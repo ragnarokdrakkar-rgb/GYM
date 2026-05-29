@@ -3397,7 +3397,7 @@ async function callClaude(userPrompt,systemPrompt){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:1024,
         system:systemPrompt||'Si izkušen fitnes trener in strokovnjak za hipertrofijo in moč. Odgovarjaj v slovenščini, jedrnato in praktično. Uporabljaj konkretne številke iz podatkov.',
         messages:[{role:'user',content:userPrompt}]
