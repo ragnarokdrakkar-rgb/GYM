@@ -322,6 +322,45 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 .vol-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;}
 /* PR feed */
 .pr-item{padding:8px;border-bottom:.5px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;}
+/* e1RM lift chips */
+.lift-chip{font-size:11px;padding:3px 10px;border-radius:12px;border:.5px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;}
+.lift-chip.on{background:var(--green-bg);border-color:var(--green);color:var(--green-text);font-weight:600;}
+/* Muscle heatmap */
+.mh-wrap{display:flex;flex-direction:column;gap:6px;}
+.mh-row{display:flex;align-items:center;gap:8px;}
+.mh-name{min-width:90px;font-size:12px;color:var(--text2);}
+.mh-bar-bg{flex:1;height:22px;background:var(--bg3);border-radius:5px;position:relative;overflow:hidden;}
+.mh-bar{height:100%;border-radius:5px;transition:width .4s;display:flex;align-items:center;padding-left:6px;font-size:10px;font-weight:600;color:#000;}
+.mh-zones{position:absolute;inset:0;pointer-events:none;}
+.mh-zone-line{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.25);}
+.mh-legend{display:flex;gap:10px;font-size:10px;color:var(--text3);margin-top:8px;flex-wrap:wrap;justify-content:center;}
+.mh-legend span{display:inline-flex;align-items:center;gap:3px;}
+.mh-legend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+.mh-status{font-size:9px;margin-left:auto;padding-right:6px;}
+/* Volume landmarks */
+.vl-tag{font-size:9px;padding:1px 5px;border-radius:6px;margin-left:6px;font-weight:600;}
+.vl-low{background:var(--blue-bg);color:var(--blue-text);}
+.vl-opt{background:var(--green-bg);color:var(--green-text);}
+.vl-high{background:var(--amber-bg);color:var(--amber-text);}
+.vl-over{background:var(--red-bg);color:var(--red-text);}
+/* Training calendar heatmap */
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(13px,1fr));gap:3px;margin-top:.5rem;}
+.cal-cell{aspect-ratio:1;border-radius:2px;background:var(--bg3);position:relative;}
+.cal-cell.l1{background:#1a4d3a;}
+.cal-cell.l2{background:#1d7a52;}
+.cal-cell.l3{background:#1d9e75;}
+.cal-cell.l4{background:#3fd99b;}
+.cal-months{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:4px;}
+.cal-legend{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);justify-content:flex-end;margin-top:6px;}
+.cal-legend i{width:11px;height:11px;border-radius:2px;display:inline-block;}
+/* AI Coach */
+.ai-key-row{display:flex;gap:6px;margin-bottom:.5rem;}
+.ai-key-row input{flex:1;background:var(--bg3);border:.5px solid var(--border);border-radius:6px;color:var(--text);padding:8px;font-size:12px;}
+.ai-msg{background:var(--bg3);border-radius:8px;padding:12px;font-size:13px;line-height:1.5;margin-top:.5rem;white-space:pre-wrap;}
+.ai-msg.user{background:var(--green-bg);color:var(--green-text);}
+.ai-loading{font-size:12px;color:var(--text3);padding:.5rem;text-align:center;}
+.ai-chat-row{display:flex;gap:6px;margin-top:.5rem;}
+.ai-chat-row input{flex:1;background:var(--bg3);border:.5px solid var(--border);border-radius:6px;color:var(--text);padding:8px;font-size:13px;}
 .pr-item:last-child{border-bottom:none;}
 .pr-item-l{flex:1;min-width:0;}
 .pr-item-name{font-size:13px;font-weight:500;color:var(--text);}
@@ -550,8 +589,22 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 <!-- STATS PAGE -->
 <div class="page" id="page-stats">
   <div class="card">
-    <div class="ct">📊 Volumen po mišičnih skupinah · ta teden</div>
+    <div class="ct">📈 e1RM napredek</div>
+    <div id="e1rm-lift-chips" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.5rem;"></div>
+    <div style="position:relative;height:240px;"><canvas id="e1rm-chart"></canvas></div>
+    <div id="e1rm-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj podatkov. Zabeleži vsaj 2 treninga z isto vajo.</div>
+  </div>
+  <div class="card">
+    <div class="ct">🔥 Mišični heatmap · ta teden</div>
+    <div id="muscle-heatmap"></div>
+  </div>
+  <div class="card">
+    <div class="ct">📊 Volumen + landmarks · ta teden</div>
     <div id="vol-grp-view"></div>
+  </div>
+  <div class="card">
+    <div class="ct">🗓️ Koledar treningov</div>
+    <div id="train-calendar"></div>
   </div>
   <div class="card">
     <div class="ct">💪 Razmerja moči (BW)</div>
@@ -564,6 +617,11 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   <div class="card">
     <div class="ct">🏆 PR feed</div>
     <div id="pr-feed"></div>
+  </div>
+  <div class="card">
+    <div class="ct">🤖 AI Coach</div>
+    <div id="ai-coach-setup"></div>
+    <div id="ai-coach-content"></div>
   </div>
 </div>
 
@@ -977,6 +1035,10 @@ function showPage(p){
     document.getElementById('strength-ratios').innerHTML=renderStrengthRatios();
     document.getElementById('body-readiness').innerHTML=renderBodyReadiness();
     document.getElementById('pr-feed').innerHTML=renderPRFeed();
+    document.getElementById('muscle-heatmap').innerHTML=renderMuscleHeatmap();
+    document.getElementById('train-calendar').innerHTML=renderTrainCalendar();
+    renderE1RMChart();
+    renderAICoach();
   }
 }
 
@@ -3080,20 +3142,27 @@ function checkDeloadNeeded(di,ei,cn){
 
 // --- Volume per muscle group ---
 function calcVolumeThisWeek(){
-  // Setov per muscle group v trenutnem ciklu, trenutnem tednu
   const all=getSets();
   const cn=getCyc().num;
   const groups={};
+  const customs=getCustomExercises();
   PROG.days.forEach((d,di)=>{
-    d.ex.forEach((e,ei)=>{
-      const map=EX_MAP[e.n];if(!map)return;
+    const allEx=[...d.ex.slice(0,d._origLen||d.ex.length),...getExtraExercises(di)];
+    allEx.forEach((e,ei)=>{
+      let map=EX_MAP[e.n];
+      // Če ni v EX_MAP, poišči v built-in DB ali custom
+      if(!map){
+        const dbEx=EXERCISE_DB.find(x=>x.n===e.n);
+        if(dbEx){map={p:[dbEx.m],s:dbEx.s?dbEx.s.split(', '):[]};}
+        else{const cu=customs.find(x=>x.n===e.n);if(cu)map={p:[cu.muscle],s:[]};}
+      }
+      if(!map)return;
       const k=`c${cn}w${cw}d${di}e${ei}`;
       const sets=(all[k]||[]).filter(s=>s.done&&s.kg&&s.reps&&!s.drop);
       const cnt=sets.length;
       if(cnt===0)return;
-      // Primary muscles dobijo full count, secondary pol
       map.p.forEach(m=>{groups[m]=(groups[m]||0)+cnt;});
-      map.s.forEach(m=>{groups[m]=(groups[m]||0)+cnt*0.5;});
+      (map.s||[]).forEach(m=>{groups[m]=(groups[m]||0)+cnt*0.5;});
     });
   });
   return groups;
@@ -3108,13 +3177,253 @@ function renderVolumeView(){
     const cnt=groups[m]||0;
     const t=VOL_TARGETS[m]||{min:0,max:20};
     const pct=Math.min(100,(cnt/maxX)*100);
-    let cls='under';
-    if(cnt>=t.min&&cnt<=t.max)cls='optimal';
-    else if(cnt>t.max&&cnt<=t.max*1.3)cls='high';
-    else if(cnt>t.max*1.3)cls='over';
-    return `<div class="vol-grp-row"><span class="vol-grp-name">${m}</span><div class="vol-grp-bar"><div class="vol-grp-fill ${cls}" style="width:${pct}%;"></div></div><span class="vol-grp-cnt">${cnt%1===0?cnt:cnt.toFixed(1)}</span></div>`;
+    let cls='under',tag='',tagcls='';
+    if(cnt<t.min){cls='under';tag='pod MEV';tagcls='vl-low';}
+    else if(cnt>=t.min&&cnt<=t.max){cls='optimal';tag='optimal';tagcls='vl-opt';}
+    else if(cnt>t.max&&cnt<=t.max*1.3){cls='high';tag='visoko';tagcls='vl-high';}
+    else{cls='over';tag='MRV+';tagcls='vl-over';}
+    return `<div class="vol-grp-row"><span class="vol-grp-name">${m}<span class="vl-tag ${tagcls}">${tag}</span></span><div class="vol-grp-bar"><div class="vol-grp-fill ${cls}" style="width:${pct}%;"></div></div><span class="vol-grp-cnt">${cnt%1===0?cnt:cnt.toFixed(1)}</span></div>`;
   }).join('');
-  return `<div class="vol-grp">${html}</div><div class="vol-legend"><span><i style="background:var(--blue);"></i>Pod</span><span><i style="background:var(--green);"></i>Optimalno</span><span><i style="background:var(--amber);"></i>Visoko</span><span><i style="background:var(--red);"></i>Pretrenirano</span></div>`;
+  return `<div style="font-size:10px;color:var(--text3);margin-bottom:6px;">MEV=minimum za rast · optimal=10-20 setov · MRV=meja okrevanja</div><div class="vol-grp">${html}</div><div class="vol-legend"><span><i style="background:var(--blue);"></i>Pod MEV</span><span><i style="background:var(--green);"></i>Optimalno</span><span><i style="background:var(--amber);"></i>Visoko</span><span><i style="background:var(--red);"></i>MRV+</span></div>`;
+}
+
+// === MIŠIČNI HEATMAP ===
+function renderMuscleHeatmap(){
+  const groups=calcVolumeThisWeek();
+  const muscles=Object.keys(VOL_TARGETS);
+  const withData=muscles.filter(m=>(groups[m]||0)>0);
+  if(withData.length===0)return '<div style="color:var(--text3);font-size:12px;padding:.5rem;text-align:center;">Ni opravljenih vaj ta teden.</div>';
+  const sorted=muscles.sort((a,b)=>(groups[b]||0)-(groups[a]||0));
+  const rows=sorted.map(m=>{
+    const cnt=groups[m]||0;
+    const t=VOL_TARGETS[m]||{min:8,max:20};
+    const mrv=t.max*1.3;
+    let color,status;
+    if(cnt===0){color='var(--bg4)';status='—';}
+    else if(cnt<t.min){color='#378add';status='premalo';}
+    else if(cnt<=t.max){color='#1d9e75';status='optimal ✓';}
+    else if(cnt<=mrv){color='#ef9f27';status='veliko';}
+    else{color='#e24b4a';status='preveč';}
+    const pct=Math.min(100,(cnt/(mrv||20))*100);
+    return `<div class="mh-row"><span class="mh-name">${m}</span><div class="mh-bar-bg"><div class="mh-bar" style="width:${pct}%;background:${color};">${cnt>0?(cnt%1===0?cnt:cnt.toFixed(1)):''}</div></div><span class="mh-status" style="color:${color};">${status}</span></div>`;
+  }).join('');
+  return `<div class="mh-wrap">${rows}</div><div class="mh-legend"><span><i style="background:#378add;"></i>Premalo</span><span><i style="background:#1d9e75;"></i>Optimal</span><span><i style="background:#ef9f27;"></i>Veliko</span><span><i style="background:#e24b4a;"></i>Preveč</span></div>`;
+}
+
+// === KOLEDAR TRENINGOV (heatmap) ===
+function renderTrainCalendar(){
+  const sessions=getSessions();
+  if(sessions.length===0)return '<div style="color:var(--text3);font-size:12px;padding:.5rem;text-align:center;">Še ni treningov.</div>';
+  // Zadnjih ~16 tednov (112 dni)
+  const days=112;
+  const now=new Date();now.setHours(0,0,0,0);
+  // Map datum -> volumen
+  const all=getSets();
+  const dateVol={};
+  sessions.forEach(s=>{
+    const di=DAY_NAMES.indexOf(s.dayName);
+    let v=0;
+    if(di>=0){
+      for(let w=0;w<4;w++)for(let ei=0;ei<20;ei++){
+        const k=sdk(s.cycle,w,di,ei);
+        if(all[k])all[k].filter(x=>x.done).forEach(x=>v+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0));
+      }
+    }
+    dateVol[s.date]=(dateVol[s.date]||0)+(v||1);
+  });
+  const maxV=Math.max(1,...Object.values(dateVol));
+  let cells='';
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(now-i*86400000);
+    const ds=d.toISOString().split('T')[0];
+    const v=dateVol[ds]||0;
+    let lvl='';
+    if(v>0){
+      const ratio=v/maxV;
+      lvl=ratio>0.75?'l4':ratio>0.5?'l3':ratio>0.25?'l2':'l1';
+    }
+    cells+=`<div class="cal-cell ${lvl}" title="${ds}${v>0?' · trening':''}"></div>`;
+  }
+  return `<div class="cal-grid">${cells}</div><div class="cal-legend">Manj <i class="cal-cell"></i><i class="cal-cell l1"></i><i class="cal-cell l2"></i><i class="cal-cell l3"></i><i class="cal-cell l4"></i> Več</div>`;
+}
+
+// === e1RM TREND GRAF ===
+let e1rmChart=null,e1rmActiveLift=0;
+function getE1RMHistory(){
+  // Za vsako glavno vajo, zberi (datum, max e1RM) skozi sesije
+  const all=getSets();
+  const lifts={};
+  Object.entries(BIG_LIFTS).forEach(([key,exName])=>{lifts[exName]=[];});
+  // Tudi dodaj vse vaje ki imajo PR history? Za zdaj samo glavne + tiste z dovolj podatki
+  const sessions=getSessions().slice().reverse();  // od najstarejše
+  sessions.forEach(s=>{
+    const di=DAY_NAMES.indexOf(s.dayName);if(di<0)return;
+    PROG.days[di]&&PROG.days[di].ex.forEach((e,ei)=>{
+      for(let w=0;w<4;w++){
+        const k=sdk(s.cycle,w,di,ei);
+        if(all[k]){
+          const done=all[k].filter(x=>x.done&&x.kg&&x.reps);
+          if(done.length>0){
+            const best=done.reduce((mx,x)=>{const e1=parseFloat(x.kg)*(1+parseInt(x.reps)/30);return e1>mx?e1:mx;},0);
+            if(best>0){
+              if(!lifts[e.n])lifts[e.n]=[];
+              lifts[e.n].push({date:s.date,e1rm:Math.round(best)});
+            }
+          }
+        }
+      }
+    });
+  });
+  // Obdrži samo vaje z >=2 točkama
+  Object.keys(lifts).forEach(k=>{if(lifts[k].length<2)delete lifts[k];});
+  return lifts;
+}
+function renderE1RMChart(){
+  const hist=getE1RMHistory();
+  const liftNames=Object.keys(hist);
+  const chipsEl=document.getElementById('e1rm-lift-chips');
+  const emptyEl=document.getElementById('e1rm-empty');
+  const canvas=document.getElementById('e1rm-chart');
+  if(liftNames.length===0){
+    if(chipsEl)chipsEl.innerHTML='';
+    if(emptyEl)emptyEl.style.display='block';
+    if(canvas)canvas.style.display='none';
+    if(e1rmChart){e1rmChart.destroy();e1rmChart=null;}
+    return;
+  }
+  if(emptyEl)emptyEl.style.display='none';
+  if(canvas)canvas.style.display='block';
+  if(e1rmActiveLift>=liftNames.length)e1rmActiveLift=0;
+  // Chips
+  if(chipsEl)chipsEl.innerHTML=liftNames.map((n,i)=>`<button class="lift-chip${i===e1rmActiveLift?' on':''}" onclick="selectE1RMLift(${i})">${n.length>18?n.slice(0,16)+'…':n}</button>`).join('');
+  const activeName=liftNames[e1rmActiveLift];
+  const data=hist[activeName];
+  if(e1rmChart)e1rmChart.destroy();
+  const ctx=canvas.getContext('2d');
+  const isDark=document.documentElement.getAttribute('data-theme')!=='light';
+  e1rmChart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:data.map(d=>d.date.slice(5)),
+      datasets:[{
+        label:activeName+' e1RM (kg)',
+        data:data.map(d=>d.e1rm),
+        borderColor:'#1d9e75',
+        backgroundColor:'rgba(29,158,117,0.1)',
+        fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#1d9e75'
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{color:isDark?'#2e3035':'#eee'}},
+        x:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{display:false}}
+      }
+    }
+  });
+}
+function selectE1RMLift(i){e1rmActiveLift=i;renderE1RMChart();}
+
+// === AI COACH ===
+function getAIKey(){return localStorage.getItem('wt_ai_key')||'';}
+function saveAIKey(){
+  const v=document.getElementById('ai-key-input').value.trim();
+  if(!v){toast('Vnesi API ključ','err');return;}
+  localStorage.setItem('wt_ai_key',v);
+  toast('✓ Ključ shranjen','ok');
+  renderAICoach();
+}
+function clearAIKey(){localStorage.removeItem('wt_ai_key');renderAICoach();}
+function renderAICoach(){
+  const setup=document.getElementById('ai-coach-setup');
+  const content=document.getElementById('ai-coach-content');
+  if(!setup)return;
+  const key=getAIKey();
+  if(!key){
+    setup.innerHTML=`
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem;line-height:1.4;">Vnesi Anthropic API ključ za AI analizo treninga. Ključ ostane samo na tvoji napravi.<br><a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--green-text);">→ Pridobi ključ</a></div>
+      <div class="ai-key-row">
+        <input type="password" id="ai-key-input" placeholder="sk-ant-...">
+        <button class="sb" onclick="saveAIKey()">Shrani</button>
+      </div>`;
+    content.innerHTML='';
+    return;
+  }
+  setup.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.5rem;">
+    <button class="sb" onclick="aiAnalyzeWeek()">📊 Analiziraj moj teden</button>
+    <button class="sb" onclick="aiAnalyzeProgress()" style="background:var(--bg3);">📈 Napredek</button>
+    <button class="sb" onclick="clearAIKey()" style="background:var(--bg3);color:var(--text3);">Odstrani ključ</button>
+  </div>
+  <div class="ai-chat-row">
+    <input type="text" id="ai-question" placeholder="Vprašaj karkoli o treningu..." onkeydown="if(event.key==='Enter')aiAsk()">
+    <button class="sb" onclick="aiAsk()">Vprašaj</button>
+  </div>`;
+}
+
+// Zberi povzetek podatkov za AI
+function buildAIContext(){
+  const sessions=getSessions().slice(0,15);
+  const prs=getPRs();
+  const groups=calcVolumeThisWeek();
+  const bw=(function(){try{const d=getBW();const e=Object.entries(d).sort((a,b)=>a[0].localeCompare(b[0]));return e.length?e[e.length-1][1]:null;}catch{return null;}})();
+  // PR summary
+  const prList=[];
+  Object.entries(prs).forEach(([k,v])=>{if(typeof v==='object'&&v.exName&&v.kg)prList.push(`${v.exName}: ${v.kg}kg×${v.reps||1}`);});
+  // e1RM trends
+  const hist=getE1RMHistory();
+  const trends=[];
+  Object.entries(hist).forEach(([n,d])=>{if(d.length>=2){const first=d[0].e1rm,last=d[d.length-1].e1rm;const ch=last-first;trends.push(`${n}: ${first}→${last}kg e1RM (${ch>=0?'+':''}${ch})`);}});
+  return `Podatki uporabnika (powerbuilding program, 5 dni: Push A, Pull A, Noge, Push B, Pull B; 4-tedenski cikli T1 Heavy/T2 Moderate/T3 Volume/T4 Deload):
+Telesna teža: ${bw||'?'}kg
+Zadnjih ${sessions.length} sesij: ${sessions.map(s=>`${s.date} ${s.dayName} ${s.durationMin}min`).join('; ')}
+Volumen ta teden (seti/mišica): ${Object.entries(groups).map(([m,c])=>`${m}:${c%1===0?c:c.toFixed(1)}`).join(', ')||'ni podatkov'}
+PR-ji: ${prList.join(', ')||'ni'}
+e1RM trendi: ${trends.join('; ')||'premalo podatkov'}`;
+}
+
+async function callClaude(userPrompt,systemPrompt){
+  const key=getAIKey();
+  if(!key)return null;
+  const content=document.getElementById('ai-coach-content');
+  content.innerHTML='<div class="ai-loading">🤖 Claude razmišlja...</div>';
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1024,
+        system:systemPrompt||'Si izkušen fitnes trener in strokovnjak za hipertrofijo in moč. Odgovarjaj v slovenščini, jedrnato in praktično. Uporabljaj konkretne številke iz podatkov.',
+        messages:[{role:'user',content:userPrompt}]
+      })
+    });
+    const data=await resp.json();
+    if(data.error){content.innerHTML=`<div class="ai-msg" style="color:var(--red-text);">Napaka: ${data.error.message||'preveri API ključ'}</div>`;return null;}
+    const text=data.content.map(b=>b.text||'').join('\n');
+    content.innerHTML=`<div class="ai-msg">${text.replace(/</g,'&lt;')}</div>`;
+    return text;
+  }catch(e){
+    content.innerHTML=`<div class="ai-msg" style="color:var(--red-text);">Napaka pri povezavi: ${e.message}</div>`;
+    return null;
+  }
+}
+function aiAnalyzeWeek(){
+  callClaude(buildAIContext()+'\n\nAnaliziraj moj zadnji teden treninga. Kaj gre dobro, kaj bi izboljšal? Bodi konkreten.');
+}
+function aiAnalyzeProgress(){
+  callClaude(buildAIContext()+'\n\nAnaliziraj moj dolgoročni napredek glede na e1RM trende in PR-je. Kje napredujem, kje stagniram? Predlogi?');
+}
+function aiAsk(){
+  const inp=document.getElementById('ai-question');
+  const q=inp.value.trim();if(!q)return;
+  inp.value='';
+  callClaude(buildAIContext()+'\n\nUporabnikovo vprašanje: '+q);
 }
 
 // --- PR feed timeline ---
