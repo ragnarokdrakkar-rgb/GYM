@@ -619,6 +619,35 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div id="pr-feed"></div>
   </div>
   <div class="card">
+    <div class="ct">📊 Tonaža na trening</div>
+    <div style="position:relative;height:200px;"><canvas id="tonnage-chart"></canvas></div>
+    <div id="tonnage-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj treningov.</div>
+  </div>
+  <div class="card">
+    <div class="ct">🔁 Frekvenca mišic · ta teden</div>
+    <div id="muscle-freq"></div>
+  </div>
+  <div class="card">
+    <div class="ct">🎯 Cilji</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.5rem;align-items:center;">
+      <select class="si" id="goal-ex" style="flex:1;min-width:120px;"></select>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:.5rem;">
+      <input class="si" type="number" id="goal-target" placeholder="cilj kg" style="width:80px;">
+      <input class="si" type="date" id="goal-date" style="flex:1;">
+      <button class="sb" onclick="addGoal()">+</button>
+    </div>
+    <div id="goals-list"></div>
+  </div>
+  <div class="card">
+    <div class="ct">🩹 Bolečine / poškodbe</div>
+    <div style="display:flex;gap:6px;margin-bottom:.5rem;">
+      <input class="si" type="text" id="injury-input" placeholder="npr. leva rama boli..." style="flex:1;">
+      <button class="sb" onclick="logInjury()">+</button>
+    </div>
+    <div id="injury-log"></div>
+  </div>
+  <div class="card">
     <div class="ct">🤖 AI Coach</div>
     <div id="ai-coach-setup"></div>
     <div id="ai-coach-content"></div>
@@ -1037,7 +1066,11 @@ function showPage(p){
     document.getElementById('pr-feed').innerHTML=renderPRFeed();
     document.getElementById('muscle-heatmap').innerHTML=renderMuscleHeatmap();
     document.getElementById('train-calendar').innerHTML=renderTrainCalendar();
+    document.getElementById('muscle-freq').innerHTML=renderMuscleFrequency();
     renderE1RMChart();
+    renderTonnageChart();
+    renderGoals();
+    renderInjuryLog();
     renderAICoach();
   }
 }
@@ -1226,7 +1259,10 @@ function showDay(idx){
   if(wk.dl){html+=`<div class="dbox">Deload teden — 60–65% teže iz tedna 1. Ustavi 4–5 pon. pred odpovedjo. Maks 3 serije.</div>`;}
   else{html+=`<div class="pg"><div class="pc"><div class="pn">${allEx.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
   html+=allEx.map((e,i)=>renderEx(e,i,idx,wk,cyc.num,!!e.extra)).join('');
-  html+=`<button class="sb" style="width:100%;margin-top:.75rem;background:var(--bg3);border:1px dashed var(--border2);" onclick="openAddExercise(${idx})">+ Dodaj vajo na ta dan</button>`;
+  html+=`<div style="display:flex;gap:6px;margin-top:.75rem;">
+    <button class="sb" style="flex:1;background:var(--blue-bg);border:1px solid var(--blue);color:var(--blue-text);" onclick="prefillFromLastSession(${idx})">↺ Predizpolni teže</button>
+    <button class="sb" style="flex:1;background:var(--bg3);border:1px dashed var(--border2);" onclick="openAddExercise(${idx})">+ Dodaj vajo</button>
+  </div>`;
   document.getElementById('day-content').innerHTML=html;
 }
 
@@ -1485,6 +1521,8 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     </div>
     ${ph}${lhHtml}${sugHtml}${plateHtml}
     ${e.m&&ei===0&&cw===0?wuHint(e,sets):''}
+    <div id="wu-dyn-${exKey}"></div>
+    <button class="swbtn" style="margin-bottom:6px;background:var(--amber-bg);border-color:var(--amber);color:var(--amber-text);" onclick="showDynWarmup('${exKey}',${di},${ei})">🔥 Ogrevanje</button>
     <div class="ex-d">${e.d}</div>${e.tip?`<div class="ex-tip">${e.tip}</div>`:''}
     <table class="st"><thead><tr><th>S</th><th>Teža</th><th>Pon</th><th>Vol</th><th>1RM</th><th></th></tr></thead><tbody id="rows-${exKey}">${rows}</tbody></table>
     ${tv>0?`<div class="vol-total" style="font-size:11px;color:var(--green-text);margin-top:4px;text-align:right;">Skupaj: ${Math.round(tv).toLocaleString()} kg</div>`:''}
@@ -1782,6 +1820,233 @@ function buildWU(wkg,type){
 }
 function rnd(n){return Math.round(n/2.5)*2.5;}
 
+// === DINAMIČNO OGREVANJE za vsako vajo ===
+function showDynWarmup(exKey,di,ei){
+  const box=document.getElementById('wu-dyn-'+exKey);
+  if(!box)return;
+  if(box.innerHTML){box.innerHTML='';return;}
+  const all=getSets();
+  const fkg=parseFloat((all[exKey]&&all[exKey][0]&&all[exKey][0].kg)||0);
+  if(fkg<=0){box.innerHTML='<div class="wubox">Vnesi delovno težo v 1. serijo</div>';return;}
+  const exName=(PROG.days[di].ex[ei]||{}).n||'';
+  const lower=/squat|deadlift|leg press|lunge|hip thrust|rdl|romanian/i.test(exName);
+  const wu=buildWU(fkg,lower?'lower':'upper');
+  box.innerHTML=`<div class="wubox"><strong>Ogrevanje do ${fkg}kg:</strong><br>${wu.map(w=>`${w.pct===0?'Palica':w.pct+'%'} → <strong>${w.kg}kg</strong> × ${w.reps}`).join('<br>')}</div>`;
+}
+
+// === PRE-FILL naslednje sesije ===
+function prefillFromLastSession(di){
+  const all=getSets();
+  const cyc=getCyc();
+  let filled=0;
+  PROG.days[di].ex.forEach((e,ei)=>{
+    const curKey=sdk(cyc.num,cw,di,ei);
+    const cur=all[curKey];
+    if(cur&&cur.some(s=>s.kg))return;
+    let lastKg=null;
+    outer:
+    for(let c=cyc.num;c>=1;c--){
+      const wStart=(c===cyc.num)?cw-1:3;
+      for(let w=wStart;w>=0;w--){
+        const k=sdk(c,w,di,ei);
+        if(all[k]){
+          const done=all[k].filter(s=>s.done&&s.kg);
+          if(done.length>0){
+            const top=done.reduce((a,b)=>parseFloat(b.kg)>parseFloat(a.kg)?b:a);
+            lastKg=parseFloat(top.kg);
+            break outer;
+          }
+        }
+      }
+    }
+    if(lastKg){
+      const n=nsf(di,ei,PROG.weeks[cw],curKey);
+      if(!all[curKey])all[curKey]=Array.from({length:n},()=>({kg:'',reps:'',done:false}));
+      for(let i=0;i<n;i++){
+        if(!all[curKey][i])all[curKey][i]={kg:'',reps:'',done:false};
+        if(!all[curKey][i].kg)all[curKey][i].kg=String(lastKg);
+      }
+      filled++;
+    }
+  });
+  if(filled>0){saveSets(all);showDay(di);toast(`✓ Predizpolnjeno ${filled} vaj`,'ok');}
+  else toast('Ni prejšnjih podatkov','err');
+}
+
+// === REP PR tracking ===
+function getRepPRs(){try{return JSON.parse(localStorage.getItem('wt_rep_prs')||'{}');}catch{return {};}}
+function saveRepPRs(d){localStorage.setItem('wt_rep_prs',JSON.stringify(d));}
+function checkRepPR(exName,kg,reps){
+  if(!exName||!kg||!reps)return false;
+  const prs=getRepPRs();
+  if(!prs[exName])prs[exName]={};
+  const cur=prs[exName][reps]||0;
+  if(kg>cur){prs[exName][reps]=kg;saveRepPRs(prs);return cur>0;}
+  return false;
+}
+
+// === TONNAGE TREND ===
+function getTonnageHistory(){
+  const sessions=getSessions().slice().reverse();
+  const all=getSets();
+  return sessions.map(s=>{
+    const di=DAY_NAMES.indexOf(s.dayName);
+    let tonnage=0;
+    if(di>=0){
+      for(let w=0;w<4;w++)for(let ei=0;ei<20;ei++){
+        const k=sdk(s.cycle,w,di,ei);
+        if(all[k])all[k].filter(x=>x.done).forEach(x=>tonnage+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0));
+      }
+    }
+    return {date:s.date,tonnage:Math.round(tonnage)};
+  }).filter(t=>t.tonnage>0);
+}
+let tonnageChart=null;
+function renderTonnageChart(){
+  const hist=getTonnageHistory();
+  const canvas=document.getElementById('tonnage-chart');
+  const empty=document.getElementById('tonnage-empty');
+  if(!canvas)return;
+  if(hist.length<2){
+    if(empty)empty.style.display='block';canvas.style.display='none';
+    if(tonnageChart){tonnageChart.destroy();tonnageChart=null;}
+    return;
+  }
+  if(empty)empty.style.display='none';canvas.style.display='block';
+  if(tonnageChart)tonnageChart.destroy();
+  const isDark=document.documentElement.getAttribute('data-theme')!=='light';
+  tonnageChart=new Chart(canvas.getContext('2d'),{
+    type:'bar',
+    data:{labels:hist.slice(-20).map(h=>h.date.slice(5)),datasets:[{label:'Tonaža (kg)',data:hist.slice(-20).map(h=>h.tonnage),backgroundColor:'#378add'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{color:isDark?'#2e3035':'#eee'}},x:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{display:false}}}}
+  });
+}
+
+// === FREKVENCA MIŠIC ===
+function renderMuscleFrequency(){
+  const sessions=getSessions();
+  const weekAgo=Date.now()-7*86400000;
+  const recent=sessions.filter(s=>new Date(s.date).getTime()>=weekAgo);
+  const freq={};
+  recent.forEach(s=>{
+    const di=DAY_NAMES.indexOf(s.dayName);if(di<0)return;
+    const seen=new Set();
+    PROG.days[di]&&PROG.days[di].ex.forEach(e=>{
+      let map=EX_MAP[e.n];
+      if(!map){const db=EXERCISE_DB.find(x=>x.n===e.n);if(db)map={p:[db.m]};}
+      if(map&&map.p)map.p.forEach(m=>seen.add(m));
+    });
+    seen.forEach(m=>{freq[m]=(freq[m]||0)+1;});
+  });
+  const muscles=Object.keys(VOL_TARGETS);
+  const rows=muscles.map(m=>{
+    const f=freq[m]||0;
+    let cls,msg;
+    if(f===0){cls='vl-low';msg='0× ni treniran';}
+    else if(f===1){cls='vl-high';msg='1× — lahko 2×';}
+    else{cls='vl-opt';msg=`${f}× ✓`;}
+    return `<div class="bpr-row"><span>${m}</span><span class="vl-tag ${cls}">${msg}</span></div>`;
+  }).join('');
+  return `<div style="font-size:10px;color:var(--text3);margin-bottom:6px;">2× tedensko je za večino bolje kot 1×</div>${rows}`;
+}
+
+// === CILJI + NAPOVED ===
+function getGoals(){try{return JSON.parse(localStorage.getItem('wt_goals')||'[]');}catch{return [];}}
+function saveGoals(g){localStorage.setItem('wt_goals',JSON.stringify(g));}
+function addGoal(){
+  const ex=document.getElementById('goal-ex').value;
+  const target=parseFloat(document.getElementById('goal-target').value);
+  const date=document.getElementById('goal-date').value;
+  if(!ex||!target||!date){toast('Izpolni vsa polja','err');return;}
+  const goals=getGoals();
+  goals.push({ex,target,date});
+  saveGoals(goals);
+  document.getElementById('goal-target').value='';
+  renderGoals();
+  toast('✓ Cilj dodan','ok');
+}
+function deleteGoal(idx){const g=getGoals();g.splice(idx,1);saveGoals(g);renderGoals();}
+function renderGoals(){
+  const el=document.getElementById('goals-list');if(!el)return;
+  const sel=document.getElementById('goal-ex');
+  if(sel&&!sel._filled){
+    const allNames=[...new Set([...Object.values(BIG_LIFTS),...EXERCISE_DB.map(e=>e.n)])];
+    sel.innerHTML=allNames.map(n=>`<option value="${n}">${n}</option>`).join('');
+    sel._filled=true;
+  }
+  const goals=getGoals();
+  if(goals.length===0){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:.5rem;">Ni ciljev.</div>';return;}
+  const hist=getE1RMHistory();
+  el.innerHTML=goals.map((g,idx)=>{
+    let cur=0;
+    if(hist[g.ex]&&hist[g.ex].length>0)cur=hist[g.ex][hist[g.ex].length-1].e1rm;
+    const pct=Math.min(100,Math.round((cur/g.target)*100));
+    const daysLeft=Math.ceil((new Date(g.date)-Date.now())/86400000);
+    let forecast='';
+    if(hist[g.ex]&&hist[g.ex].length>=2){
+      const data=hist[g.ex];
+      const first=data[0],last=data[data.length-1];
+      const daysSpan=(new Date(last.date)-new Date(first.date))/86400000||1;
+      const ratePerDay=(last.e1rm-first.e1rm)/daysSpan;
+      if(ratePerDay>0){
+        const daysToGoal=(g.target-cur)/ratePerDay;
+        const reachDate=new Date(Date.now()+daysToGoal*86400000);
+        forecast=daysToGoal<=daysLeft?`✓ Na pravi poti (~${reachDate.toLocaleDateString('sl-SI')})`:`⚠ Prepočasi (~${reachDate.toLocaleDateString('sl-SI')})`;
+      }else forecast='Stagnacija — ni napredka';
+    }
+    return `<div style="padding:8px;border-bottom:.5px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong style="font-size:13px;">${g.ex}</strong>
+        <button class="bk-item-btn del" style="font-size:11px;" onclick="deleteGoal(${idx})">×</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin:3px 0;">Cilj ${g.target}kg · trenutno ${cur||'?'}kg · ${daysLeft>0?daysLeft+' dni':'rok potekel'}</div>
+      <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${pct>=100?'var(--green)':'var(--blue)'};"></div></div>
+      ${forecast?`<div style="font-size:10px;color:var(--text3);margin-top:3px;">${forecast}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// === ENERGIJA / INJURY LOG ===
+function getDayLog(){try{return JSON.parse(localStorage.getItem('wt_daylog')||'{}');}catch{return {};}}
+function saveDayLog(d){localStorage.setItem('wt_daylog',JSON.stringify(d));}
+function setEnergy(val){
+  const log=getDayLog();
+  const today=new Date().toISOString().split('T')[0];
+  if(!log[today])log[today]={};
+  log[today].energy=val;
+  saveDayLog(log);
+  document.querySelectorAll('.energy-btn').forEach((b,i)=>b.classList.toggle('on',i+1===val));
+  toast('✓ Energija '+val+'/5','ok');
+}
+function logInjury(){
+  const txt=document.getElementById('injury-input').value.trim();
+  if(!txt)return;
+  const log=getDayLog();
+  const today=new Date().toISOString().split('T')[0];
+  if(!log[today])log[today]={};
+  if(!log[today].injuries)log[today].injuries=[];
+  log[today].injuries.push(txt);
+  saveDayLog(log);
+  document.getElementById('injury-input').value='';
+  renderInjuryLog();
+  toast('✓ Zabeleženo','ok');
+}
+function renderInjuryLog(){
+  const el=document.getElementById('injury-log');if(!el)return;
+  const log=getDayLog();
+  const all=[];
+  Object.entries(log).forEach(([date,d])=>{if(d.injuries)d.injuries.forEach(t=>all.push({date,t}));});
+  all.sort((a,b)=>b.date.localeCompare(a.date));
+  if(all.length===0){el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:.4rem;">Ni zapisov.</div>';return;}
+  const words={};
+  all.forEach(i=>{i.t.toLowerCase().split(/\s+/).forEach(w=>{if(w.length>3)words[w]=(words[w]||0)+1;});});
+  const patterns=Object.entries(words).filter(([w,c])=>c>=3).map(([w])=>w);
+  let html='';
+  if(patterns.length>0)html+=`<div style="font-size:11px;color:var(--amber-text);background:var(--amber-bg);padding:6px;border-radius:6px;margin-bottom:6px;">⚠ Pogosto: ${patterns.join(', ')}</div>`;
+  html+=all.slice(0,15).map(i=>`<div style="font-size:12px;padding:5px 0;border-bottom:.5px solid var(--border);"><span style="color:var(--text3);font-size:10px;">${i.date}</span> · ${i.t}</div>`).join('');
+  el.innerHTML=html;
+}
+
 function sv(key,si,field,val,di,ei,cn,isBarbell){
   // Validacija
   let inpSel='.ri';
@@ -1906,9 +2171,15 @@ function checkPR(key,di,ei,sets){
   });
   const maxKg=bestSet?parseFloat(bestSet.kg):0;
   const card=document.getElementById('ec-'+key);if(!card)return;
+  const exName=(PROG.days[di].ex[ei]||{}).n||'Vaja';
+  // Rep PR — preveri vsak opravljeni set posebej
+  let repPRhit=false;
+  sets.forEach(s=>{
+    if(s.done&&s.kg&&s.reps){
+      if(checkRepPR(exName,parseFloat(s.kg),parseInt(s.reps)))repPRhit=true;
+    }
+  });
   if(maxKg>cpr&&maxKg>0){
-    // Ohrani history za PR feed
-    const exName=PROG.days[di].ex[ei].n;
     const history=(typeof prs[prk]==='object'&&Array.isArray(prs[prk].history))?prs[prk].history:[];
     history.unshift({kg:maxKg,reps:parseInt(bestSet.reps),date:new Date().toISOString().split('T')[0]});
     prs[prk]={kg:maxKg,reps:parseInt(bestSet.reps),date:new Date().toISOString().split('T')[0],exName,history:history.slice(0,20)};
@@ -1918,6 +2189,9 @@ function checkPR(key,di,ei,sets){
     if(!pb){pb=document.createElement('span');pb.className='b prb';pb.textContent='PR';card.querySelector('.bdg').appendChild(pb);}
     const bn=document.getElementById('pr-banner');
     if(bn){bn.textContent=`Nov PR: ${exName} — ${maxKg}kg × ${bestSet.reps}! 💪`;bn.classList.add('visible');setTimeout(()=>bn.classList.remove('visible'),4000);}
+  } else if(repPRhit){
+    const bn=document.getElementById('pr-banner');
+    if(bn){bn.textContent=`Rep PR: ${exName}! 💪`;bn.classList.add('visible');setTimeout(()=>bn.classList.remove('visible'),3000);}
   }
 }
 
@@ -2691,6 +2965,9 @@ async function exportData(){
     sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}'),
     extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
+    rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
+    goals:JSON.parse(localStorage.getItem('wt_goals')||'[]'),
+    daylog:JSON.parse(localStorage.getItem('wt_daylog')||'{}'),
     custom_ex:JSON.parse(localStorage.getItem(CUST_KEY)||'[]'),
     kg_step:localStorage.getItem('wt_kg_step'),
     reps_step:localStorage.getItem('wt_reps_step')
@@ -2758,6 +3035,9 @@ function importData(){
         if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
         if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
         if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
+        if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
+        if(backup.goals) localStorage.setItem('wt_goals',JSON.stringify(backup.goals));
+        if(backup.daylog) localStorage.setItem('wt_daylog',JSON.stringify(backup.daylog));
         if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
         if(backup.kg_step) localStorage.setItem('wt_kg_step',backup.kg_step);
         if(backup.reps_step) localStorage.setItem('wt_reps_step',backup.reps_step);
@@ -3684,6 +3964,9 @@ async function buildBackupJSON(includePhotos){
     sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}'),
     extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
+    rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
+    goals:JSON.parse(localStorage.getItem('wt_goals')||'[]'),
+    daylog:JSON.parse(localStorage.getItem('wt_daylog')||'{}'),
     custom_ex:JSON.parse(localStorage.getItem(CUST_KEY)||'[]'),
     kg_step:localStorage.getItem('wt_kg_step'),
     reps_step:localStorage.getItem('wt_reps_step')
@@ -3816,6 +4099,9 @@ async function restoreBackupFromIDB(id){
     if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
         if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
         if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
+        if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
+        if(backup.goals) localStorage.setItem('wt_goals',JSON.stringify(backup.goals));
+        if(backup.daylog) localStorage.setItem('wt_daylog',JSON.stringify(backup.daylog));
         if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
         if(backup.kg_step) localStorage.setItem('wt_kg_step',backup.kg_step);
         if(backup.reps_step) localStorage.setItem('wt_reps_step',backup.reps_step);
