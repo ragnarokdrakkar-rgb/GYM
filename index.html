@@ -65,6 +65,19 @@ body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;font-siz
 .dbox{background:var(--blue-bg);border:.5px solid var(--blue);border-radius:8px;padding:9px 13px;margin-bottom:1rem;font-size:12px;color:var(--blue-text);line-height:1.6;}
 .wubox{background:var(--purple-bg);border:.5px solid var(--purple);border-radius:8px;padding:8px 12px;margin-bottom:.75rem;font-size:12px;color:var(--purple-text);}
 .sug-box{background:var(--blue-bg);border:.5px solid var(--blue);border-radius:8px;padding:8px 12px;margin-bottom:.75rem;font-size:12px;color:var(--blue-text);}
+.p531-box{background:var(--purple-bg);border:1px solid var(--purple);border-radius:8px;padding:10px 12px;margin-bottom:.75rem;font-size:13px;color:var(--text);}
+.p531-box.bbb{background:var(--green-bg);border-color:var(--green);}
+.p531-box.p531-warn{background:var(--amber-bg);border-color:var(--amber);color:var(--amber-text);font-size:12px;}
+.p531-title{font-weight:600;margin-bottom:6px;font-size:12px;color:var(--purple-text);}
+.p531-box.bbb .p531-title{color:var(--green-text);}
+.p531-row{display:flex;align-items:center;gap:10px;padding:3px 0;font-size:14px;}
+.p531-row span{color:var(--text2);font-size:12px;}
+.p531-pct{min-width:36px;}
+.p531-note{font-size:10px;color:var(--text3);margin-top:6px;font-style:italic;}
+.tm-grid{display:flex;flex-direction:column;gap:6px;}
+.tm-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.tm-row span{font-size:13px;color:var(--text2);}
+.tm-row input{width:90px;background:var(--bg3);border:.5px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:14px;text-align:center;}
 .platebox{background:var(--bg3);border:.5px solid var(--border2);border-radius:8px;padding:8px 12px;margin-bottom:.75rem;font-size:12px;color:var(--text2);}
 .platebox strong{color:var(--text);}
 .platebox .pl-each{font-size:11px;color:var(--text3);margin-top:3px;display:block;}
@@ -725,6 +738,32 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 <!-- TOOLS PAGE -->
 <div class="page" id="page-tools">
   <div class="card">
+    <div class="ct">🔄 Program profil</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.4;">Preklopi med <strong>Cut</strong> (trenutni 5-dnevni PPL, ohranjanje) in <strong>Bulk</strong> (5/3/1 Boring But Big — moč + masa). Podatki obeh ostanejo ločeni.</div>
+    <div id="profile-status" style="font-size:13px;font-weight:600;margin-bottom:.75rem;"></div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <button class="sb" id="prof-cut-btn" onclick="switchProfile('cut')">Cut (ohranjanje)</button>
+      <button class="sb" id="prof-bulk-btn" onclick="switchProfile('bulk')" style="background:var(--bg3);">Bulk (5/3/1)</button>
+    </div>
+    <div id="tm-editor" style="display:none;margin-top:1rem;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem;font-weight:500;">Training Max-i (90% tvojega 1RM):</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Vnesi svoj <strong>pravi 1RM</strong> — app sam izračuna TM (90%). Vse 5/3/1 teže računajo iz tega.</div>
+      <div class="tm-grid">
+        <div class="tm-row"><span>Bench 1RM</span><input type="number" id="tm-bench" placeholder="kg" step="2.5"></div>
+        <div class="tm-row"><span>Squat 1RM</span><input type="number" id="tm-squat" placeholder="kg" step="2.5"></div>
+        <div class="tm-row"><span>Deadlift 1RM</span><input type="number" id="tm-deadlift" placeholder="kg" step="2.5"></div>
+        <div class="tm-row"><span>OHP 1RM</span><input type="number" id="tm-ohp" placeholder="kg" step="2.5"></div>
+      </div>
+      <button class="sb" onclick="save531FromInputs()" style="margin-top:.5rem;width:100%;">💾 Shrani 1RM-je</button>
+      <div id="tm-current" style="font-size:11px;color:var(--text3);margin-top:.5rem;"></div>
+      <div style="display:flex;gap:.5rem;margin-top:.75rem;">
+        <button class="sb" onclick="advance531Cycle()" style="background:var(--green-bg);border-color:var(--green);color:var(--green-text);flex:1;">✓ Zaključi cikel (+TM)</button>
+        <button class="sb" onclick="reset531Cycle()" style="background:var(--bg3);">↺ Reset</button>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:.4rem;">Po vsakem 4-tedenskem ciklu pritisni "Zaključi cikel": +2.5kg bench/OHP, +5kg squat/deadlift.</div>
+    </div>
+  </div>
+  <div class="card">
     <div class="ct">💾 Backup</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.4;">Tedensko app samodejno shrani backup v napravo (preživi PWA reinstall). Občasno prenesi <strong>JSON v Drive/iCloud</strong> za varnost.</div>
     <div style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap;">
@@ -866,7 +905,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 const LS={sets:'wt_s6',pr:'wt_p6',notes:'wt_n6',bw:'wt_bw6',cycle:'wt_c6',meas:'wt_m6',gym:'wt_g6',theme:'wt_th6',sessions:'wt_sess6',cynotes:'wt_cyn6',restplan:'wt_rp6',setcounts:'wt_sc6'};
 const REST_T={main:180,acc:90,iso:60,lat:45};
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
-const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl"];
+const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
@@ -1095,7 +1134,7 @@ function showPage(p){
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
-  if(p==='tools'){initPlates();initGSUrl();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();}
+  if(p==='tools'){initProfileUI();initPlates();initGSUrl();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();}
   if(p==='gymlog'){renderSessHist();renderRestPlan();renderWeeklySummary();}
   if(p==='stats'){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
@@ -1141,7 +1180,7 @@ function allDone(di,ei){
   return all[key].slice(0,n).every(s=>s.done);
 }
 
-const PROG={
+const PROG_CUT={
   weeks:[
     {reps:"6–8",rpe:"RPE 8–9",sM:5,sA:4,pill:"bl",rb:"rh",dl:false},
     {reps:"8–10",rpe:"RPE 7–8",sM:4,sA:4,pill:"gr",rb:"rm",dl:false},
@@ -1192,7 +1231,195 @@ const PROG={
   ]
 };
 
-// ============== MUSCLE GROUP MAPPING ==============
+// ============== BULK PROGRAM (5/3/1 BBB) ==============
+// Tedni ustrezajo 5/3/1 ciklu: 5s / 3s / 531 / deload
+// fl=glavni 531 dvig (uporablja TM), bbb=BBB 5×10 dodatek
+const W531=[
+  {pct:[0.65,0.75,0.85],reps:["5","5","5+"]},   // teden 1: 5s
+  {pct:[0.70,0.80,0.90],reps:["3","3","3+"]},   // teden 2: 3s
+  {pct:[0.75,0.85,0.95],reps:["5","3","1+"]},   // teden 3: 531
+  {pct:[0.40,0.50,0.60],reps:["5","5","5"]}     // teden 4: deload
+];
+const PROG_BULK={
+  is531:true,
+  weeks:[
+    {reps:"5/3/1",rpe:"5s teden",sM:3,sA:4,pill:"bl",rb:"rh",dl:false,label:"5s"},
+    {reps:"5/3/1",rpe:"3s teden",sM:3,sA:4,pill:"gr",rb:"rm",dl:false,label:"3s"},
+    {reps:"5/3/1",rpe:"531 teden",sM:3,sA:4,pill:"am",rb:"rh",dl:false,label:"531"},
+    {reps:"deload",rpe:"Deload",sM:3,sA:3,pill:"gr",rb:"rl",dl:true,label:"deload"}
+  ],
+  days:[
+    {title:"Push A — Bench 5/3/1",sub:"Prsa · tricepsi · rame",tags:[{t:"Prsa",p:1},{t:"Tricepsi",p:0},{t:"Ramena",p:0}],ex:[
+      {n:"Barbell bench press",m:1,fl:"bench",r:REST_T.main,rl:"3 min",d:"Glavni 5/3/1 dvig. Zadnji set max ponovitev (+).",tip:"Lopatice nazaj, noge v tla."},
+      {n:"Barbell bench press — BBB",m:0,bbb:"bench",r:REST_T.acc,rl:"90s",d:"5×10 pri ~50% TM. Volumen za hipertrofijo.",tip:""},
+      {n:"Incline dumbbell press",m:0,r:REST_T.acc,rl:"90s",d:"30–45° naklon. 3×10.",tip:""},
+      {n:"Lateral raises",m:0,r:REST_T.lat,rl:"45s",d:"3×12-15. Stroga tehnika.",tip:""},
+      {n:"Tricep pushdown — rope",m:0,r:REST_T.iso,rl:"60s",d:"3×12. Komolci prikovani.",tip:""},
+    ]},
+    {title:"Pull A — širina hrbta",sub:"Hrbet · bicepsi",tags:[{t:"Hrbet",p:1},{t:"Bicepsi",p:0}],ex:[
+      {n:"Weighted pull-ups",m:1,r:REST_T.main,rl:"3 min",d:"4×8-10. Dodaj utež.",tip:""},
+      {n:"Barbell row",m:1,r:REST_T.main,rl:"3 min",d:"4×8-10. Vleči k spodnjim prsim.",tip:""},
+      {n:"Seated cable row",m:0,r:REST_T.acc,rl:"90s",d:"3×10. Stisni lopatice.",tip:""},
+      {n:"Face pulls",m:0,r:REST_T.iso,rl:"60s",d:"3×15. Zdravje ramen.",tip:""},
+      {n:"Barbell curl",m:0,r:REST_T.iso,rl:"60s",d:"3×12.",tip:""},
+      {n:"Hammer curl",m:0,r:REST_T.iso,rl:"60s",d:"3×12. Debelina rok.",tip:""},
+    ]},
+    {title:"Noge — Squat 5/3/1",sub:"Kvadricepsi · hamstringi · gluteusi",tags:[{t:"Kvadricepsi",p:1},{t:"Hamstringi",p:1},{t:"Gluteusi",p:0}],ex:[
+      {n:"Barbell squat",m:1,fl:"squat",r:REST_T.main,rl:"3 min",d:"Glavni 5/3/1 dvig. Globina pod vzporedno.",tip:"Trd trup, kolena ven."},
+      {n:"Barbell squat — BBB",m:0,bbb:"squat",r:REST_T.acc,rl:"90s",d:"5×10 pri ~50% TM.",tip:""},
+      {n:"Romanian deadlift",m:1,r:REST_T.acc,rl:"90s",d:"3×10. Hamstringi/gluteusi.",tip:""},
+      {n:"Leg curl — seated",m:0,r:REST_T.iso,rl:"60s",d:"3×12.",tip:""},
+      {n:"Leg extension",m:0,r:REST_T.iso,rl:"60s",d:"3×12.",tip:""},
+      {n:"Standing calf raise",m:0,r:REST_T.lat,rl:"45s",d:"4×15.",tip:""},
+    ]},
+    {title:"Push B — OHP 5/3/1",sub:"Ramena · prsa · tricepsi",tags:[{t:"Ramena",p:1},{t:"Prsa",p:0},{t:"Tricepsi",p:0}],ex:[
+      {n:"Overhead press — barbell",m:1,fl:"ohp",r:REST_T.main,rl:"3 min",d:"Glavni 5/3/1 dvig. Polna zaklenitev.",tip:"Gluteusi stisnjeni."},
+      {n:"Overhead press — BBB",m:0,bbb:"ohp",r:REST_T.acc,rl:"90s",d:"5×10 pri ~50% TM.",tip:""},
+      {n:"Incline dumbbell press",m:0,r:REST_T.acc,rl:"90s",d:"3×10.",tip:""},
+      {n:"Lateral raises",m:0,r:REST_T.lat,rl:"45s",d:"3×15.",tip:""},
+      {n:"Overhead tricep extension",m:0,r:REST_T.iso,rl:"60s",d:"3×12.",tip:""},
+    ]},
+    {title:"Pull B — Deadlift 5/3/1",sub:"Hrbet · hamstringi · bicepsi",tags:[{t:"Hrbet",p:1},{t:"Hamstringi",p:0},{t:"Bicepsi",p:0}],ex:[
+      {n:"Deadlift",m:1,fl:"deadlift",r:REST_T.main,rl:"3 min",d:"Glavni 5/3/1 dvig. Nevtralni hrbet.",tip:"Palica ob telesu, potisni v tla."},
+      {n:"Deadlift — BBB",m:0,bbb:"deadlift",bbbSets:5,bbbReps:5,r:REST_T.acc,rl:"2 min",d:"5×5 pri ~50% TM (deadlift BBB je 5×5, ne 5×10).",tip:""},
+      {n:"Lat pulldown — close grip",m:0,r:REST_T.acc,rl:"90s",d:"3×10.",tip:""},
+      {n:"Single-arm DB row",m:0,r:REST_T.acc,rl:"90s",d:"3×10. Unilateralno.",tip:""},
+      {n:"Reverse fly — machine",m:0,r:REST_T.iso,rl:"60s",d:"3×15. Zadnji deltoid.",tip:""},
+      {n:"Cable curl 21s",m:0,r:REST_T.iso,rl:"60s",d:"3× (7+7+7).",tip:""},
+    ]}
+  ]
+};
+
+// ============== PROFIL SISTEM ==============
+function getActiveProfile(){return localStorage.getItem('wt_profile')||'cut';}
+function setActiveProfile(p){localStorage.setItem('wt_profile',p);}
+// 5/3/1 Training Max-i (90% 1RM) — uporabnik vnese 1RM
+function get531TMs(){try{return JSON.parse(localStorage.getItem('wt_531tm')||'{}');}catch{return {};}}
+function save531TMs(t){localStorage.setItem('wt_531tm',JSON.stringify(t));}
+// Koliko ciklov 5/3/1 je bilo opravljenih (za progresijo TM)
+function get531CycleOffset(){return parseInt(localStorage.getItem('wt_531offset')||'0');}
+function set531CycleOffset(n){localStorage.setItem('wt_531offset',String(n));}
+
+// PROG je aktivni program glede na profil
+let PROG = getActiveProfile()==='bulk' ? PROG_BULK : PROG_CUT;
+
+// Trenutni Training Max za dvig (z upoštevanjem progresije ciklov)
+function getCurrentTM(lift){
+  const tms=get531TMs();
+  const base=parseFloat(tms[lift]);
+  if(!base||isNaN(base))return null;
+  const offset=get531CycleOffset();
+  const inc=(lift==='bench'||lift==='ohp')?2.5:5;
+  return base+offset*inc;
+}
+function roundToPlate(kg){return Math.round(kg/2.5)*2.5;}
+// 5/3/1 prescription za glavni dvig
+function get531Prescription(lift,weekIdx){
+  const tm=getCurrentTM(lift);
+  if(!tm)return null;
+  const w=W531[weekIdx];if(!w)return null;
+  return w.pct.map((p,i)=>({pct:Math.round(p*100),kg:roundToPlate(tm*p),reps:w.reps[i]}));
+}
+// BBB prescription
+function getBBBPrescription(lift,sets,reps){
+  const tm=getCurrentTM(lift);
+  if(!tm)return null;
+  return {kg:roundToPlate(tm*0.5),sets:sets||5,reps:reps||10};
+}
+
+// === PREKLOP PROFILA ===
+function switchProfile(p){
+  const cur=getActiveProfile();
+  if(p===cur){toast('Že aktiven: '+(p==='bulk'?'Bulk':'Cut'),'ok');return;}
+  if(p==='bulk'){
+    const tms=get531TMs();
+    const has=['bench','squat','deadlift','ohp'].every(l=>tms[l]);
+    if(!has){
+      setActiveProfile('bulk');
+      PROG=PROG_BULK;
+      initProfileUI();
+      toast('Bulk aktiven — vnesi 1RM-je spodaj','ok');
+      // Odpri TM editor in scroll
+      const ed=document.getElementById('tm-editor');if(ed)ed.style.display='block';
+      return;
+    }
+  }
+  setActiveProfile(p);
+  PROG = p==='bulk'?PROG_BULK:PROG_CUT;
+  // Reset day/week na varno
+  cw=0;cd=0;
+  localStorage.setItem('wt_last_week','0');localStorage.setItem('wt_last_day','0');
+  initProfileUI();
+  toast('✓ Preklopljeno na '+(p==='bulk'?'Bulk (5/3/1)':'Cut'),'ok');
+}
+
+function initProfileUI(){
+  const prof=getActiveProfile();
+  const status=document.getElementById('profile-status');
+  if(status)status.innerHTML=prof==='bulk'?'Aktivno: <span style="color:var(--green-text);">Bulk — 5/3/1 BBB</span>':'Aktivno: <span style="color:var(--blue-text);">Cut — 5-dnevni PPL</span>';
+  const cutBtn=document.getElementById('prof-cut-btn');
+  const bulkBtn=document.getElementById('prof-bulk-btn');
+  if(cutBtn&&bulkBtn){
+    const active='background:var(--green-bg);border-color:var(--green);color:var(--green-text);';
+    const inactive='background:var(--bg3);';
+    cutBtn.style.cssText=prof==='cut'?active:inactive;
+    bulkBtn.style.cssText=prof==='bulk'?active:inactive;
+  }
+  const ed=document.getElementById('tm-editor');
+  if(ed)ed.style.display=prof==='bulk'?'block':'none';
+  // Napolni TM inpute
+  const tms=get531TMs();
+  ['bench','squat','deadlift','ohp'].forEach(l=>{
+    const inp=document.getElementById('tm-'+l);
+    if(inp&&tms[l])inp.value=tms[l];
+  });
+  render531Current();
+}
+
+function save531FromInputs(){
+  const tms=get531TMs();
+  let any=false;
+  ['bench','squat','deadlift','ohp'].forEach(l=>{
+    const inp=document.getElementById('tm-'+l);
+    if(inp&&inp.value){
+      // Vnos je 1RM, shranimo TM = 90% (zaokroženo)
+      const oneRM=parseFloat(inp.value);
+      if(oneRM>0){tms[l]=roundToPlate(oneRM*0.9);any=true;}
+    }
+  });
+  if(!any){toast('Vnesi vsaj en 1RM','err');return;}
+  save531TMs(tms);
+  render531Current();
+  if(getActiveProfile()==='bulk')showDay(cd);
+  toast('✓ Training Max-i shranjeni','ok');
+}
+
+function render531Current(){
+  const el=document.getElementById('tm-current');if(!el)return;
+  const tms=get531TMs();
+  const offset=get531CycleOffset();
+  const lifts=[['bench','Bench'],['squat','Squat'],['deadlift','DL'],['ohp','OHP']];
+  const parts=lifts.filter(([k])=>tms[k]).map(([k,lbl])=>{
+    const tm=getCurrentTM(k);
+    return `${lbl} TM ${tm}kg`;
+  });
+  el.innerHTML=parts.length?`Trenutni TM (cikel ${offset+1}): ${parts.join(' · ')}`:'Ni vnesenih 1RM-jev.';
+}
+
+function advance531Cycle(){
+  if(!confirm('Zaključi cikel? TM se poveča: +2.5kg bench/OHP, +5kg squat/deadlift.'))return;
+  set531CycleOffset(get531CycleOffset()+1);
+  render531Current();
+  if(getActiveProfile()==='bulk')showDay(cd);
+  toast('✓ Nov cikel — TM povišan','ok');
+}
+function reset531Cycle(){
+  if(!confirm('Resetiraj progresijo ciklov na začetek (TM nazaj na osnovne 1RM)?'))return;
+  set531CycleOffset(0);
+  render531Current();
+  if(getActiveProfile()==='bulk')showDay(cd);
+  toast('↺ Cikli resetirani','ok');
+}
 // Per-vaja: {primary: [muscles], secondary: [muscles], category}
 // Category: 'compound' (več mišic), 'isolation' (ena mišica)
 const EX_MAP = {
@@ -1230,7 +1457,13 @@ const EX_MAP = {
   "Lat pulldown — close grip": {p:["Hrbet"], s:["Bicepsi"], cat:"compound"},
   "Reverse fly — machine": {p:["Zadnji deltoid"], s:[], cat:"isolation"},
   "Incline dumbbell curl": {p:["Bicepsi"], s:[], cat:"isolation"},
-  "Cable curl 21s": {p:["Bicepsi"], s:[], cat:"isolation"}
+  "Cable curl 21s": {p:["Bicepsi"], s:[], cat:"isolation"},
+  // Bulk 5/3/1 vaje
+  "Deadlift": {p:["Hrbet","Hamstringi","Gluteusi"], s:["Trapezius"], cat:"compound"},
+  "Barbell bench press — BBB": {p:["Prsa"], s:["Tricepsi","Sprednji deltoid"], cat:"compound"},
+  "Barbell squat — BBB": {p:["Kvadricepsi","Gluteusi"], s:["Hamstringi"], cat:"compound"},
+  "Overhead press — BBB": {p:["Ramena"], s:["Tricepsi"], cat:"compound"},
+  "Deadlift — BBB": {p:["Hrbet","Hamstringi","Gluteusi"], s:["Trapezius"], cat:"compound"}
 };
 
 // Volume cilji per skupina (sets/teden, znanstveno priporočeno)
@@ -1532,6 +1765,21 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const baseN=wk.dl?3:(e.m?wk.sM:wk.sA);
   const extra=getExtraSets(exKey);
   const swHasData=SWAPS_DB[e.n];
+  // 5/3/1 prescription box (samo bulk profil)
+  let p531Html='';
+  if(PROG.is531&&e.fl){
+    const presc=get531Prescription(e.fl,cw);
+    if(presc){
+      p531Html=`<div class="p531-box"><div class="p531-title">📋 5/3/1 — ${PROG.weeks[cw].label} teden</div>${presc.map((s,i)=>`<div class="p531-row"><span>Set ${i+1}</span><span class="p531-pct">${s.pct}%</span><strong>${s.kg}kg</strong><span>× ${s.reps}</span></div>`).join('')}<div class="p531-note">Zadnji set "+" = naredi MAX ponovitev (vsaj predpisano).</div></div>`;
+    } else {
+      p531Html=`<div class="p531-box p531-warn">⚠ Vnesi 1RM za ${e.fl} — Tools → Profil ali preklopi na Bulk.</div>`;
+    }
+  } else if(PROG.is531&&e.bbb){
+    const bbb=getBBBPrescription(e.bbb,e.bbbSets,e.bbbReps);
+    if(bbb){
+      p531Html=`<div class="p531-box bbb"><div class="p531-title">💪 BBB — volumen</div><div class="p531-row"><strong>${bbb.sets}×${bbb.reps}</strong><span>@ <strong>${bbb.kg}kg</strong> (~50% TM)</span></div></div>`;
+    }
+  }
   // Preveri če je vaja že v celoti zaključena (samo ob render-u — collapse stanje)
   const isAllDone=sets.length>=n&&sets.slice(0,n).every(s=>s.done);
   const userFold=isFolded(exKey);
@@ -1558,6 +1806,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
       </div>
     </div>
     ${ph}${lhHtml}${sugHtml}
+    ${p531Html}
     <div id="wu-dyn-${exKey}"></div>
     <button class="swbtn" style="margin-bottom:6px;background:var(--amber-bg);border-color:var(--amber);color:var(--amber-text);" onclick="showDynWarmup('${exKey}',${di},${ei})">🔥 Ogrevanje</button>
     <div class="ex-d">${e.d}</div>${e.tip?`<div class="ex-tip">${e.tip}</div>`:''}
@@ -3187,6 +3436,9 @@ async function exportData(){
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
     rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
     phases:JSON.parse(localStorage.getItem('wt_phases')||'[]'),
+    profile:getActiveProfile(),
+    tm531:get531TMs(),
+    offset531:get531CycleOffset(),
     goals:JSON.parse(localStorage.getItem('wt_goals')||'[]'),
     daylog:JSON.parse(localStorage.getItem('wt_daylog')||'{}'),
     custom_ex:JSON.parse(localStorage.getItem(CUST_KEY)||'[]'),
@@ -3258,6 +3510,9 @@ function importData(){
         if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
         if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
         if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
+        if(backup.profile) localStorage.setItem('wt_profile',backup.profile);
+        if(backup.tm531) localStorage.setItem('wt_531tm',JSON.stringify(backup.tm531));
+        if(backup.offset531!==undefined) localStorage.setItem('wt_531offset',String(backup.offset531));
         if(backup.goals) localStorage.setItem('wt_goals',JSON.stringify(backup.goals));
         if(backup.daylog) localStorage.setItem('wt_daylog',JSON.stringify(backup.daylog));
         if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
@@ -3279,6 +3534,7 @@ function importData(){
           }
         }
         // Refresh UI
+        PROG = getActiveProfile()==='bulk' ? PROG_BULK : PROG_CUT;
         initTheme();initBWGoal();
         cw=0;cd=0;
         document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));
@@ -4188,6 +4444,9 @@ async function buildBackupJSON(includePhotos){
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
     rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
     phases:JSON.parse(localStorage.getItem('wt_phases')||'[]'),
+    profile:getActiveProfile(),
+    tm531:get531TMs(),
+    offset531:get531CycleOffset(),
     goals:JSON.parse(localStorage.getItem('wt_goals')||'[]'),
     daylog:JSON.parse(localStorage.getItem('wt_daylog')||'{}'),
     custom_ex:JSON.parse(localStorage.getItem(CUST_KEY)||'[]'),
@@ -4324,6 +4583,9 @@ async function restoreBackupFromIDB(id){
         if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
         if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
         if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
+        if(backup.profile) localStorage.setItem('wt_profile',backup.profile);
+        if(backup.tm531) localStorage.setItem('wt_531tm',JSON.stringify(backup.tm531));
+        if(backup.offset531!==undefined) localStorage.setItem('wt_531offset',String(backup.offset531));
         if(backup.goals) localStorage.setItem('wt_goals',JSON.stringify(backup.goals));
         if(backup.daylog) localStorage.setItem('wt_daylog',JSON.stringify(backup.daylog));
         if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
