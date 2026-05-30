@@ -1557,8 +1557,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
         <button class="sw-custom-btn" onclick="useCustomSwap('${exKey}')">Uporabi</button>
       </div>
     </div>
-    ${ph}${lhHtml}${sugHtml}${plateHtml}
-    ${e.m&&ei===0&&cw===0?wuHint(e,sets):''}
+    ${ph}${lhHtml}${sugHtml}
     <div id="wu-dyn-${exKey}"></div>
     <button class="swbtn" style="margin-bottom:6px;background:var(--amber-bg);border-color:var(--amber);color:var(--amber-text);" onclick="showDynWarmup('${exKey}',${di},${ei})">🔥 Ogrevanje</button>
     <div class="ex-d">${e.d}</div>${e.tip?`<div class="ex-tip">${e.tip}</div>`:''}
