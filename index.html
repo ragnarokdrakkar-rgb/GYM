@@ -531,6 +531,17 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div class="sum-grid" id="sum-grid"></div>
     <div id="sum-detail" style="font-size:12px;color:var(--text2);"></div>
   </div>
+  <!-- Long-term overview -->
+  <div class="card">
+    <div class="ct">📅 Dolgoročni pregled</div>
+    <div id="longterm-stats"></div>
+  </div>
+  <!-- Duration trend -->
+  <div class="card">
+    <div class="ct">⏱ Trajanje treningov</div>
+    <div style="position:relative;height:180px;"><canvas id="duration-chart"></canvas></div>
+    <div id="duration-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj treningov.</div>
+  </div>
   <!-- Rest day planner -->
   <div class="card">
     <div class="ct">Tedenski planer</div>
@@ -546,7 +557,17 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   <!-- Session history -->
   <div class="card">
     <div class="ct">Session zgodovina</div>
-    <button class="sb" onclick="addManualSession()" style="margin-bottom:.5rem;background:var(--bg3);">+ Ročno dodaj sesijo</button>
+    <div style="display:flex;gap:6px;margin-bottom:.5rem;flex-wrap:wrap;">
+      <button class="sb" onclick="addManualSession()" style="background:var(--bg3);">+ Ročno dodaj</button>
+      <select class="si" id="sess-filter" onchange="renderSessHist()" style="flex:1;min-width:100px;">
+        <option value="">Vsi dnevi</option>
+        <option value="Push A">Push A</option>
+        <option value="Pull A">Pull A</option>
+        <option value="Noge">Noge</option>
+        <option value="Push B">Push B</option>
+        <option value="Pull B">Pull B</option>
+      </select>
+    </div>
     <div id="sess-hist-content"><div style="font-size:12px;color:var(--text3);">Še ni zabeleženih treningov.</div></div>
   </div>
 </div>
@@ -569,6 +590,23 @@ tr.is-drop{background:rgba(167,139,250,.04);}
       <div class="pbg"><div class="pf" id="bw-pf" style="width:0%;"></div></div>
       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:2px;"><span id="bw-start-label">Start</span><span id="bw-goal-label">Cilj</span></div>
     </div>
+  </div>
+  <div class="card" id="bw-stats-card" style="display:none;">
+    <div class="ct">📊 Statistika</div>
+    <div id="bw-stats"></div>
+  </div>
+  <div class="card" id="bw-phase-card">
+    <div class="ct">🔵 Faza</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Označi obdobje (cut/bulk/maintenance) za pregled.</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <select class="si" id="phase-type" style="flex:1;">
+        <option value="cut">Cut</option>
+        <option value="bulk">Bulk</option>
+        <option value="maintain">Maintenance</option>
+      </select>
+      <button class="sb" onclick="startPhase()">Začni danes</button>
+    </div>
+    <div id="phase-list" style="margin-top:.5rem;"></div>
   </div>
   <div class="card" id="bw-chart-card" style="display:none;"><div class="ct">Trend</div><div class="cw"><canvas id="bw-chart"></canvas></div></div>
   <div class="card" id="bw-log-card" style="display:none;"><div class="ct">Zgodovina</div><div id="bw-log"></div></div>
@@ -1054,7 +1092,7 @@ function showPage(p){
   document.getElementById('page-'+p).classList.add('active');
   const idx={workout:0,cycle:1,gymlog:2,bodyweight:3,stats:4,tools:5}[p];
   document.querySelectorAll('.nt')[idx].classList.add('active');
-  if(p==='bodyweight'){initBWGoal();renderBW();}
+  if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
   if(p==='tools'){initPlates();initGSUrl();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();}
@@ -2654,8 +2692,18 @@ function confirmNext(){
 function renderSessHist(){
   const sessions=getSessions();
   const el=document.getElementById('sess-hist-content');if(!el)return;
-  if(sessions.length===0){el.innerHTML='<div style="font-size:12px;color:var(--text3);">Še ni treningov.</div>';return;}
-  el.innerHTML=sessions.slice(0,30).map((s,idx)=>`<div class="sess-entry">
+  // Filter po dnevu
+  const filter=(document.getElementById('sess-filter')||{}).value||'';
+  // Render dolgoročni pregled + duration graf (vedno, neodvisno od filtra)
+  renderLongtermStats();
+  renderDurationChart();
+  let filtered=sessions;
+  if(filter)filtered=sessions.filter(s=>s.dayName===filter);
+  if(filtered.length===0){el.innerHTML='<div style="font-size:12px;color:var(--text3);">'+(filter?'Ni treningov za "'+filter+'".':'Še ni treningov.')+'</div>';return;}
+  // idx mora kazati na originalni index v sessions
+  el.innerHTML=filtered.slice(0,30).map(s=>{
+    const idx=sessions.indexOf(s);
+    return `<div class="sess-entry">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
       <div style="flex:1;">
         <div class="sess-day">${s.dayName} — T${s.weekNum} · Cikel ${s.cycle}</div>
@@ -2666,7 +2714,55 @@ function renderSessHist(){
         <button class="bk-item-btn del" style="font-size:11px;" onclick="deleteSession(${idx})" title="Izbriši">×</button>
       </div>
     </div>
-  </div>`).join('');
+  </div>`;}).join('');
+}
+
+// Dolgoročni pregled
+function renderLongtermStats(){
+  const el=document.getElementById('longterm-stats');if(!el)return;
+  const sessions=getSessions();
+  if(sessions.length===0){el.innerHTML='<div style="font-size:12px;color:var(--text3);">Ni podatkov.</div>';return;}
+  const total=sessions.length;
+  const durations=sessions.filter(s=>s.durationMin>0).map(s=>s.durationMin);
+  const avgDur=durations.length?Math.round(durations.reduce((a,b)=>a+b,0)/durations.length):0;
+  const maxDur=durations.length?Math.max(...durations):0;
+  const minDur=durations.length?Math.min(...durations):0;
+  // Treningov na teden (povprečje zadnjih 4 tednov)
+  const now=Date.now();
+  const last4w=sessions.filter(s=>now-new Date(s.date).getTime()<=28*86400000).length;
+  const perWeek=(last4w/4).toFixed(1);
+  // Najpogostejši dan
+  const dayCounts={};
+  sessions.forEach(s=>{dayCounts[s.dayName]=(dayCounts[s.dayName]||0)+1;});
+  // Prvi trening datum
+  const firstDate=sessions[sessions.length-1].date;
+  const daysSince=Math.floor((now-new Date(firstDate).getTime())/86400000);
+  return el.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:700;color:var(--green-text);">${total}</div><div style="font-size:10px;color:var(--text3);">treningov skupaj</div></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:700;color:var(--blue-text);">${perWeek}</div><div style="font-size:10px;color:var(--text3);">na teden (4t avg)</div></div>
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:700;color:var(--purple-text);">${avgDur}</div><div style="font-size:10px;color:var(--text3);">povp. minut</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center;">Najkrajši ${minDur}min · najdaljši ${maxDur}min · ${daysSince} dni od prvega treninga</div>`;
+}
+
+// Trajanje treningov graf
+let durationChart=null;
+function renderDurationChart(){
+  const canvas=document.getElementById('duration-chart');
+  const empty=document.getElementById('duration-empty');
+  if(!canvas)return;
+  const sessions=getSessions().slice().reverse().filter(s=>s.durationMin>0);
+  if(sessions.length<2){if(empty)empty.style.display='block';canvas.style.display='none';if(durationChart){durationChart.destroy();durationChart=null;}return;}
+  if(empty)empty.style.display='none';canvas.style.display='block';
+  if(durationChart)durationChart.destroy();
+  const isDark=document.documentElement.getAttribute('data-theme')!=='light';
+  const recent=sessions.slice(-20);
+  durationChart=new Chart(canvas.getContext('2d'),{
+    type:'line',
+    data:{labels:recent.map(s=>s.date.slice(5)),datasets:[{label:'Min',data:recent.map(s=>s.durationMin),borderColor:'#7f77dd',backgroundColor:'rgba(127,119,221,0.1)',fill:true,tension:0.3,pointRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{color:isDark?'#2e3035':'#eee'}},x:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{display:false}}}}
+  });
 }
 
 function editSession(idx){
@@ -2867,7 +2963,132 @@ function renderBW(){
   if(bwChart)bwChart.destroy();
   const allVals=[...vals,goal];
   const yMin=Math.floor(Math.min(...allVals)-1),yMax=Math.ceil(Math.max(...allVals)+1);
-  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:vals,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.1)',tension:0.3,pointRadius:4,pointBackgroundColor:'#1d9e75',borderWidth:2},{data:Array(labels.length).fill(goal),borderColor:'#ef9f27',borderDash:[4,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false},border:{color:gc}}}}});
+  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Teža',data:vals,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.1)',tension:0.3,pointRadius:3,pointBackgroundColor:'#1d9e75',borderWidth:1.5},{label:'7-dnevno povprečje',data:movingAvg(vals,7),borderColor:'#7f77dd',backgroundColor:'transparent',tension:0.4,pointRadius:0,borderWidth:2.5},{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#ef9f27',borderDash:[4,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:tc,font:{size:10},boxWidth:12}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false},border:{color:gc}}}}});
+  // Statistika + faze
+  renderBWStats(entries,goal);
+  renderPhases();
+}
+
+// 7-dnevno drseče povprečje
+function movingAvg(arr,window){
+  return arr.map((_,i)=>{
+    const start=Math.max(0,i-window+1);
+    const slice=arr.slice(start,i+1);
+    return Math.round(slice.reduce((a,b)=>a+b,0)/slice.length*100)/100;
+  });
+}
+
+function renderBWStats(entries,goal){
+  const card=document.getElementById('bw-stats-card');
+  const el=document.getElementById('bw-stats');
+  if(!el)return;
+  if(entries.length<2){card.style.display='none';return;}
+  card.style.display='block';
+  const vals=entries.map(e=>parseFloat(e[1]));
+  const dates=entries.map(e=>new Date(e[0]));
+  const latest=vals[vals.length-1];
+  // 7-dnevno povprečje (zadnjih 7 vnosov)
+  const last7=vals.slice(-7);
+  const avg7=last7.reduce((a,b)=>a+b,0)/last7.length;
+  // Tedenska sprememba — primerjaj zadnjih 7 dni vs prejšnjih 7 dni
+  const now=dates[dates.length-1].getTime();
+  const thisWeek=entries.filter(e=>now-new Date(e[0]).getTime()<=7*86400000).map(e=>parseFloat(e[1]));
+  const prevWeek=entries.filter(e=>{const t=now-new Date(e[0]).getTime();return t>7*86400000&&t<=14*86400000;}).map(e=>parseFloat(e[1]));
+  let weeklyChange=null;
+  if(thisWeek.length>0&&prevWeek.length>0){
+    const tAvg=thisWeek.reduce((a,b)=>a+b,0)/thisWeek.length;
+    const pAvg=prevWeek.reduce((a,b)=>a+b,0)/prevWeek.length;
+    weeklyChange=tAvg-pAvg;
+  } else if(vals.length>=2){
+    // Fallback: razlika zadnjih dveh vnosov ekstrapolirana
+    const daySpan=(dates[dates.length-1]-dates[0])/86400000||1;
+    const totalChange=vals[vals.length-1]-vals[0];
+    weeklyChange=(totalChange/daySpan)*7;
+  }
+  // Napoved do cilja
+  let forecast='';
+  if(weeklyChange!==null&&Math.abs(weeklyChange)>0.05){
+    const remaining=goal-avg7;
+    const weeksNeeded=remaining/weeklyChange;
+    if(weeksNeeded>0&&weeksNeeded<260){
+      const reachDate=new Date(now+weeksNeeded*7*86400000);
+      forecast=`📅 Pri tem tempu dosežeš ${goal}kg okoli <strong>${reachDate.toLocaleDateString('sl-SI')}</strong> (~${Math.round(weeksNeeded)} tednov)`;
+    } else if(weeksNeeded<=0){
+      forecast=`✓ Cilj dosežen ali presežen!`;
+    } else {
+      forecast=`Tempo prepočasen za realno napoved`;
+    }
+  }
+  // Tempo ocena za cut
+  let tempoNote='';
+  if(weeklyChange!==null&&weeklyChange<0){
+    const rate=Math.abs(weeklyChange);
+    if(rate>0.8)tempoNote='<span style="color:var(--red-text);">⚠ Hitro — tvegaš izgubo mišice. Razmisli o manjšem deficitu.</span>';
+    else if(rate>=0.3&&rate<=0.7)tempoNote='<span style="color:var(--green-text);">✓ Idealen tempo za cut (0.3-0.7kg/teden)</span>';
+    else if(rate<0.3)tempoNote='<span style="color:var(--amber-text);">Počasen tempo — ok če si blizu cilja</span>';
+  }
+  const wcColor=weeklyChange<0?'var(--green-text)':weeklyChange>0?'var(--red-text)':'var(--text2)';
+  const wcStr=weeklyChange!==null?`${weeklyChange>0?'+':''}${weeklyChange.toFixed(2)}kg`:'—';
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:.5rem;">
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:var(--purple-text);">${avg7.toFixed(1)}kg</div>
+        <div style="font-size:11px;color:var(--text3);">7-dnevno povprečje</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:${wcColor};">${wcStr}</div>
+        <div style="font-size:11px;color:var(--text3);">Tedenska sprememba</div>
+      </div>
+    </div>
+    ${tempoNote?`<div style="font-size:12px;padding:6px 0;">${tempoNote}</div>`:''}
+    ${forecast?`<div style="font-size:12px;color:var(--text2);padding:6px;background:var(--bg3);border-radius:6px;">${forecast}</div>`:''}
+    <div style="font-size:10px;color:var(--text3);margin-top:6px;">Dnevna teža niha ±1-2kg (voda, hrana). Sledi 7-dnevnemu povprečju, ne posameznim dnevom.</div>`;
+}
+
+// === FAZE (cut/bulk/maintenance) ===
+function getPhases(){try{return JSON.parse(localStorage.getItem('wt_phases')||'[]');}catch{return [];}}
+function savePhases(p){localStorage.setItem('wt_phases',JSON.stringify(p));}
+function startPhase(){
+  const type=document.getElementById('phase-type').value;
+  const phases=getPhases();
+  const today=new Date().toISOString().split('T')[0];
+  // Zaključi prejšnjo fazo
+  if(phases.length>0&&!phases[phases.length-1].end){
+    phases[phases.length-1].end=today;
+  }
+  phases.push({type,start:today,end:null});
+  savePhases(phases);
+  renderPhases();
+  toast('✓ Faza '+type+' začeta','ok');
+}
+function endPhase(idx){
+  const phases=getPhases();
+  if(phases[idx]){phases[idx].end=new Date().toISOString().split('T')[0];savePhases(phases);renderPhases();}
+}
+function deletePhase(idx){
+  const phases=getPhases();phases.splice(idx,1);savePhases(phases);renderPhases();
+}
+function renderPhases(){
+  const el=document.getElementById('phase-list');if(!el)return;
+  const phases=getPhases().slice().reverse();
+  if(phases.length===0){el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:.4rem;">Ni faz.</div>';return;}
+  const labels={cut:'🔻 Cut',bulk:'🔺 Bulk',maintain:'➖ Maintenance'};
+  const bw=getBW();
+  el.innerHTML=phases.map((p,ri)=>{
+    const idx=getPhases().length-1-ri;
+    const active=!p.end;
+    // Sprememba teže v fazi
+    let change='';
+    const inPhase=Object.entries(bw).filter(([d])=>d>=p.start&&(!p.end||d<=p.end)).sort();
+    if(inPhase.length>=2){
+      const diff=parseFloat(inPhase[inPhase.length-1][1])-parseFloat(inPhase[0][1]);
+      change=` · ${diff>0?'+':''}${diff.toFixed(1)}kg`;
+    }
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--border);font-size:12px;">
+      <div><strong>${labels[p.type]||p.type}</strong><div style="font-size:10px;color:var(--text3);">${p.start} → ${p.end||'zdaj'}${change}</div></div>
+      <div style="display:flex;gap:4px;">${active?`<button class="bk-item-btn" style="font-size:10px;" onclick="endPhase(${idx})">Končaj</button>`:''}<button class="bk-item-btn del" style="font-size:10px;" onclick="deletePhase(${idx})">×</button></div>
+    </div>`;
+  }).join('');
 }
 
 // MEASUREMENTS — neck removed
@@ -2966,6 +3187,7 @@ async function exportData(){
     extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
     rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
+    phases:JSON.parse(localStorage.getItem('wt_phases')||'[]'),
     goals:JSON.parse(localStorage.getItem('wt_goals')||'[]'),
     daylog:JSON.parse(localStorage.getItem('wt_daylog')||'{}'),
     custom_ex:JSON.parse(localStorage.getItem(CUST_KEY)||'[]'),
@@ -3036,6 +3258,7 @@ function importData(){
         if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
         if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
         if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
+        if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
         if(backup.goals) localStorage.setItem('wt_goals',JSON.stringify(backup.goals));
         if(backup.daylog) localStorage.setItem('wt_daylog',JSON.stringify(backup.daylog));
         if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
@@ -3965,6 +4188,7 @@ async function buildBackupJSON(includePhotos){
     extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
     rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
+    phases:JSON.parse(localStorage.getItem('wt_phases')||'[]'),
     goals:JSON.parse(localStorage.getItem('wt_goals')||'[]'),
     daylog:JSON.parse(localStorage.getItem('wt_daylog')||'{}'),
     custom_ex:JSON.parse(localStorage.getItem(CUST_KEY)||'[]'),
@@ -4100,6 +4324,7 @@ async function restoreBackupFromIDB(id){
         if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
         if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
         if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
+        if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
         if(backup.goals) localStorage.setItem('wt_goals',JSON.stringify(backup.goals));
         if(backup.daylog) localStorage.setItem('wt_daylog',JSON.stringify(backup.daylog));
         if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
