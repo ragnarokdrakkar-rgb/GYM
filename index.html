@@ -717,6 +717,29 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   </div>
 </div>
 
+<!-- DATA EDITOR POPUP -->
+<div class="note-pop" id="data-edit-pop">
+  <div class="note-pop-card" style="max-width:520px;max-height:88vh;display:flex;flex-direction:column;">
+    <h3>✎ Uredi pretekle podatke</h3>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Izberi cikel, teden in dan. Popravi kile/ponovitve neposredno.</div>
+    <div style="display:flex;gap:6px;margin-bottom:.5rem;">
+      <select class="si" id="de-cycle" onchange="renderDataEditor()" style="flex:1;"></select>
+      <select class="si" id="de-week" onchange="renderDataEditor()" style="flex:1;">
+        <option value="0">T1 Heavy</option>
+        <option value="1">T2 Moderate</option>
+        <option value="2">T3 Volume</option>
+        <option value="3">T4 Deload</option>
+      </select>
+      <select class="si" id="de-day" onchange="renderDataEditor()" style="flex:1;"></select>
+    </div>
+    <div id="de-content" style="flex:1;overflow-y:auto;max-height:60vh;"></div>
+    <div class="note-pop-actions">
+      <button class="sb" onclick="closeDataEditor()" style="background:var(--bg3);">Zapri</button>
+      <button class="sb" onclick="saveDataEditor()" style="background:var(--green-bg);border-color:var(--green);color:var(--green-text);">💾 Shrani</button>
+    </div>
+  </div>
+</div>
+
 <!-- NOTE POPUP -->
 <div class="note-pop" id="note-pop">
   <div class="note-pop-card">
@@ -773,6 +796,11 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     </div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:.4rem;font-weight:500;">Lokalni avto-backupi (zadnjih 4):</div>
     <div id="backup-list"></div>
+  </div>
+  <div class="card">
+    <div class="ct">✎ Uredi pretekle podatke</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;line-height:1.4;">Popravi kile/ponovitve katerekoli pretekle vaje (npr. če so se podatki pomešali). Izbereš cikel, teden, dan.</div>
+    <button class="sb" onclick="openDataEditor()" style="width:100%;">Odpri urejevalnik</button>
   </div>
   <div class="card">
     <div class="ct">➕ Dodaj svojo vajo</div>
@@ -1576,6 +1604,99 @@ function openAddExercise(di){
   setTimeout(()=>document.getElementById('add-ex-search').focus(),100);
 }
 function closeAddExercise(){document.getElementById('add-ex-pop').classList.remove('on');}
+
+// ============== UREJEVALNIK PRETEKLIH PODATKOV ==============
+function openDataEditor(){
+  const cyc=getCyc();
+  // Zagotovi _origLen za vse dni (da extra vaje pravilno ločimo)
+  PROG.days.forEach(d=>{if(d._origLen===undefined)d._origLen=d.ex.length;});
+  // Napolni cikle (1..trenutni)
+  const cycSel=document.getElementById('de-cycle');
+  cycSel.innerHTML='';
+  for(let c=1;c<=cyc.num;c++){
+    cycSel.innerHTML+=`<option value="${c}">Cikel ${c}</option>`;
+  }
+  cycSel.value=cyc.num;
+  // Napolni dneve
+  const daySel=document.getElementById('de-day');
+  daySel.innerHTML=DAY_NAMES.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
+  daySel.value=cd;
+  // Privzeti teden = trenutni
+  document.getElementById('de-week').value=cw;
+  renderDataEditor();
+  document.getElementById('data-edit-pop').classList.add('on');
+}
+function closeDataEditor(){document.getElementById('data-edit-pop').classList.remove('on');}
+
+function renderDataEditor(){
+  const c=parseInt(document.getElementById('de-cycle').value);
+  const w=parseInt(document.getElementById('de-week').value);
+  const di=parseInt(document.getElementById('de-day').value);
+  const el=document.getElementById('de-content');
+  // Vaje tega dne v PRAVILNEM vrstnem redu (ujema exKey e0,e1... indekse).
+  // d.ex vzdržuje showDay kot urejen mixed; dodamo morebitne manjkajoče extra.
+  const d=PROG.days[di];
+  if(d&&d._origLen===undefined)d._origLen=d.ex.length;
+  let mixed=d?d.ex.map(e=>({...e})):[];
+  const names=new Set(mixed.map(e=>e.n));
+  getExtraExercises(di).forEach(ex=>{if(!names.has(ex.n))mixed.push({...ex,extra:true});});
+  const all=getSets();
+  let html='';
+  mixed.forEach((e,ei)=>{
+    const key=sdk(c,w,di,ei);
+    const sets=all[key]||[];
+    const dispName=getSwappedName(key,e.n);
+    const hasData=sets.some(s=>s.kg||s.reps);
+    html+=`<div style="background:var(--bg3);border-radius:8px;padding:8px;margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:${hasData?'var(--text)':'var(--text3)'};">${dispName}${e.extra?' <span style="font-size:10px;color:var(--blue-text);">+extra</span>':''}</div>`;
+    if(sets.length===0){
+      html+=`<div style="font-size:11px;color:var(--text3);">Ni setov.</div>`;
+    } else {
+      html+=`<table style="width:100%;font-size:12px;border-collapse:collapse;"><thead><tr style="color:var(--text3);font-size:10px;"><th style="text-align:left;padding:2px;">Set</th><th style="padding:2px;">Kg</th><th style="padding:2px;">Pon</th><th style="padding:2px;">✓</th></tr></thead><tbody>`;
+      sets.forEach((s,si)=>{
+        html+=`<tr>
+          <td style="padding:2px;color:var(--text3);">${si+1}</td>
+          <td style="padding:2px;"><input type="number" step="0.5" value="${s.kg||''}" id="de-${key}-${si}-kg" style="width:60px;padding:4px;background:var(--bg2);border:.5px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-size:12px;"></td>
+          <td style="padding:2px;"><input type="number" value="${s.reps||''}" id="de-${key}-${si}-reps" style="width:50px;padding:4px;background:var(--bg2);border:.5px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-size:12px;"></td>
+          <td style="padding:2px;text-align:center;"><input type="checkbox" ${s.done?'checked':''} id="de-${key}-${si}-done" style="width:16px;height:16px;"></td>
+        </tr>`;
+      });
+      html+=`</tbody></table>`;
+    }
+    html+=`</div>`;
+  });
+  if(!html)html='<div style="font-size:12px;color:var(--text3);padding:1rem;text-align:center;">Ni vaj za ta dan.</div>';
+  el.innerHTML=html;
+  el.dataset.keys=JSON.stringify(mixed.map((e,ei)=>sdk(c,w,di,ei)));
+}
+
+function saveDataEditor(){
+  const el=document.getElementById('de-content');
+  const keys=JSON.parse(el.dataset.keys||'[]');
+  const all=getSets();
+  let changed=0;
+  keys.forEach(key=>{
+    if(!all[key])return;
+    all[key].forEach((s,si)=>{
+      const kgEl=document.getElementById(`de-${key}-${si}-kg`);
+      const repsEl=document.getElementById(`de-${key}-${si}-reps`);
+      const doneEl=document.getElementById(`de-${key}-${si}-done`);
+      if(kgEl){
+        const newKg=kgEl.value;
+        const newReps=repsEl?repsEl.value:s.reps;
+        const newDone=doneEl?doneEl.checked:s.done;
+        if(String(s.kg)!==String(newKg)||String(s.reps)!==String(newReps)||s.done!==newDone){
+          s.kg=newKg;s.reps=newReps;s.done=newDone;changed++;
+        }
+      }
+    });
+  });
+  saveSets(all);
+  toast(`✓ Shranjeno (${changed} sprememb)`,'ok');
+  // Osveži prikaze
+  if(typeof showDay==='function')showDay(cd);
+}
+
 function renderAddExList(query){
   const q=(query||'').toLowerCase().trim();
   const customs=getCustomExercises().map(c=>({n:c.n,m:c.muscle,c:c.cat,d:c.desc||'',custom:true}));
