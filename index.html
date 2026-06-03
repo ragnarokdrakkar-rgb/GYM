@@ -1564,6 +1564,8 @@ function showDay(idx){
     <button class="sb" style="flex:1;background:var(--bg3);border:1px dashed var(--border2);" onclick="openAddExercise(${idx})">+ Dodaj vajo</button>
   </div>`;
   document.getElementById('day-content').innerHTML=html;
+  // Obnovi aktivni rest timer, če teče (re-render je uničil njegov UI)
+  if(typeof restoreTimer==='function')restoreTimer();
 }
 
 // Vrstni red shranjen kot SEZNAM IMEN vaj per dan
@@ -2813,19 +2815,22 @@ function restoreTimer(){
     const t=JSON.parse(raw);
     const rem=Math.ceil((t.endTs-Date.now())/1000);
     if(rem<=0){localStorage.removeItem(LS_TIMER);return;}
+    // Počisti morebitni obstoječi interval za ta key (proti podvajanju ob re-renderju)
+    if(TM[t.key]){clearInterval(TM[t.key]);TM[t.key]=null;}
     // Počakaj da DOM zariše vajo, potem zagon
     setTimeout(()=>{
       const bar=document.getElementById('tb-'+t.key);
-      if(!bar){localStorage.removeItem(LS_TIMER);return;}
+      if(!bar){return;}  // vaja ni (več) na zaslonu — pusti LS_TIMER, lahko se vrne
       const cnt=document.getElementById('tc-'+t.key);
       bar.classList.add('on');bar.classList.remove('flash');
+      if(TM[t.key]){clearInterval(TM[t.key]);}
       const tick=()=>{
         const r=Math.max(0,Math.ceil((t.endTs-Date.now())/1000));
         if(cnt)cnt.textContent=r;
         if(r<=0){clearInterval(TM[t.key]);TM[t.key]=null;localStorage.removeItem(LS_TIMER);alertEnd(t.key);}
       };
       tick();TM[t.key]=setInterval(tick,250);
-    },300);
+    },50);
   }catch(e){localStorage.removeItem(LS_TIMER);}
 }
 function pad(n){return String(n).padStart(2,'0');}
