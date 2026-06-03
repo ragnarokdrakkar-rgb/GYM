@@ -3459,7 +3459,16 @@ function renderBW(){
   const pl=document.getElementById('bw-prog-label');if(pl)pl.textContent=`Napredek do ${goal}kg`;
   const sl=document.getElementById('bw-start-label');if(sl)sl.textContent=`Start: ${first}kg`;
   const gl=document.getElementById('bw-goal-label');if(gl)gl.textContent=`Cilj: ${goal}kg`;
-  document.getElementById('bw-log').innerHTML=entries.slice().reverse().slice(0,10).map((e,i,arr)=>{const prev=arr[i+1];const diff=prev?parseFloat(e[1])-parseFloat(prev[1]):0;const ds=diff!==0?`<span style="font-size:11px;color:${diff<0?'var(--green-text)':'var(--red-text)'}">${diff<0?'↓':'↑'}${Math.abs(diff).toFixed(1)}kg</span>`:'';return`<div class="bwe"><span>${e[0]}</span><span style="display:flex;gap:8px;align-items:center;">${ds}<strong style="color:var(--text);">${e[1]}kg</strong><button class="bk-item-btn" style="font-size:11px;padding:2px 6px;" onclick="editBW('${e[0]}',${e[1]})" title="Uredi">✎</button><button class="bk-item-btn del" style="font-size:11px;padding:2px 6px;" onclick="deleteBW('${e[0]}')" title="Izbriši">×</button></span></div>`;}).join('');
+  const bwRev=entries.slice().reverse();
+  const bwRow=(e,i,arr)=>{const prev=arr[i+1];const diff=prev?parseFloat(e[1])-parseFloat(prev[1]):0;const ds=diff!==0?`<span style="font-size:11px;color:${diff<0?'var(--green-text)':'var(--red-text)'}">${diff<0?'↓':'↑'}${Math.abs(diff).toFixed(1)}kg</span>`:'';return`<div class="bwe"><span>${e[0]}</span><span style="display:flex;gap:8px;align-items:center;">${ds}<strong style="color:var(--text);">${e[1]}kg</strong><button class="bk-item-btn" style="font-size:11px;padding:2px 6px;" onclick="editBW('${e[0]}',${e[1]})" title="Uredi">✎</button><button class="bk-item-btn del" style="font-size:11px;padding:2px 6px;" onclick="deleteBW('${e[0]}')" title="Izbriši">×</button></span></div>`;};
+  const bwShown=bwRev.slice(0,10).map((e,i)=>bwRow(e,i,bwRev)).join('');
+  const bwRest=bwRev.slice(10).map((e,i)=>bwRow(e,i+10,bwRev)).join('');
+  let bwHtml=bwShown;
+  if(bwRest){
+    bwHtml+=`<div id="bw-log-rest" style="display:none;">${bwRest}</div>
+    <button class="sb" onclick="const r=document.getElementById('bw-log-rest');const open=r.style.display!=='none';r.style.display=open?'none':'block';this.textContent=open?'▾ Prikaži vse (${bwRev.length})':'▴ Skrij';" style="width:100%;margin-top:.5rem;background:var(--bg3);font-size:12px;">▾ Prikaži vse (${bwRev.length})</button>`;
+  }
+  document.getElementById('bw-log').innerHTML=bwHtml;
   const labels=entries.map(e=>e[0].slice(5)),vals=entries.map(e=>parseFloat(e[1]));
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
   const gc=isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)',tc=isDark?'#9da3ae':'#666';
