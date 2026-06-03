@@ -4012,25 +4012,23 @@ function renderTrainCalendar(){
 // === e1RM TREND GRAF ===
 let e1rmChart=null,e1rmActiveLift=0;
 function getE1RMHistory(){
-  // Za vsako glavno vajo, zberi (datum, max e1RM) skozi sesije
   const all=getSets();
   const lifts={};
   Object.entries(BIG_LIFTS).forEach(([key,exName])=>{lifts[exName]=[];});
-  // Tudi dodaj vse vaje ki imajo PR history? Za zdaj samo glavne + tiste z dovolj podatki
-  const sessions=getSessions().slice().reverse();  // od najstarejše
+  const sessions=getSessions().slice().reverse();
   sessions.forEach(s=>{
     const di=DAY_NAMES.indexOf(s.dayName);if(di<0)return;
+    // SAMO pravi teden te sesije
+    const w=Math.max(0,(s.weekNum||1)-1);
     PROG.days[di]&&PROG.days[di].ex.forEach((e,ei)=>{
-      for(let w=0;w<4;w++){
-        const k=sdk(s.cycle,w,di,ei);
-        if(all[k]){
-          const done=all[k].filter(x=>x.done&&x.kg&&x.reps);
-          if(done.length>0){
-            const best=done.reduce((mx,x)=>{const e1=parseFloat(x.kg)*(1+parseInt(x.reps)/30);return e1>mx?e1:mx;},0);
-            if(best>0){
-              if(!lifts[e.n])lifts[e.n]=[];
-              lifts[e.n].push({date:s.date,e1rm:Math.round(best)});
-            }
+      const k=sdk(s.cycle,w,di,ei);
+      if(all[k]){
+        const done=all[k].filter(x=>x.done&&x.kg&&x.reps);
+        if(done.length>0){
+          const best=done.reduce((mx,x)=>{const e1=parseFloat(x.kg)*(1+parseInt(x.reps)/30);return e1>mx?e1:mx;},0);
+          if(best>0){
+            if(!lifts[e.n])lifts[e.n]=[];
+            lifts[e.n].push({date:s.date,e1rm:Math.round(best)});
           }
         }
       }
