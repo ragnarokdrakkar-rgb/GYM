@@ -2179,12 +2179,16 @@ function getTonnageHistory(){
     const di=DAY_NAMES.indexOf(s.dayName);
     let tonnage=0;
     if(di>=0){
-      for(let w=0;w<4;w++)for(let ei=0;ei<20;ei++){
+      // SAMO pravi teden te sesije (weekNum je 1-indexed)
+      const w=Math.max(0,(s.weekNum||1)-1);
+      for(let ei=0;ei<20;ei++){
         const k=sdk(s.cycle,w,di,ei);
-        if(all[k])all[k].filter(x=>x.done).forEach(x=>tonnage+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0));
+        if(all[k])all[k].filter(x=>x.done&&x.kg&&x.reps).forEach(x=>{
+          tonnage+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0);
+        });
       }
     }
-    return {date:s.date,tonnage:Math.round(tonnage)};
+    return {date:s.date,day:s.dayName,tonnage:Math.round(tonnage)};
   }).filter(t=>t.tonnage>0);
 }
 let tonnageChart=null;
@@ -3088,11 +3092,11 @@ function renderWeeklySummary(){
     sessList.forEach(sess=>{
       const di=DAY_NAMES.indexOf(sess.dayName);
       if(di<0||!PROG.days[di])return;
-      for(let w=0;w<4;w++){
-        for(let ei=0;ei<PROG.days[di].ex.length;ei++){
-          const key=sdk(sess.cycle,w,di,ei);
-          if(all[key]){all[key].filter(x=>x.done).forEach(x=>{s++;v+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0);});}
-        }
+      // SAMO pravi teden te sesije
+      const w=Math.max(0,(sess.weekNum||1)-1);
+      for(let ei=0;ei<PROG.days[di].ex.length;ei++){
+        const key=sdk(sess.cycle,w,di,ei);
+        if(all[key]){all[key].filter(x=>x.done).forEach(x=>{s++;v+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0);});}
       }
     });
     return {sets:s,vol:v};
