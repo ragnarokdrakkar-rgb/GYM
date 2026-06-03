@@ -564,6 +564,12 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div class="ct">📅 Dolgoročni pregled</div>
     <div id="longterm-stats"></div>
   </div>
+  <!-- Consistency by day -->
+  <div class="card">
+    <div class="ct">📊 Konsistenca po dnevih</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Kako pogosto opraviš vsak trening (zadnjih 8 tednov).</div>
+    <div id="consistency-stats"></div>
+  </div>
   <!-- Duration trend -->
   <div class="card">
     <div class="ct">⏱ Trajanje treningov</div>
@@ -572,15 +578,10 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   </div>
   <!-- Rest day planner -->
   <div class="card">
-    <div class="ct">Tedenski planer</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;">Tapni dan za spremembo tipa.</div>
+    <div class="ct">📋 Tedenski plan</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;">Tapni dan, da krožiš: Počitek → Push A → Pull A → Noge → Push B → Pull B → Kardio. Načrtuj svoj teden.</div>
     <div class="rest-grid" id="rest-grid"></div>
-    <div class="rest-type-sel" id="rest-type-sel">
-      <button class="rts" id="rts-train" onclick="setRestMode('train')">🏋 Trening</button>
-      <button class="rts" id="rts-rest" onclick="setRestMode('rest')">😴 Počitek</button>
-      <button class="rts" id="rts-cardio" onclick="setRestMode('cardio')">🚶 Kardio</button>
-    </div>
-    <div class="week-note">Tapni dan in nato tip — shrani se samodejno.</div>
+    <div id="plan-summary" style="font-size:11px;color:var(--text3);margin-top:.75rem;text-align:center;"></div>
   </div>
   <!-- Session history -->
   <div class="card">
@@ -3091,18 +3092,41 @@ function renderSessHist(){
   const filter=(document.getElementById('sess-filter')||{}).value||'';
   // Render dolgoročni pregled + duration graf (vedno, neodvisno od filtra)
   renderLongtermStats();
+  renderConsistency();
   renderDurationChart();
   let filtered=sessions;
   if(filter)filtered=sessions.filter(s=>s.dayName===filter);
   if(filtered.length===0){el.innerHTML='<div style="font-size:12px;color:var(--text3);">'+(filter?'Ni treningov za "'+filter+'".':'Še ni treningov.')+'</div>';return;}
   // idx mora kazati na originalni index v sessions
+  const all=getSets();
   el.innerHTML=filtered.slice(0,30).map(s=>{
     const idx=sessions.indexOf(s);
+    // Izračunaj tonažo in št. setov za to sesijo
+    const di=DAY_NAMES.indexOf(s.dayName);
+    let tonnage=0,setCount=0,topE1RM=0,topLift='';
+    if(di>=0){
+      const w=Math.max(0,(s.weekNum||1)-1);
+      for(let ei=0;ei<20;ei++){
+        const k=sdk(s.cycle,w,di,ei);
+        if(all[k])all[k].filter(x=>x.done&&x.kg&&x.reps).forEach(x=>{
+          const kg=parseFloat(x.kg)||0,reps=parseFloat(x.reps)||0;
+          tonnage+=kg*reps;setCount++;
+          const e1=kg*(1+reps/30);
+          if(e1>topE1RM){topE1RM=e1;}
+        });
+      }
+    }
+    const dayColor={"Push A":"#1d9e75","Pull A":"#3b82f6","Noge":"#f59e0b","Push B":"#10b981","Pull B":"#6366f1"}[s.dayName]||'var(--green-text)';
     return `<div class="sess-entry">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
       <div style="flex:1;">
-        <div class="sess-day">${s.dayName} — T${s.weekNum} · Cikel ${s.cycle}</div>
-        <div class="sess-meta">${s.date} · ${s.startTime||'–'}–${s.endTime||'–'} · <strong style="color:var(--green-text);">${s.durationMin} min</strong></div>
+        <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:${dayColor};display:inline-block;"></span><span class="sess-day">${s.dayName}</span><span style="font-size:10px;color:var(--text3);">T${s.weekNum} · C${s.cycle}</span></div>
+        <div class="sess-meta">${s.date} · ${s.startTime||'–'}–${s.endTime||'–'}</div>
+        <div style="display:flex;gap:10px;margin-top:4px;font-size:11px;">
+          <span style="color:var(--green-text);">⏱ ${s.durationMin}min</span>
+          ${setCount>0?`<span style="color:var(--blue-text);">${setCount} setov</span>`:''}
+          ${tonnage>0?`<span style="color:var(--purple-text);">${(tonnage/1000).toFixed(1)}t</span>`:''}
+        </div>
       </div>
       <div style="display:flex;gap:4px;">
         <button class="bk-item-btn" style="font-size:11px;" onclick="editSession(${idx})" title="Uredi">✎</button>
@@ -3139,6 +3163,39 @@ function renderLongtermStats(){
       <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:700;color:var(--purple-text);">${avgDur}</div><div style="font-size:10px;color:var(--text3);">povp. minut</div></div>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center;">Najkrajši ${minDur}min · najdaljši ${maxDur}min · ${daysSince} dni od prvega treninga</div>`;
+}
+
+// Konsistenca po dnevih (zadnjih 8 tednov)
+function renderConsistency(){
+  const el=document.getElementById('consistency-stats');if(!el)return;
+  const sessions=getSessions();
+  const now=Date.now();
+  const weeks=8;
+  const since=now-weeks*7*86400000;
+  const recent=sessions.filter(s=>new Date(s.date).getTime()>=since);
+  if(recent.length===0){el.innerHTML='<div style="font-size:12px;color:var(--text3);">Ni treningov v zadnjih 8 tednih.</div>';return;}
+  const colors={"Push A":"#1d9e75","Pull A":"#3b82f6","Noge":"#f59e0b","Push B":"#10b981","Pull B":"#6366f1"};
+  // Preštej vsak dan
+  const counts={};
+  DAY_NAMES.forEach(d=>counts[d]=0);
+  recent.forEach(s=>{if(counts[s.dayName]!==undefined)counts[s.dayName]++;});
+  const maxCount=Math.max(weeks,...Object.values(counts));
+  el.innerHTML=DAY_NAMES.map(d=>{
+    const c=counts[d];
+    const pct=Math.round((c/weeks)*100);
+    const barW=Math.round((c/maxCount)*100);
+    const color=colors[d]||'#1d9e75';
+    return `<div style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span style="color:var(--text2);">${d}</span><span style="color:var(--text3);">${c}× · ${pct}%</span></div>
+      <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${barW}%;background:${color};border-radius:4px;"></div></div>
+    </div>`;
+  }).join('');
+  // Najboljši/najslabši dan
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const best=sorted[0],worst=sorted[sorted.length-1];
+  if(best[1]>0&&best[1]!==worst[1]){
+    el.innerHTML+=`<div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center;">Najpogosteje: <strong style="color:var(--green-text);">${best[0]}</strong> · najredkeje: <strong style="color:var(--amber-text);">${worst[0]}</strong></div>`;
+  }
 }
 
 // Trajanje treningov graf
@@ -3288,23 +3345,34 @@ function calcStreak(sessions){
 function renderRestPlan(){
   const plan=getRestPlan();
   const grid=document.getElementById('rest-grid');if(!grid)return;
+  // Cikel opcij: počitek, 5 treningov, kardio
+  const colors={rest:'var(--bg3)','Push A':'#1d9e75','Pull A':'#3b82f6','Noge':'#f59e0b','Push B':'#10b981','Pull B':'#6366f1',cardio:'#ec4899'};
+  const labels={rest:'Počitek','Push A':'Push A','Pull A':'Pull A','Noge':'Noge','Push B':'Push B','Pull B':'Pull B',cardio:'Kardio'};
   grid.innerHTML=WEEK_DAYS.map((d,i)=>{
     const type=plan[i]||'rest';
-    const labels={train:'Trening',rest:'Počitek',cardio:'Kardio'};
-    return`<div class="rest-day ${type}" onclick="toggleRestDay(${i})"><div class="rest-day-name">${d}</div><div class="rest-day-type">${labels[type]}</div></div>`;
+    const isTrain=type!=='rest'&&type!=='cardio';
+    const bg=colors[type]||'var(--bg3)';
+    const txtColor=(type==='rest')?'var(--text2)':'#fff';
+    return`<div onclick="toggleRestDay(${i})" style="padding:8px 2px;text-align:center;border-radius:8px;background:${bg};cursor:pointer;min-height:46px;display:flex;flex-direction:column;justify-content:center;${type==='rest'?'border:.5px solid var(--border);':''}">
+      <div style="font-size:10px;color:${type==='rest'?'var(--text3)':'rgba(255,255,255,.85)'};margin-bottom:3px;">${d}</div>
+      <div style="font-size:10px;font-weight:600;color:${txtColor};line-height:1.1;">${labels[type]}</div>
+    </div>`;
   }).join('');
+  // Povzetek
+  const trainDays=plan.filter(t=>t&&t!=='rest'&&t!=='cardio').length;
+  const cardioDays=plan.filter(t=>t==='cardio').length;
+  const restDays=7-trainDays-cardioDays;
+  const sum=document.getElementById('plan-summary');
+  if(sum)sum.textContent=`${trainDays} treningov · ${cardioDays} kardio · ${restDays} počitka na teden`;
 }
 
-function setRestMode(mode){
-  restMode=mode;
-  document.querySelectorAll('.rts').forEach(b=>b.className='rts');
-  const btn=document.getElementById('rts-'+mode);
-  if(btn)btn.className=`rts active-${mode}`;
-}
-
+const PLAN_CYCLE=['rest','Push A','Pull A','Noge','Push B','Pull B','cardio'];
 function toggleRestDay(idx){
   const plan=getRestPlan();
-  plan[idx]=restMode;saveRestPlan(plan);renderRestPlan();
+  const cur=plan[idx]||'rest';
+  const ci=PLAN_CYCLE.indexOf(cur);
+  plan[idx]=PLAN_CYCLE[(ci+1)%PLAN_CYCLE.length];
+  saveRestPlan(plan);renderRestPlan();
 }
 
 // BODYWEIGHT
