@@ -1541,10 +1541,11 @@ function showDay(idx){
   localStorage.setItem('wt_last_day',String(idx));
   document.querySelectorAll('.dt').forEach((t,i)=>t.classList.toggle('active',i===idx));
   const d=PROG.days[idx],wk=PROG.weeks[cw],cyc=getCyc();
-  if(d._origLen===undefined)d._origLen=d.ex.length;
-  const origLen=d._origLen;
-  // Original vaje (vedno prisotne) + extra (uporabnikove)
-  const origs=d.ex.slice(0,origLen).map(e=>({...e,extra:false}));
+  // Shrani originalni seznam vaj ENKRAT (preden se d.ex kdaj prepiše z mixed)
+  if(d._origEx===undefined)d._origEx=d.ex.slice();
+  if(d._origLen===undefined)d._origLen=d._origEx.length;
+  // Original vaje (vedno prisotne) + extra (uporabnikove) — vedno iz stabilnega vira
+  const origs=d._origEx.map(e=>({...e,extra:false}));
   const extras=getExtraExercises(idx).map(e=>({...e,extra:true}));
   let mixed=[...origs,...extras];
   // Uporabi shranjeni vrstni red (seznam imen)
@@ -1636,10 +1637,10 @@ function renderDataEditor(){
   // Vaje tega dne v PRAVILNEM vrstnem redu (ujema exKey e0,e1... indekse).
   // d.ex vzdržuje showDay kot urejen mixed; dodamo morebitne manjkajoče extra.
   const d=PROG.days[di];
-  if(d&&d._origLen===undefined)d._origLen=d.ex.length;
-  let mixed=d?d.ex.map(e=>({...e})):[];
-  const names=new Set(mixed.map(e=>e.n));
-  getExtraExercises(di).forEach(ex=>{if(!names.has(ex.n))mixed.push({...ex,extra:true});});
+  if(d&&d._origEx===undefined)d._origEx=d.ex.slice();
+  const origs=(d?(d._origEx||d.ex):[]).map(e=>({...e,extra:false}));
+  const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
+  let mixed=applyExOrderByName(di,[...origs,...extras]);
   const all=getSets();
   let html='';
   mixed.forEach((e,ei)=>{
@@ -4030,7 +4031,11 @@ function calcVolumeThisWeek(){
   const groups={};
   const customs=getCustomExercises();
   PROG.days.forEach((d,di)=>{
-    const allEx=[...d.ex.slice(0,d._origLen||d.ex.length),...getExtraExercises(di)];
+    if(d&&d._origEx===undefined)d._origEx=d.ex.slice();
+    // Vaje v pravilnem vrstnem redu (ujema exKey indekse), iz stabilnega vira
+    const origs=(d._origEx||d.ex).map(e=>({...e,extra:false}));
+    const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
+    let allEx=applyExOrderByName(di,[...origs,...extras]);
     allEx.forEach((e,ei)=>{
       let map=EX_MAP[e.n];
       // Če ni v EX_MAP, poišči v built-in DB ali custom
