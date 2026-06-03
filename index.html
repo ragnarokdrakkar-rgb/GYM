@@ -202,6 +202,10 @@ select.si option{background:var(--bg3);color:var(--text);}
 .meas-in{width:70px;font-size:13px;padding:5px 8px;border:.5px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);text-align:center;}
 .meas-in:focus{outline:none;border-color:var(--green);}
 .sess-entry{padding:10px 0;border-bottom:.5px solid var(--border);}
+.month-body{display:none;padding:0 4px;}
+.month-group.open .month-body{display:block;}
+.month-arrow{display:inline-block;transition:transform .2s;margin-left:4px;}
+.month-group.open .month-arrow{transform:rotate(180deg);}
 .sess-entry:last-child{border-bottom:none;}
 .sess-day{font-weight:500;color:var(--text);margin-bottom:3px;font-size:13px;}
 .sess-meta{color:var(--text2);font-size:11px;}
@@ -575,13 +579,6 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div class="ct">⏱ Trajanje treningov</div>
     <div style="position:relative;height:180px;"><canvas id="duration-chart"></canvas></div>
     <div id="duration-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj treningov.</div>
-  </div>
-  <!-- Rest day planner -->
-  <div class="card">
-    <div class="ct">📋 Tedenski plan</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;">Tapni dan, da krožiš: Počitek → Push A → Pull A → Noge → Push B → Pull B → Kardio. Načrtuj svoj teden.</div>
-    <div class="rest-grid" id="rest-grid"></div>
-    <div id="plan-summary" style="font-size:11px;color:var(--text3);margin-top:.75rem;text-align:center;"></div>
   </div>
   <!-- Session history -->
   <div class="card">
@@ -1180,7 +1177,7 @@ function showPage(p){
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
   if(p==='tools'){initProfileUI();initPlates();initGSUrl();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();}
-  if(p==='gymlog'){renderSessHist();renderRestPlan();renderWeeklySummary();}
+  if(p==='gymlog'){renderSessHist();renderWeeklySummary();}
   if(p==='stats'){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
     document.getElementById('strength-ratios').innerHTML=renderStrengthRatios();
@@ -3097,43 +3094,75 @@ function renderSessHist(){
   let filtered=sessions;
   if(filter)filtered=sessions.filter(s=>s.dayName===filter);
   if(filtered.length===0){el.innerHTML='<div style="font-size:12px;color:var(--text3);">'+(filter?'Ni treningov za "'+filter+'".':'Še ni treningov.')+'</div>';return;}
-  // idx mora kazati na originalni index v sessions
   const all=getSets();
-  el.innerHTML=filtered.slice(0,30).map(s=>{
-    const idx=sessions.indexOf(s);
-    // Izračunaj tonažo in št. setov za to sesijo
+  const dayColor={"Push A":"#1d9e75","Pull A":"#3b82f6","Noge":"#f59e0b","Push B":"#10b981","Pull B":"#6366f1"};
+  const monthNames=["Januar","Februar","Marec","April","Maj","Junij","Julij","Avgust","September","Oktober","November","December"];
+  // Grupiraj po mesecu (YYYY-MM)
+  const byMonth={};
+  filtered.forEach(s=>{
+    const mk=s.date.slice(0,7);
+    if(!byMonth[mk])byMonth[mk]=[];
+    byMonth[mk].push(s);
+  });
+  const months=Object.keys(byMonth).sort().reverse();
+  const curMonth=new Date().toISOString().slice(0,7);
+  // Pomožna: izračun tonaže/setov za sesijo
+  function sessStats(s){
     const di=DAY_NAMES.indexOf(s.dayName);
-    let tonnage=0,setCount=0,topE1RM=0,topLift='';
+    let tonnage=0,setCount=0;
     if(di>=0){
       const w=Math.max(0,(s.weekNum||1)-1);
       for(let ei=0;ei<20;ei++){
         const k=sdk(s.cycle,w,di,ei);
         if(all[k])all[k].filter(x=>x.done&&x.kg&&x.reps).forEach(x=>{
-          const kg=parseFloat(x.kg)||0,reps=parseFloat(x.reps)||0;
-          tonnage+=kg*reps;setCount++;
-          const e1=kg*(1+reps/30);
-          if(e1>topE1RM){topE1RM=e1;}
+          tonnage+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0);setCount++;
         });
       }
     }
-    const dayColor={"Push A":"#1d9e75","Pull A":"#3b82f6","Noge":"#f59e0b","Push B":"#10b981","Pull B":"#6366f1"}[s.dayName]||'var(--green-text)';
-    return `<div class="sess-entry">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
-      <div style="flex:1;">
-        <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:${dayColor};display:inline-block;"></span><span class="sess-day">${s.dayName}</span><span style="font-size:10px;color:var(--text3);">T${s.weekNum} · C${s.cycle}</span></div>
-        <div class="sess-meta">${s.date} · ${s.startTime||'–'}–${s.endTime||'–'}</div>
-        <div style="display:flex;gap:10px;margin-top:4px;font-size:11px;">
-          <span style="color:var(--green-text);">⏱ ${s.durationMin}min</span>
-          ${setCount>0?`<span style="color:var(--blue-text);">${setCount} setov</span>`:''}
-          ${tonnage>0?`<span style="color:var(--purple-text);">${(tonnage/1000).toFixed(1)}t</span>`:''}
+    return {tonnage,setCount};
+  }
+  let html='';
+  months.forEach(mk=>{
+    const [y,m]=mk.split('-');
+    const monthLabel=`${monthNames[parseInt(m)-1]} ${y}`;
+    const sess=byMonth[mk];
+    const isOpen=(mk===curMonth)||(months.length===1);
+    // Mesečni povzetek
+    let monthTon=0;
+    sess.forEach(s=>{monthTon+=sessStats(s).tonnage;});
+    const rows=sess.map(s=>{
+      const idx=sessions.indexOf(s);
+      const st=sessStats(s);
+      const col=dayColor[s.dayName]||'var(--green-text)';
+      return `<div class="sess-entry">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:${col};display:inline-block;"></span><span class="sess-day">${s.dayName}</span><span style="font-size:10px;color:var(--text3);">T${s.weekNum} · C${s.cycle}</span></div>
+            <div class="sess-meta">${s.date} · ${s.startTime||'–'}–${s.endTime||'–'}</div>
+            <div style="display:flex;gap:10px;margin-top:4px;font-size:11px;">
+              <span style="color:var(--green-text);">⏱ ${s.durationMin}min</span>
+              ${st.setCount>0?`<span style="color:var(--blue-text);">${st.setCount} setov</span>`:''}
+              ${st.tonnage>0?`<span style="color:var(--purple-text);">${(st.tonnage/1000).toFixed(1)}t</span>`:''}
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;">
+            <button class="bk-item-btn" style="font-size:11px;" onclick="editSession(${idx})" title="Uredi">✎</button>
+            <button class="bk-item-btn del" style="font-size:11px;" onclick="deleteSession(${idx})" title="Izbriši">×</button>
+          </div>
         </div>
+      </div>`;
+    }).join('');
+    html+=`<div class="month-group" style="margin-bottom:8px;">
+      <div onclick="this.parentNode.classList.toggle('open')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg3);border-radius:8px;cursor:pointer;">
+        <span style="font-size:13px;font-weight:600;color:var(--text);">${monthLabel}</span>
+        <span style="font-size:11px;color:var(--text3);">${sess.length} treningov · ${(monthTon/1000).toFixed(1)}t <span class="month-arrow">▾</span></span>
       </div>
-      <div style="display:flex;gap:4px;">
-        <button class="bk-item-btn" style="font-size:11px;" onclick="editSession(${idx})" title="Uredi">✎</button>
-        <button class="bk-item-btn del" style="font-size:11px;" onclick="deleteSession(${idx})" title="Izbriši">×</button>
-      </div>
-    </div>
-  </div>`;}).join('');
+      <div class="month-body">${rows}</div>
+    </div>`;
+    // Označi odprtost preko inline (dodamo open class spodaj prek JS)
+    if(isOpen)html=html.replace('<div class="month-group" style="margin-bottom:8px;">','<div class="month-group open" style="margin-bottom:8px;">');
+  });
+  el.innerHTML=html;
 }
 
 // Dolgoročni pregled
