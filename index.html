@@ -580,6 +580,12 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div style="position:relative;height:180px;"><canvas id="duration-chart"></canvas></div>
     <div id="duration-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj treningov.</div>
   </div>
+  <!-- Tonnage trend -->
+  <div class="card">
+    <div class="ct">📊 Tonaža na trening</div>
+    <div style="position:relative;height:200px;"><canvas id="tonnage-chart"></canvas></div>
+    <div id="tonnage-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj treningov.</div>
+  </div>
   <!-- Session history -->
   <div class="card">
     <div class="ct">Session zgodovina</div>
@@ -659,10 +665,6 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div id="e1rm-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj podatkov. Zabeleži vsaj 2 treninga z isto vajo.</div>
   </div>
   <div class="card">
-    <div class="ct">🔥 Mišični heatmap · ta teden</div>
-    <div id="muscle-heatmap"></div>
-  </div>
-  <div class="card">
     <div class="ct">📊 Volumen + landmarks · ta teden</div>
     <div id="vol-grp-view"></div>
   </div>
@@ -676,21 +678,8 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div id="strength-ratios"></div>
   </div>
   <div class="card">
-    <div class="ct">⏱ Pripravljenost mišičnih skupin</div>
-    <div id="body-readiness"></div>
-  </div>
-  <div class="card">
     <div class="ct">🏆 PR feed</div>
     <div id="pr-feed"></div>
-  </div>
-  <div class="card">
-    <div class="ct">📊 Tonaža na trening</div>
-    <div style="position:relative;height:200px;"><canvas id="tonnage-chart"></canvas></div>
-    <div id="tonnage-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj treningov.</div>
-  </div>
-  <div class="card">
-    <div class="ct">🔁 Frekvenca mišic · ta teden</div>
-    <div id="muscle-freq"></div>
   </div>
   <div class="card">
     <div class="ct">🎯 Cilji</div>
@@ -705,12 +694,20 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div id="goals-list"></div>
   </div>
   <div class="card">
-    <div class="ct">🩹 Bolečine / poškodbe</div>
-    <div style="display:flex;gap:6px;margin-bottom:.5rem;">
-      <input class="si" type="text" id="injury-input" placeholder="npr. leva rama boli..." style="flex:1;">
-      <button class="sb" onclick="logInjury()">+</button>
+    <div class="ct">☕ Kofein & 😴 Spanje</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Beleži pred treningom — vidiš vpliv na treninge.</div>
+    <div style="display:flex;gap:6px;margin-bottom:.5rem;align-items:center;">
+      <span style="font-size:13px;color:var(--text2);width:62px;">☕ Kofein</span>
+      <input class="si" type="number" id="caffeine-in" placeholder="mg" style="flex:1;" step="50">
+      <span style="font-size:11px;color:var(--text3);">mg</span>
     </div>
-    <div id="injury-log"></div>
+    <div style="display:flex;gap:6px;margin-bottom:.5rem;align-items:center;">
+      <span style="font-size:13px;color:var(--text2);width:62px;">😴 Spanje</span>
+      <input class="si" type="number" id="sleep-in" placeholder="ure" style="flex:1;" step="0.5">
+      <span style="font-size:11px;color:var(--text3);">ur</span>
+    </div>
+    <button class="sb" onclick="logCaffeineSleep()" style="width:100%;">💾 Zabeleži za danes</button>
+    <div id="cs-log"></div>
   </div>
   <div class="card">
     <div class="ct">🤖 AI Coach</div>
@@ -1177,19 +1174,15 @@ function showPage(p){
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
   if(p==='tools'){initProfileUI();initPlates();initGSUrl();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();}
-  if(p==='gymlog'){renderSessHist();renderWeeklySummary();}
+  if(p==='gymlog'){renderSessHist();renderWeeklySummary();renderTonnageChart();}
   if(p==='stats'){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
     document.getElementById('strength-ratios').innerHTML=renderStrengthRatios();
-    document.getElementById('body-readiness').innerHTML=renderBodyReadiness();
     document.getElementById('pr-feed').innerHTML=renderPRFeed();
-    document.getElementById('muscle-heatmap').innerHTML=renderMuscleHeatmap();
     document.getElementById('train-calendar').innerHTML=renderTrainCalendar();
-    document.getElementById('muscle-freq').innerHTML=renderMuscleFrequency();
     renderE1RMChart();
-    renderTonnageChart();
     renderGoals();
-    renderInjuryLog();
+    renderCaffeineSleep();
     renderAICoach();
   }
 }
@@ -1537,7 +1530,7 @@ const STRENGTH_TIERS = {
 const BIG_LIFTS = {
   bench:"Barbell bench press",
   squat:"Barbell squat",
-  deadlift:"Romanian deadlift",  // ker pravi DL je capped
+  deadlift:"Deadlift — capped at 75% (≈140kg)",
   ohp:"Overhead press — barbell"
 };
 
@@ -2446,32 +2439,51 @@ function setEnergy(val){
   document.querySelectorAll('.energy-btn').forEach((b,i)=>b.classList.toggle('on',i+1===val));
   toast('✓ Energija '+val+'/5','ok');
 }
-function logInjury(){
-  const txt=document.getElementById('injury-input').value.trim();
-  if(!txt)return;
+// === KOFEIN & SPANJE ===
+function logCaffeineSleep(){
+  const caf=parseFloat(document.getElementById('caffeine-in').value);
+  const slp=parseFloat(document.getElementById('sleep-in').value);
+  if((isNaN(caf)||caf<0)&&(isNaN(slp)||slp<0)){toast('Vnesi kofein ali spanje','err');return;}
   const log=getDayLog();
   const today=new Date().toISOString().split('T')[0];
   if(!log[today])log[today]={};
-  if(!log[today].injuries)log[today].injuries=[];
-  log[today].injuries.push(txt);
+  if(!isNaN(caf)&&caf>=0)log[today].caffeine=caf;
+  if(!isNaN(slp)&&slp>=0)log[today].sleep=slp;
   saveDayLog(log);
-  document.getElementById('injury-input').value='';
-  renderInjuryLog();
-  toast('✓ Zabeleženo','ok');
+  document.getElementById('caffeine-in').value='';
+  document.getElementById('sleep-in').value='';
+  renderCaffeineSleep();
+  toast('✓ Zabeleženo za danes','ok');
 }
-function renderInjuryLog(){
-  const el=document.getElementById('injury-log');if(!el)return;
+function renderCaffeineSleep(){
+  const el=document.getElementById('cs-log');if(!el)return;
   const log=getDayLog();
-  const all=[];
-  Object.entries(log).forEach(([date,d])=>{if(d.injuries)d.injuries.forEach(t=>all.push({date,t}));});
-  all.sort((a,b)=>b.date.localeCompare(a.date));
-  if(all.length===0){el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:.4rem;">Ni zapisov.</div>';return;}
-  const words={};
-  all.forEach(i=>{i.t.toLowerCase().split(/\s+/).forEach(w=>{if(w.length>3)words[w]=(words[w]||0)+1;});});
-  const patterns=Object.entries(words).filter(([w,c])=>c>=3).map(([w])=>w);
-  let html='';
-  if(patterns.length>0)html+=`<div style="font-size:11px;color:var(--amber-text);background:var(--amber-bg);padding:6px;border-radius:6px;margin-bottom:6px;">⚠ Pogosto: ${patterns.join(', ')}</div>`;
-  html+=all.slice(0,15).map(i=>`<div style="font-size:12px;padding:5px 0;border-bottom:.5px solid var(--border);"><span style="color:var(--text3);font-size:10px;">${i.date}</span> · ${i.t}</div>`).join('');
+  const today=new Date().toISOString().split('T')[0];
+  // Današnji vnos
+  const t=log[today]||{};
+  let todayHtml='';
+  if(t.caffeine!==undefined||t.sleep!==undefined){
+    todayHtml=`<div style="font-size:12px;color:var(--text2);background:var(--bg3);padding:8px;border-radius:6px;margin:8px 0;text-align:center;">Danes: ${t.caffeine!==undefined?`☕ ${t.caffeine}mg`:''} ${t.caffeine!==undefined&&t.sleep!==undefined?'·':''} ${t.sleep!==undefined?`😴 ${t.sleep}h`:''}</div>`;
+  }
+  // Zgodovina zadnjih 14 dni
+  const entries=Object.entries(log).filter(([d,v])=>v.caffeine!==undefined||v.sleep!==undefined).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,14);
+  if(entries.length===0){el.innerHTML=todayHtml||'<div style="font-size:11px;color:var(--text3);padding:.4rem;">Ni zapisov.</div>';return;}
+  // Povprečja
+  const cafVals=entries.filter(([d,v])=>v.caffeine!==undefined).map(([d,v])=>v.caffeine);
+  const slpVals=entries.filter(([d,v])=>v.sleep!==undefined).map(([d,v])=>v.sleep);
+  const avgCaf=cafVals.length?Math.round(cafVals.reduce((a,b)=>a+b,0)/cafVals.length):null;
+  const avgSlp=slpVals.length?(slpVals.reduce((a,b)=>a+b,0)/slpVals.length).toFixed(1):null;
+  let html=todayHtml;
+  if(avgCaf!==null||avgSlp!==null){
+    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;">
+      ${avgCaf!==null?`<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:700;color:#a16207;">${avgCaf}mg</div><div style="font-size:10px;color:var(--text3);">povp. kofein</div></div>`:''}
+      ${avgSlp!==null?`<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:700;color:var(--blue-text);">${avgSlp}h</div><div style="font-size:10px;color:var(--text3);">povp. spanje</div></div>`:''}
+    </div>`;
+  }
+  html+=entries.map(([date,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:.5px solid var(--border);">
+    <span style="color:var(--text3);font-size:11px;">${new Date(date).toLocaleDateString('sl-SI')}</span>
+    <span>${v.caffeine!==undefined?`☕ ${v.caffeine}mg`:''} ${v.sleep!==undefined?`<span style="color:var(--blue-text);margin-left:8px;">😴 ${v.sleep}h</span>`:''}</span>
+  </div>`).join('');
   el.innerHTML=html;
 }
 
@@ -4489,11 +4501,19 @@ function renderPRFeed(){
   });
   items.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(items.length===0)return '<div style="color:var(--text3);font-size:12px;padding:.5rem;">Še brez PR-jev.</div>';
-  return items.slice(0,30).map(i=>{
+  const renderItem=i=>{
     const e1rm=Math.round((parseFloat(i.kg)||0)*(1+(parseInt(i.reps)||1)/30));
     const dateNice=i.date?new Date(i.date).toLocaleDateString('sl-SI'):'';
     return `<div class="pr-item"><div class="pr-item-l"><div class="pr-item-name">${i.exName}</div><div class="pr-item-date">${dateNice}</div></div><div class="pr-item-r"><div class="pr-item-val">${i.kg}kg × ${i.reps||1}</div><div class="pr-item-delta">e1RM ${e1rm}kg</div></div></div>`;
-  }).join('');
+  };
+  const shown=items.slice(0,8).map(renderItem).join('');
+  const rest=items.slice(8).map(renderItem).join('');
+  let html=shown;
+  if(rest){
+    html+=`<div id="pr-feed-rest" style="display:none;">${rest}</div>
+    <button class="sb" onclick="const r=document.getElementById('pr-feed-rest');const open=r.style.display!=='none';r.style.display=open?'none':'block';this.textContent=open?'▾ Prikaži vse (${items.length})':'▴ Skrij';" style="width:100%;margin-top:.5rem;background:var(--bg3);font-size:12px;">▾ Prikaži vse (${items.length})</button>`;
+  }
+  return html;
 }
 
 // --- Strength ratios ---
@@ -4540,7 +4560,7 @@ function renderStrengthRatios(){
         break;
       }
     }
-    const liftName={bench:"Bench",squat:"Squat",deadlift:"RDL",ohp:"OHP"}[key];
+    const liftName={bench:"Bench",squat:"Squat",deadlift:"Deadlift",ohp:"OHP"}[key];
     return `<tr><td class="sr-name">${liftName}</td><td class="sr-kg">${e1rm}kg</td><td class="sr-ratio">${ratio}× BW</td><td><span class="sr-tier ${tierCls}">${tierLabel}</span></td></tr>`;
   }).filter(Boolean).join('');
   if(!rows)return '<div style="color:var(--text3);font-size:12px;">Še brez PR-jev za big lift-e.</div>';
