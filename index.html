@@ -363,6 +363,21 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 .cal-cell.l2{background:#1d7a52;}
 .cal-cell.l3{background:#1d9e75;}
 .cal-cell.l4{background:#3fd99b;}
+/* Mesečni koledar */
+.mcal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
+.mcal-nav{background:var(--bg3);border:.5px solid var(--border);border-radius:6px;color:var(--text);width:32px;height:32px;font-size:16px;cursor:pointer;}
+.mcal-title{font-size:14px;font-weight:600;color:var(--text);}
+.mcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.mcal-dow{text-align:center;font-size:10px;color:var(--text3);padding:2px 0;font-weight:600;}
+.mcal-day{aspect-ratio:1;border-radius:8px;background:var(--bg3);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--text2);position:relative;min-height:38px;}
+.mcal-day.empty{background:transparent;}
+.mcal-day.today{outline:2px solid var(--blue);}
+.mcal-day.trained{font-weight:700;color:#fff;}
+.mcal-daynum{font-size:12px;line-height:1;}
+.mcal-daytag{font-size:8px;line-height:1.1;margin-top:2px;opacity:.95;text-align:center;padding:0 1px;}
+.mcal-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:.6rem;font-size:10px;color:var(--text3);}
+.mcal-legend span{display:flex;align-items:center;gap:3px;}
+.mcal-dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
 .cal-months{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:4px;}
 .cal-legend{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);justify-content:flex-end;margin-top:6px;}
 .cal-legend i{width:11px;height:11px;border-radius:2px;display:inline-block;}
@@ -655,6 +670,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   </div>
   <div class="card">
     <div class="ct">🗓️ Koledar treningov</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.25rem;">Barva = kateri trening. Drsaj med meseci s puščicami.</div>
     <div id="train-calendar"></div>
   </div>
   <div class="card">
@@ -4103,42 +4119,76 @@ function renderMuscleHeatmap(){
   return `<div class="mh-wrap">${rows}</div><div class="mh-legend"><span><i style="background:#378add;"></i>Premalo</span><span><i style="background:#1d9e75;"></i>Optimal</span><span><i style="background:#ef9f27;"></i>Veliko</span><span><i style="background:#e24b4a;"></i>Preveč</span></div>`;
 }
 
-// === KOLEDAR TRENINGOV (heatmap) ===
+// === MESEČNI KOLEDAR TRENINGOV ===
+let mcalOffset=0; // 0 = trenutni mesec, -1 = prejšnji, ...
+// Barva za vsak dan treninga
+const DAY_COLORS={"Push A":"#1d9e75","Pull A":"#3b82f6","Noge":"#f59e0b","Push B":"#10b981","Pull B":"#6366f1"};
+// Kratka oznaka
+const DAY_SHORT={"Push A":"Push A","Pull A":"Pull A","Noge":"Noge","Push B":"Push B","Pull B":"Pull B"};
+
+function changeMcalMonth(delta){
+  mcalOffset+=delta;
+  if(mcalOffset>0)mcalOffset=0; // ne v prihodnost
+  const el=document.getElementById('train-calendar');
+  if(el)el.innerHTML=renderTrainCalendar();
+}
+
 function renderTrainCalendar(){
   const sessions=getSessions();
   if(sessions.length===0)return '<div style="color:var(--text3);font-size:12px;padding:.5rem;text-align:center;">Še ni treningov.</div>';
-  // Zadnjih ~16 tednov (112 dni)
-  const days=112;
-  const now=new Date();now.setHours(0,0,0,0);
-  // Map datum -> volumen
-  const all=getSets();
-  const dateVol={};
+  // Map datum -> seznam dni treninga (lahko več treningov isti dan)
+  const byDate={};
   sessions.forEach(s=>{
-    const di=DAY_NAMES.indexOf(s.dayName);
-    let v=0;
-    if(di>=0){
-      const w=Math.max(0,(s.weekNum||1)-1);
-      for(let ei=0;ei<20;ei++){
-        const k=sdk(s.cycle,w,di,ei);
-        if(all[k])all[k].filter(x=>x.done).forEach(x=>v+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0));
-      }
-    }
-    dateVol[s.date]=(dateVol[s.date]||0)+(v||1);
+    if(!byDate[s.date])byDate[s.date]=[];
+    byDate[s.date].push(s.dayName);
   });
-  const maxV=Math.max(1,...Object.values(dateVol));
-  let cells='';
-  for(let i=days-1;i>=0;i--){
-    const d=new Date(now-i*86400000);
-    const ds=d.toISOString().split('T')[0];
-    const v=dateVol[ds]||0;
-    let lvl='';
-    if(v>0){
-      const ratio=v/maxV;
-      lvl=ratio>0.75?'l4':ratio>0.5?'l3':ratio>0.25?'l2':'l1';
+  // Izračunaj prikazani mesec
+  const today=new Date();today.setHours(0,0,0,0);
+  const view=new Date(today.getFullYear(),today.getMonth()+mcalOffset,1);
+  const year=view.getFullYear(),month=view.getMonth();
+  const monthNames=["Januar","Februar","Marec","April","Maj","Junij","Julij","Avgust","September","Oktober","November","December"];
+  const firstDow=(new Date(year,month,1).getDay()+6)%7; // pon=0
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const todayStr=today.toISOString().split('T')[0];
+  // Glava z navigacijo
+  let html=`<div class="mcal-head">
+    <button class="mcal-nav" onclick="changeMcalMonth(-1)">‹</button>
+    <div class="mcal-title">${monthNames[month]} ${year}</div>
+    <button class="mcal-nav" onclick="changeMcalMonth(1)" ${mcalOffset>=0?'style="opacity:.3;"':''}>›</button>
+  </div>`;
+  // Dnevi v tednu
+  html+=`<div class="mcal-grid">`;
+  ["P","T","S","Č","P","S","N"].forEach(d=>{html+=`<div class="mcal-dow">${d}</div>`;});
+  // Prazne celice pred 1.
+  for(let i=0;i<firstDow;i++)html+=`<div class="mcal-day empty"></div>`;
+  // Dnevi
+  let trainCount=0;
+  for(let day=1;day<=daysInMonth;day++){
+    const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const trainings=byDate[dateStr]||[];
+    const isToday=dateStr===todayStr;
+    if(trainings.length>0){
+      trainCount++;
+      const firstDay=trainings[0];
+      const color=DAY_COLORS[firstDay]||"#1d9e75";
+      const tag=trainings.length>1?`${trainings.length}×`:(DAY_SHORT[firstDay]||firstDay);
+      html+=`<div class="mcal-day trained ${isToday?'today':''}" style="background:${color};" title="${dateStr}: ${trainings.join(', ')}">
+        <div class="mcal-daynum">${day}</div>
+        <div class="mcal-daytag">${tag}</div>
+      </div>`;
+    } else {
+      html+=`<div class="mcal-day ${isToday?'today':''}"><div class="mcal-daynum">${day}</div></div>`;
     }
-    cells+=`<div class="cal-cell ${lvl}" title="${ds}${v>0?' · trening':''}"></div>`;
   }
-  return `<div class="cal-grid">${cells}</div><div class="cal-legend">Manj <i class="cal-cell"></i><i class="cal-cell l1"></i><i class="cal-cell l2"></i><i class="cal-cell l3"></i><i class="cal-cell l4"></i> Več</div>`;
+  html+=`</div>`;
+  // Legenda
+  html+=`<div class="mcal-legend">`;
+  Object.entries(DAY_COLORS).forEach(([name,color])=>{
+    html+=`<span><i class="mcal-dot" style="background:${color};"></i>${name}</span>`;
+  });
+  html+=`</div>`;
+  html+=`<div style="font-size:11px;color:var(--text3);margin-top:.5rem;text-align:center;">${trainCount} treningov v ${monthNames[month].toLowerCase()}u</div>`;
+  return html;
 }
 
 // === e1RM TREND GRAF ===
