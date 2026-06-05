@@ -1846,12 +1846,14 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   while(all[exKey].length<n) all[exKey].push({kg:'',reps:'',done:false});
   saveSets(all);
   const sets=all[exKey],prs=getPRs(),prk=`pr${di}${ei}`,cpr=prs[prk]||0;
+  // Ali je vaja zamenjana? Če da, Peak/Zadnjič (vezana na pozicijo) so od STARE vaje → skrij
+  const isSwapped=!!getExSwaps()[swapPosKey(exKey)]||!!getExSwaps()[exKey];
   // Prev cycle hint
   let ph='';
-  if(cn>1){const pp=getPeakForExercise(cn-1,di,ei);if(pp>0)ph=`<div class="ph">Prejšnji cikel peak: ${pp}kg</div>`;}
+  if(cn>1&&!isSwapped){const pp=getPeakForExercise(cn-1,di,ei);if(pp>0)ph=`<div class="ph">Prejšnji cikel peak: ${pp}kg</div>`;}
   // Last session hint (prejšnji teden ali prejšnji cikel) — najbolj koristen za izbiro teže
   let lhHtml='';
-  const last=getLastSession(di,ei,cn,cw);
+  const last=isSwapped?null:getLastSession(di,ei,cn,cw);
   if(last){
     const meta=last.date?` · ${last.date}`:'';
     lhHtml=`<div class="last-hint"><span>↺ Zadnjič: <strong>${last.kg}kg × ${last.reps}</strong></span><span class="lh-meta">T${last.w+1} C${last.c}${meta}</span></div>`;
@@ -1939,7 +1941,6 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     ${ph}${lhHtml}${sugHtml}
     ${p531Html}
     <div id="wu-dyn-${exKey}"></div>
-    <button class="swbtn" style="margin-bottom:6px;background:var(--amber-bg);border-color:var(--amber);color:var(--amber-text);" onclick="showDynWarmup('${exKey}',${di},${ei})">🔥 Ogrevanje</button>
     <div class="ex-d">${e.d}</div>${e.tip?`<div class="ex-tip">${e.tip}</div>`:''}
     <table class="st"><thead><tr><th>S</th><th>Teža</th><th>Pon</th><th>Vol</th><th>1RM</th><th></th></tr></thead><tbody id="rows-${exKey}">${rows}</tbody></table>
     ${tv>0?`<div class="vol-total" style="font-size:11px;color:var(--green-text);margin-top:4px;text-align:right;">Skupaj: ${Math.round(tv).toLocaleString()} kg</div>`:''}
@@ -1998,7 +1999,9 @@ function removeSet(exKey,di,ei,cn){
 function toggleSwap(key){const p=document.getElementById('sw-'+key);if(p){swOpen[key]=!swOpen[key];p.classList.toggle('open',swOpen[key]);}}
 function getExSwaps(){try{return JSON.parse(localStorage.getItem('wt_exswap')||'{}');}catch{return {};}}
 function saveExSwaps(s){localStorage.setItem('wt_exswap',JSON.stringify(s));}
-function getSwappedName(exKey,origName){const s=getExSwaps();return s[exKey]||origName;}
+// Swap je vezan na POZICIJO (dan+vaja), velja za vse tedne in cikle
+function swapPosKey(exKey){const m=String(exKey).match(/d(\d+)e(\d+)$/);return m?`d${m[1]}e${m[2]}`:exKey;}
+function getSwappedName(exKey,origName){const s=getExSwaps();return s[swapPosKey(exKey)]||s[exKey]||origName;}
 
 // === STEPPER za kg in pon ===
 function getKgStep(){return parseFloat(localStorage.getItem('wt_kg_step')||'2.5');}
@@ -2183,11 +2186,12 @@ function stepReps(exKey,si,di,ei,cn,delta){
 }
 function useSwap(key,name){
   const swaps=getExSwaps();
-  swaps[key]=name;
+  const pk=swapPosKey(key);
+  swaps[pk]=name;
+  if(swaps[key]&&key!==pk)delete swaps[key]; // počisti morebiten star per-teden swap
   saveExSwaps(swaps);
-  const el=document.getElementById('exn-'+key);if(el)el.textContent=name;
-  const p=document.getElementById('sw-'+key);if(p){p.classList.remove('open');swOpen[key]=false;}
-  toast('✓ Vaja zamenjana','ok');
+  showDay(cd); // osveži vse tedne
+  toast('✓ Vaja zamenjana (vsi tedni)','ok');
 }
 function useCustomSwap(key){const inp=document.getElementById('swci-'+key);if(!inp||!inp.value.trim())return;useSwap(key,inp.value.trim());}
 
@@ -2220,7 +2224,11 @@ function filterSwapDB(exKey,query){
 }
 function clearSwap(key){
   const swaps=getExSwaps();
-  if(swaps[key]){delete swaps[key];saveExSwaps(swaps);showDay(cd);toast('↺ Original','ok');}
+  const pk=swapPosKey(key);
+  let changed=false;
+  if(swaps[pk]){delete swaps[pk];changed=true;}
+  if(swaps[key]){delete swaps[key];changed=true;}
+  if(changed){saveExSwaps(swaps);showDay(cd);toast('↺ Original','ok');}
 }
 
 function wuHint(e,sets){
