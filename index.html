@@ -3477,9 +3477,12 @@ function renderBW(){
   const goal=getBWGoal();
   const first=parseFloat(entries[0][1]);
   const latest=parseFloat(entries[entries.length-1][1]);
+  // Za napredek uporabi 7-dnevno povprečje (stabilno, konsistentno s statistiko) namesto surove zadnje teže
+  const last7v=entries.slice(-7).map(e=>parseFloat(e[1]));
+  const avg7=last7v.reduce((a,b)=>a+b,0)/last7v.length;
   const isLoss=goal<first;
   const total=Math.abs(first-goal);
-  const done=isLoss?Math.max(0,first-latest):Math.max(0,latest-first);
+  const done=isLoss?Math.max(0,first-avg7):Math.max(0,avg7-first);
   const pct=total>0?Math.min(100,Math.round((done/total)*100)):0;
   document.getElementById('bw-prog-wrap').style.display='block';
   document.getElementById('bw-chart-card').style.display='block';
@@ -3533,20 +3536,25 @@ function renderBWStats(entries,goal){
   // 7-dnevno povprečje (zadnjih 7 vnosov)
   const last7=vals.slice(-7);
   const avg7=last7.reduce((a,b)=>a+b,0)/last7.length;
-  // Tedenska sprememba — primerjaj zadnjih 7 dni vs prejšnjih 7 dni
+  // Tedenska sprememba — LINEARNA REGRESIJA čez zadnjih 21 dni (zgladi dnevno nihanje)
   const now=dates[dates.length-1].getTime();
-  const thisWeek=entries.filter(e=>now-new Date(e[0]).getTime()<=7*86400000).map(e=>parseFloat(e[1]));
-  const prevWeek=entries.filter(e=>{const t=now-new Date(e[0]).getTime();return t>7*86400000&&t<=14*86400000;}).map(e=>parseFloat(e[1]));
+  const recentWindow=entries.filter(e=>now-new Date(e[0]).getTime()<=21*86400000);
   let weeklyChange=null;
-  if(thisWeek.length>0&&prevWeek.length>0){
-    const tAvg=thisWeek.reduce((a,b)=>a+b,0)/thisWeek.length;
-    const pAvg=prevWeek.reduce((a,b)=>a+b,0)/prevWeek.length;
-    weeklyChange=tAvg-pAvg;
-  } else if(vals.length>=2){
-    // Fallback: razlika zadnjih dveh vnosov ekstrapolirana
+  if(recentWindow.length>=3){
+    // Regresija: x = dnevi od prvega, y = teža
+    const pts=recentWindow.map(e=>({x:(new Date(e[0]).getTime()-now)/86400000,y:parseFloat(e[1])}));
+    const nP=pts.length;
+    const sumX=pts.reduce((a,p)=>a+p.x,0), sumY=pts.reduce((a,p)=>a+p.y,0);
+    const sumXY=pts.reduce((a,p)=>a+p.x*p.y,0), sumXX=pts.reduce((a,p)=>a+p.x*p.x,0);
+    const denom=nP*sumXX-sumX*sumX;
+    if(Math.abs(denom)>0.0001){
+      const slope=(nP*sumXY-sumX*sumY)/denom; // kg/dan
+      weeklyChange=slope*7;
+    }
+  }
+  if(weeklyChange===null&&vals.length>=2){
     const daySpan=(dates[dates.length-1]-dates[0])/86400000||1;
-    const totalChange=vals[vals.length-1]-vals[0];
-    weeklyChange=(totalChange/daySpan)*7;
+    weeklyChange=((vals[vals.length-1]-vals[0])/daySpan)*7;
   }
   // Napoved do cilja
   let forecast='';
