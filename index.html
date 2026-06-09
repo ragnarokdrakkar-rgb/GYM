@@ -680,38 +680,6 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div id="strength-ratios"></div>
   </div>
   <div class="card">
-    <div class="ct">🏆 PR feed</div>
-    <div id="pr-feed"></div>
-  </div>
-  <div class="card">
-    <div class="ct">🎯 Cilji</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.5rem;align-items:center;">
-      <select class="si" id="goal-ex" style="flex:1;min-width:120px;"></select>
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:.5rem;">
-      <input class="si" type="number" id="goal-target" placeholder="cilj kg" style="width:80px;">
-      <input class="si" type="date" id="goal-date" style="flex:1;">
-      <button class="sb" onclick="addGoal()">+</button>
-    </div>
-    <div id="goals-list"></div>
-  </div>
-  <div class="card">
-    <div class="ct">☕ Kofein & 😴 Spanje</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Beleži pred treningom — vidiš vpliv na treninge.</div>
-    <div style="display:flex;gap:6px;margin-bottom:.5rem;align-items:center;">
-      <span style="font-size:13px;color:var(--text2);width:62px;">☕ Kofein</span>
-      <input class="si" type="number" id="caffeine-in" placeholder="mg" style="flex:1;" step="50">
-      <span style="font-size:11px;color:var(--text3);">mg</span>
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:.5rem;align-items:center;">
-      <span style="font-size:13px;color:var(--text2);width:62px;">😴 Spanje</span>
-      <input class="si" type="number" id="sleep-in" placeholder="ure" style="flex:1;" step="0.5">
-      <span style="font-size:11px;color:var(--text3);">ur</span>
-    </div>
-    <button class="sb" onclick="logCaffeineSleep()" style="width:100%;">💾 Zabeleži za danes</button>
-    <div id="cs-log"></div>
-  </div>
-  <div class="card">
     <div class="ct">🤖 AI Coach</div>
     <div id="ai-coach-setup"></div>
     <div id="ai-coach-content"></div>
@@ -902,22 +870,6 @@ tr.is-drop{background:rgba(167,139,250,.04);}
       3. Android: Settings → Apps → Workout → Notifications → vklopi "Sound"<br>
       4. Push obvestila zgoraj morajo biti vklopljena<br>
       5. Test: pritisni ▶ Testiraj, počakaj 1s, zakleni zaslon → po 5s zazveni
-    </div>
-  </div>
-  <div class="card">
-    <div class="ct">Google Sheets sync</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;">Ko imaš Apps Script URL, ga vpiši tukaj. Od takrat naprej se podatki samodejno shranjujejo v oblak.</div>
-    <div class="ir">
-      <span class="lbl">Apps Script URL</span>
-      <input class="si" type="url" id="gs-url" placeholder="https://script.google.com/..." style="width:100%;max-width:400px;">
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:.5rem;flex-wrap:wrap;">
-      <button class="sb" onclick="saveGSUrlBtn()">Shrani URL</button>
-      <div id="gs-status" style="font-size:12px;color:var(--text3);">● Ni povezano</div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:.75rem;flex-wrap:wrap;">
-      <button class="sb" onclick="testGSConnection()">Testiraj povezavo</button>
-      <button class="sb" onclick="syncAllToSheets()">Sinhroniziraj vse</button>
     </div>
   </div>
   <div class="card">
@@ -1187,16 +1139,13 @@ function showPage(p){
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
-  if(p==='tools'){initProfileUI();initPlates();initGSUrl();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();}
+  if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();}
   if(p==='gymlog'){renderSessHist();renderWeeklySummary();renderTonnageChart();}
   if(p==='stats'){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
     document.getElementById('strength-ratios').innerHTML=renderStrengthRatios();
-    document.getElementById('pr-feed').innerHTML=renderPRFeed();
     document.getElementById('train-calendar').innerHTML=renderTrainCalendar();
     renderE1RMChart();
-    renderGoals();
-    renderCaffeineSleep();
     renderAICoach();
   }
 }
@@ -1579,10 +1528,16 @@ function showDay(idx){
   let html=`<div class="day-title">${d.title}</div><div class="day-sub">${d.sub}</div><div class="tags">${d.tags.map(t=>`<span class="tag ${t.p?'tag-p':'tag-s'}">${t.t}</span>`).join('')}</div>`;
   if(wk.dl){html+=`<div class="dbox">Deload teden — 60–65% teže iz tedna 1. Ustavi 4–5 pon. pred odpovedjo. Maks 3 serije.</div>`;}
   else{html+=`<div class="pg"><div class="pc"><div class="pn">${allEx.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
-  html+=allEx.map((e,i)=>renderEx(e,i,idx,wk,cyc.num,!!e.extra)).join('');
-  html+=`<div style="display:flex;gap:6px;margin-top:.75rem;">
-    <button class="sb" style="flex:1;background:var(--blue-bg);border:1px solid var(--blue);color:var(--blue-text);" onclick="prefillFromLastSession(${idx})">↺ Predizpolni teže</button>
+  html+=allEx.map((e,i)=>{
+    const _ek=sdk(cyc.num,cw,idx,i);
+    if(isExHidden(_ek))return '';
+    return renderEx(e,i,idx,wk,cyc.num,!!e.extra);
+  }).join('');
+  // Koliko vaj je skritih za ta teden
+  const cnHidden=Object.keys(getHiddenEx()).filter(k=>k.startsWith(`c${cyc.num}w${cw}d${idx}e`)).length;
+  html+=`<div style="display:flex;gap:6px;margin-top:.75rem;flex-wrap:wrap;">
     <button class="sb" style="flex:1;background:var(--bg3);border:1px dashed var(--border2);" onclick="openAddExercise(${idx})">+ Dodaj vajo</button>
+    ${cnHidden>0?`<button class="sb" style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text3);" onclick="restoreHiddenWeek(${idx})">↩ Povrni ${cnHidden} odstranjenih</button>`:''}
   </div>`;
   document.getElementById('day-content').innerHTML=html;
   // Obnovi aktivni rest timer, če teče (re-render je uničil njegov UI)
@@ -1943,7 +1898,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     </div>
     ${summaryHtml}
     <div class="ex-body">
-    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button><button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>${getExSwaps()[exKey]?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}')">↺ Original</button>`:''}${isExtra?`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">×</button>`:''}<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExUp(${di},${ei})" title="Premakni gor">↑</button><button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExDown(${di},${ei})" title="Premakni dol">↓</button>${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
+    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button><button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>${getExSwaps()[exKey]?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}')">↺ Original</button>`:''}${isExtra?`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">×</button>`:''}<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExUp(${di},${ei})" title="Premakni gor">↑</button><button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExDown(${di},${ei})" title="Premakni dol">↓</button>${isExtra?'':`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);padding:2px 6px;" onclick="removeExForWeek('${exKey}')" title="Odstrani za ta teden">🗑</button>`}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
     <div class="sw-panel" id="sw-${exKey}">
       <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}',this.value)" style="width:100%;margin-bottom:8px;">
       <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,'')}</div>
@@ -2016,6 +1971,21 @@ function saveExSwaps(s){localStorage.setItem('wt_exswap',JSON.stringify(s));}
 // Swap je vezan na POZICIJO (dan+vaja), velja za vse tedne in cikle
 function swapPosKey(exKey){const m=String(exKey).match(/d(\d+)e(\d+)$/);return m?`d${m[1]}e${m[2]}`:exKey;}
 function getSwappedName(exKey,origName){const s=getExSwaps();return s[swapPosKey(exKey)]||s[exKey]||origName;}
+
+// === SKRIVANJE VAJE ZA DOLOČEN TEDEN+CIKEL ===
+function getHiddenEx(){try{return JSON.parse(localStorage.getItem('wt_hidden_ex')||'{}');}catch{return {};}}
+function saveHiddenEx(h){localStorage.setItem('wt_hidden_ex',JSON.stringify(h));}
+function isExHidden(exKey){return !!getHiddenEx()[exKey];}
+function removeExForWeek(exKey){
+  if(!confirm('Odstrani to vajo samo za ta teden? (ostane v drugih tednih, podatki se ohranijo)'))return;
+  const h=getHiddenEx();h[exKey]=true;saveHiddenEx(h);
+  showDay(cd);toast('🗑 Vaja odstranjena za ta teden','ok');
+}
+function restoreHiddenWeek(di){
+  const h=getHiddenEx();const cn=getCyc().num;const pre=`c${cn}w${cw}d${di}e`;
+  let cnt=0;Object.keys(h).forEach(k=>{if(k.startsWith(pre)){delete h[k];cnt++;}});
+  saveHiddenEx(h);showDay(cd);toast(`↩ Povrnjenih ${cnt} vaj`,'ok');
+}
 
 // === STEPPER za kg in pon ===
 function getKgStep(){return parseFloat(localStorage.getItem('wt_kg_step')||'2.5');}
@@ -2954,9 +2924,6 @@ function toggleSess(){
     const sessions=getSessions();
     sessions.unshift({date:sessStart.toISOString().split('T')[0],dayName:DAY_NAMES[cd],weekNum:cw+1,startTime:sessStart.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'}),endTime:end.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'}),durationMin:durMin,cycle:getCyc().num});
     saveSessions(sessions);
-    sendToSheets('session',sessions[0]);
-    syncSessionSetsToSheets(sessions[0]);
-    sendToSheets('pr_sync',getPRs());
     document.getElementById('st-b').textContent='Start session';
     document.getElementById('st-b').classList.remove('active');
     document.getElementById('st-d').textContent='00:00:00';
@@ -3468,7 +3435,6 @@ function logBW(){
   const val=parseFloat(document.getElementById('bw-in').value);
   if(isNaN(val)||val<40||val>200)return;
   const d=getBW();d[new Date().toISOString().split('T')[0]]=val;saveBW(d);
-  sendToSheets('bodyweight',{date:new Date().toISOString().split('T')[0],kg:val});// Auto-sync
   document.getElementById('bw-in').value='';renderBW();
 }
 function renderBW(){
@@ -3736,6 +3702,7 @@ async function exportData(){
     swaps:JSON.parse(localStorage.getItem('wt_exswap')||'{}'),
     sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}'),
     extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
+    hidden_ex:JSON.parse(localStorage.getItem('wt_hidden_ex')||'{}'),
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
     rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
     phases:JSON.parse(localStorage.getItem('wt_phases')||'[]'),
@@ -3810,6 +3777,7 @@ function importData(){
         if(backup.collars!==undefined) setCollars(backup.collars);
         if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
         if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
+        if(backup.hidden_ex) localStorage.setItem('wt_hidden_ex',JSON.stringify(backup.hidden_ex));
         if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
         if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
         if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
@@ -4869,6 +4837,7 @@ async function buildBackupJSON(includePhotos){
     swaps:JSON.parse(localStorage.getItem('wt_exswap')||'{}'),
     sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}'),
     extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
+    hidden_ex:JSON.parse(localStorage.getItem('wt_hidden_ex')||'{}'),
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
     rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
     phases:JSON.parse(localStorage.getItem('wt_phases')||'[]'),
@@ -5008,6 +4977,7 @@ async function restoreBackupFromIDB(id){
     if(backup.collars!==undefined) setCollars(backup.collars);
     if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
         if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
+        if(backup.hidden_ex) localStorage.setItem('wt_hidden_ex',JSON.stringify(backup.hidden_ex));
         if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
         if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
         if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
