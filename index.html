@@ -1522,12 +1522,13 @@ function showDay(idx){
   mixed=applyExOrderByName(idx,mixed);
   d.ex=mixed;
   const allEx=d.ex;
-  const done=allEx.filter((_,i)=>allDone(idx,i)).length;
+  const visIdx=allEx.map((_,i)=>i).filter(i=>!isExHidden(sdk(cyc.num,cw,idx,i)));
+  const done=visIdx.filter(i=>allDone(idx,i)).length;
   const nk=`notes-c${cyc.num}w${cw}d${idx}`;
   const nv=getNotes()[nk]||'';
   let html=`<div class="day-title">${d.title}</div><div class="day-sub">${d.sub}</div><div class="tags">${d.tags.map(t=>`<span class="tag ${t.p?'tag-p':'tag-s'}">${t.t}</span>`).join('')}</div>`;
   if(wk.dl){html+=`<div class="dbox">Deload teden — 60–65% teže iz tedna 1. Ustavi 4–5 pon. pred odpovedjo. Maks 3 serije.</div>`;}
-  else{html+=`<div class="pg"><div class="pc"><div class="pn">${allEx.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
+  else{html+=`<div class="pg"><div class="pc"><div class="pn">${visIdx.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
   html+=allEx.map((e,i)=>{
     const _ek=sdk(cyc.num,cw,idx,i);
     if(isExHidden(_ek))return '';
@@ -2660,7 +2661,7 @@ function tgSet(key,si,di,ei,cn){
     // Smart deload check
     setTimeout(()=>checkDeloadNeeded(di,ei,cn),200);
   }
-  const cnt=PROG.days[di].ex.filter((_,i)=>allDone(di,i)).length;
+  const cnt=PROG.days[di].ex.filter((_,i)=>!isExHidden(sdk(cn,cw,di,i))&&allDone(di,i)).length;
   const el=document.getElementById('ex-done');if(el)el.textContent=cnt;
   // Auto-scroll na naslednjo nedokončano vajo, ko se trenutna v celoti zaključi
   if(allDone(di,ei)){
@@ -2678,10 +2679,10 @@ function tgSet(key,si,di,ei,cn){
     }
     let nextEi=-1;
     for(let i=ei+1;i<PROG.days[di].ex.length;i++){
-      if(!allDone(di,i)){nextEi=i;break;}
+      if(!allDone(di,i)&&!isExHidden(sdk(cn,cw,di,i))){nextEi=i;break;}
     }
     if(nextEi<0){
-      for(let i=0;i<ei;i++){if(!allDone(di,i)){nextEi=i;break;}}
+      for(let i=0;i<ei;i++){if(!allDone(di,i)&&!isExHidden(sdk(cn,cw,di,i))){nextEi=i;break;}}
     }
     if(nextEi>=0){
       const nextKey=sdk(cn,cw,di,nextEi);
@@ -3443,9 +3444,8 @@ function renderBW(){
   const goal=getBWGoal();
   const first=parseFloat(entries[0][1]);
   const latest=parseFloat(entries[entries.length-1][1]);
-  // Za napredek uporabi 7-dnevno povprečje (stabilno, konsistentno s statistiko) namesto surove zadnje teže
-  const last7v=entries.slice(-7).map(e=>parseFloat(e[1]));
-  const avg7=last7v.reduce((a,b)=>a+b,0)/last7v.length;
+  // Za napredek uporabi 7-dnevno povprečje PO DATUMIH (stabilno, konsistentno s statistiko)
+  const avg7=avg7d(entries);
   const isLoss=goal<first;
   const total=Math.abs(first-goal);
   const done=isLoss?Math.max(0,first-avg7):Math.max(0,avg7-first);
@@ -3475,13 +3475,33 @@ function renderBW(){
   if(bwChart)bwChart.destroy();
   const allVals=[...vals,goal];
   const yMin=Math.floor(Math.min(...allVals)-1),yMax=Math.ceil(Math.max(...allVals)+1);
-  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Teža',data:vals,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.1)',tension:0.3,pointRadius:3,pointBackgroundColor:'#1d9e75',borderWidth:1.5},{label:'7-dnevno povprečje',data:movingAvg(vals,7),borderColor:'#7f77dd',backgroundColor:'transparent',tension:0.4,pointRadius:0,borderWidth:2.5},{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#ef9f27',borderDash:[4,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:tc,font:{size:10},boxWidth:12}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false},border:{color:gc}}}}});
+  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Teža',data:vals,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.1)',tension:0.3,pointRadius:3,pointBackgroundColor:'#1d9e75',borderWidth:1.5},{label:'7-dnevno povprečje',data:movingAvgDate(entries,7),borderColor:'#7f77dd',backgroundColor:'transparent',tension:0.4,pointRadius:0,borderWidth:2.5},{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#ef9f27',borderDash:[4,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:tc,font:{size:10},boxWidth:12}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false},border:{color:gc}}}}});
   // Statistika + faze
   renderBWStats(entries,goal);
   renderPhases();
 }
 
-// 7-dnevno drseče povprečje
+// 7-dnevno povprečje PO DATUMIH (zadnjih 7 dni od zadnjega vnosa)
+function avg7d(entries){
+  if(!entries||entries.length===0)return null;
+  const lastT=new Date(entries[entries.length-1][0]).getTime();
+  let win=entries.filter(e=>lastT-new Date(e[0]).getTime()<=6.5*86400000);
+  if(win.length<2)win=entries.slice(-Math.min(7,entries.length));
+  return win.reduce((a,e)=>a+parseFloat(e[1]),0)/win.length;
+}
+// Drseče povprečje PO DATUMIH za graf (za vsako točko: vnosi zadnjih `days` dni)
+function movingAvgDate(entries,days){
+  return entries.map((e,i)=>{
+    const t=new Date(e[0]).getTime();
+    let s=0,c=0;
+    for(let j=i;j>=0;j--){
+      if(t-new Date(entries[j][0]).getTime()>(days-0.5)*86400000)break;
+      s+=parseFloat(entries[j][1]);c++;
+    }
+    return Math.round(s/c*100)/100;
+  });
+}
+// (staro, po vnosih — ohranjeno za kompatibilnost)
 function movingAvg(arr,window){
   return arr.map((_,i)=>{
     const start=Math.max(0,i-window+1);
@@ -3498,42 +3518,43 @@ function renderBWStats(entries,goal){
   card.style.display='block';
   const vals=entries.map(e=>parseFloat(e[1]));
   const dates=entries.map(e=>new Date(e[0]));
-  const latest=vals[vals.length-1];
-  // 7-dnevno povprečje (zadnjih 7 vnosov)
-  const last7=vals.slice(-7);
-  const avg7=last7.reduce((a,b)=>a+b,0)/last7.length;
-  // Tedenska sprememba — LINEARNA REGRESIJA čez zadnjih 21 dni (zgladi dnevno nihanje)
+  // 7-dnevno povprečje — PO DATUMIH (zadnjih 7 dni), ne po vnosih
+  const avg7=avg7d(entries);
+  // Tedenska sprememba — LINEARNA REGRESIJA (zgladi dnevno nihanje); okno 21 dni, razširi na 35 če premalo točk
   const now=dates[dates.length-1].getTime();
-  const recentWindow=entries.filter(e=>now-new Date(e[0]).getTime()<=21*86400000);
   let weeklyChange=null;
-  if(recentWindow.length>=3){
-    // Regresija: x = dnevi od prvega, y = teža
-    const pts=recentWindow.map(e=>({x:(new Date(e[0]).getTime()-now)/86400000,y:parseFloat(e[1])}));
-    const nP=pts.length;
-    const sumX=pts.reduce((a,p)=>a+p.x,0), sumY=pts.reduce((a,p)=>a+p.y,0);
-    const sumXY=pts.reduce((a,p)=>a+p.x*p.y,0), sumXX=pts.reduce((a,p)=>a+p.x*p.x,0);
-    const denom=nP*sumXX-sumX*sumX;
-    if(Math.abs(denom)>0.0001){
-      const slope=(nP*sumXY-sumX*sumY)/denom; // kg/dan
-      weeklyChange=slope*7;
+  for(const winDays of [21,35]){
+    const recentWindow=entries.filter(e=>now-new Date(e[0]).getTime()<=winDays*86400000);
+    if(recentWindow.length>=3){
+      const pts=recentWindow.map(e=>({x:(new Date(e[0]).getTime()-now)/86400000,y:parseFloat(e[1])}));
+      const nP=pts.length;
+      const sumX=pts.reduce((a,p)=>a+p.x,0), sumY=pts.reduce((a,p)=>a+p.y,0);
+      const sumXY=pts.reduce((a,p)=>a+p.x*p.y,0), sumXX=pts.reduce((a,p)=>a+p.x*p.x,0);
+      const denom=nP*sumXX-sumX*sumX;
+      if(Math.abs(denom)>0.0001){weeklyChange=((nP*sumXY-sumX*sumY)/denom)*7;break;}
     }
   }
   if(weeklyChange===null&&vals.length>=2){
     const daySpan=(dates[dates.length-1]-dates[0])/86400000||1;
     weeklyChange=((vals[vals.length-1]-vals[0])/daySpan)*7;
   }
-  // Napoved do cilja
+  // Napoved do cilja — upošteva SMER trenda
   let forecast='';
   if(weeklyChange!==null&&Math.abs(weeklyChange)>0.05){
     const remaining=goal-avg7;
-    const weeksNeeded=remaining/weeklyChange;
-    if(weeksNeeded>0&&weeksNeeded<260){
-      const reachDate=new Date(now+weeksNeeded*7*86400000);
-      forecast=`📅 Pri tem tempu dosežeš ${goal}kg okoli <strong>${reachDate.toLocaleDateString('sl-SI')}</strong> (~${Math.round(weeksNeeded)} tednov)`;
-    } else if(weeksNeeded<=0){
-      forecast=`✓ Cilj dosežen ali presežen!`;
+    if(Math.abs(remaining)<=0.2){
+      forecast=`✓ Cilj dosežen!`;
     } else {
-      forecast=`Tempo prepočasen za realno napoved`;
+      const movingToward=(remaining<0&&weeklyChange<0)||(remaining>0&&weeklyChange>0);
+      if(movingToward){
+        const weeksNeeded=remaining/weeklyChange;
+        if(weeksNeeded<260){
+          const reachDate=new Date(now+weeksNeeded*7*86400000);
+          forecast=`📅 Pri tem tempu dosežeš ${goal}kg okoli <strong>${reachDate.toLocaleDateString('sl-SI')}</strong> (~${Math.round(weeksNeeded)} tednov)`;
+        } else forecast=`Tempo prepočasen za realno napoved`;
+      } else {
+        forecast=`⚠ Trend gre trenutno <strong>stran od cilja</strong> (${weeklyChange>0?'+':''}${weeklyChange.toFixed(2)}kg/teden)`;
+      }
     }
   }
   // Tempo ocena za cut
