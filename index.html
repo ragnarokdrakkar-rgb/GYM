@@ -46,15 +46,20 @@ body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;font-siz
 .nt.active{border:.5px solid var(--green);background:var(--green-bg);color:var(--green-text);}
 .page{display:none;}.page.active{display:block;}
 .wtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:.75rem;}
-.wt{padding:7px 4px;text-align:center;border-radius:8px;border:.5px solid var(--border);cursor:pointer;background:var(--bg2);font-size:11px;color:var(--text2);line-height:1.4;}
+.wt{padding:7px 4px;text-align:center;border-radius:8px;border:.5px solid var(--border);cursor:pointer;background:var(--bg2);font-size:11px;color:var(--text2);line-height:1.4;position:relative;}
 .wt.active{border:.5px solid var(--blue);background:var(--blue-bg);color:var(--blue-text);font-weight:500;}
 .wt.deload{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber);}
+.wt.done{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green);}
+.wt.done::after{content:"✓";position:absolute;top:2px;right:4px;color:var(--green-text);font-size:10px;font-weight:700;}
 .dtabs{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:1.25rem;}
-.dt{padding:8px 4px;text-align:center;border-radius:8px;border:.5px solid var(--border);cursor:pointer;background:var(--bg2);}
+.dt{padding:8px 4px;text-align:center;border-radius:8px;border:.5px solid var(--border);cursor:pointer;background:var(--bg2);position:relative;}
 .dt.active{border:.5px solid var(--green);background:var(--green-bg);}
 .dt-n{font-size:10px;color:var(--text3);margin-bottom:2px;}
 .dt-l{font-size:11px;font-weight:500;color:var(--text);}
 .dt.active .dt-l{color:var(--green-text);}
+.dt.done{border-color:var(--green);background:rgba(29,158,117,0.12);}
+.dt.done::after{content:"✓";position:absolute;top:2px;right:4px;color:var(--green-text);font-size:9px;font-weight:700;}
+.dt.done .dt-l{color:var(--green-text);}
 .day-title{font-size:17px;font-weight:500;color:var(--text);margin-bottom:3px;}
 .day-sub{font-size:12px;color:var(--text2);margin-bottom:8px;}
 .tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:.75rem;}
@@ -1178,6 +1183,43 @@ function allDone(di,ei){
   return all[key].slice(0,n).every(s=>s.done);
 }
 
+// Ali so v danem dnevu (cikel cn, teden w) vse VIDNE vaje dokončane? (vsaj 1 vaja z done)
+function isDayComplete(cn,w,di){
+  const d=PROG.days[di];if(!d)return false;
+  const list=d._origEx||d.ex;
+  const total=list.length+getExtraExercises(di).length;
+  const all=getSets();
+  let anyDone=false;
+  for(let ei=0;ei<total;ei++){
+    const k=sdk(cn,w,di,ei);
+    if(getHiddenEx()[k])continue; // skrite ne štejejo
+    const sets=all[k];
+    if(!sets||sets.length===0)return false;
+    // koliko setov se pričakuje
+    const wk=PROG.weeks[w]||PROG.weeks[cw];
+    const n=nsf(di,ei,wk,k);
+    const slice=sets.slice(0,n);
+    if(slice.length===0||!slice.every(s=>s.done))return false;
+    anyDone=true;
+  }
+  return anyDone;
+}
+// Ali so vsi dnevi tedna dokončani?
+function isWeekComplete(cn,w){
+  for(let di=0;di<PROG.days.length;di++){if(!isDayComplete(cn,w,di))return false;}
+  return true;
+}
+// Posodobi barve tabov (zeleno = dokončano)
+function updateTabColors(){
+  const cn=getCyc().num;
+  document.querySelectorAll('.wt').forEach((t,w)=>{
+    t.classList.toggle('done',isWeekComplete(cn,w));
+  });
+  document.querySelectorAll('.dt').forEach((t,di)=>{
+    t.classList.toggle('done',isDayComplete(cn,cw,di));
+  });
+}
+
 const PROG_CUT={
   weeks:[
     {reps:"6–8",rpe:"RPE 8–9",sM:5,sA:4,pill:"bl",rb:"rh",dl:false},
@@ -1543,6 +1585,7 @@ function showDay(idx){
   document.getElementById('day-content').innerHTML=html;
   // Obnovi aktivni rest timer, če teče (re-render je uničil njegov UI)
   if(typeof restoreTimer==='function')restoreTimer();
+  if(typeof updateTabColors==='function')updateTabColors();
 }
 
 // Vrstni red shranjen kot SEZNAM IMEN vaj per dan
@@ -2663,6 +2706,7 @@ function tgSet(key,si,di,ei,cn){
   }
   const cnt=PROG.days[di].ex.filter((_,i)=>!isExHidden(sdk(cn,cw,di,i))&&allDone(di,i)).length;
   const el=document.getElementById('ex-done');if(el)el.textContent=cnt;
+  if(typeof updateTabColors==='function')updateTabColors();
   // Auto-scroll na naslednjo nedokončano vajo, ko se trenutna v celoti zaključi
   if(allDone(di,ei)){
     // Auto-collapse trenutno (razen če je user ročno razširil)
