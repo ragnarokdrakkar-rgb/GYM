@@ -512,9 +512,9 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   </div>
   <div class="sl">Teden</div>
   <div class="wtabs">
-    <div class="wt active" onclick="setWeek(0)">Teden 1<br>Heavy</div>
-    <div class="wt" onclick="setWeek(1)">Teden 2<br>Moderate</div>
-    <div class="wt" onclick="setWeek(2)">Teden 3<br>Volume</div>
+    <div class="wt active" onclick="setWeek(0)">Teden 1<br>Težko</div>
+    <div class="wt" onclick="setWeek(1)">Teden 2<br>Težko</div>
+    <div class="wt" onclick="setWeek(2)">Teden 3<br>Zmerno</div>
     <div class="wt deload" onclick="setWeek(3)">Teden 4<br>Deload</div>
   </div>
   <div class="sl">Dan</div>
@@ -1240,10 +1240,10 @@ function updateTabColors(){
 
 const PROG_CUT={
   weeks:[
-    {reps:"6–8",rpe:"RPE 8–9",sM:5,sA:4,pill:"bl",rb:"rh",dl:false},
-    {reps:"8–10",rpe:"RPE 7–8",sM:4,sA:4,pill:"gr",rb:"rm",dl:false},
-    {reps:"10–12",rpe:"RPE 7",sM:4,sA:4,pill:"am",rb:"rl",dl:false},
-    {reps:"10–12",rpe:"RPE 5",sM:3,sA:3,pill:"gr",rb:"rl",dl:true}
+    {reps:"5–8",rpe:"RPE 7–8",sM:5,sA:4,pill:"bl",rb:"rh",dl:false},
+    {reps:"6–8",rpe:"RPE 7–8",sM:4,sA:4,pill:"gr",rb:"rm",dl:false},
+    {reps:"8–10",rpe:"RPE 7",sM:4,sA:4,pill:"am",rb:"rl",dl:false},
+    {reps:"8–10",rpe:"RPE 5",sM:3,sA:3,pill:"gr",rb:"rl",dl:true}
   ],
   days:[
     {title:"Push A — prsa",sub:"Prsa · ramena · tricepsi",tags:[{t:"Prsa",p:1},{t:"Ramena",p:0},{t:"Tricepsi",p:0}],ex:[
@@ -1271,20 +1271,21 @@ const PROG_CUT={
       {n:"Standing calf raise",m:0,r:REST_T.lat,rl:"45s",d:"Polni razteg na dnu, zadrži 1s zgoraj.",tip:""},
     ]},
     {title:"Push B — ramena",sub:"Ramena · prsa · tricepsi",tags:[{t:"Ramena",p:1},{t:"Prsa",p:0},{t:"Tricepsi",p:0}],ex:[
-      {n:"Overhead press — barbell",m:1,r:REST_T.main,rl:"3 min",d:"1RM=85kg. T1 delovne serije: 65–70kg. Polna zaklenitev.",tip:"Gluteusi stisnjeni zgoraj."},
+      {n:"Overhead press — barbell",m:1,r:REST_T.main,rl:"3 min",d:"Glavni dvig za rame. Polna zaklenitev.",tip:"Gluteusi stisnjeni zgoraj."},
       {n:"Dumbbell bench press",m:0,r:REST_T.acc,rl:"90s",d:"Večji razpon kot palica. Globok razteg.",tip:""},
       {n:"Arnold press",m:0,r:REST_T.acc,rl:"90s",d:"Vse tri glave deltoida. Zavrti dlani.",tip:""},
       {n:"Cable lateral raise",m:0,r:REST_T.lat,rl:"45s",d:"Kabel ohranja pritisk spodaj.",tip:""},
       {n:"Weighted dips",m:0,r:REST_T.acc,rl:"90s",d:"Nagnjen naprej, komolci navzven. Dodaj 20–30kg.",tip:""},
       {n:"Overhead tricep extension",m:0,r:REST_T.iso,rl:"60s",d:"Samo dolga glava raztegnjena nad glavo.",tip:""},
     ]},
-    {title:"Pull B — debelina hrbta",sub:"Hrbet · bicepsi · zadnji deltoid",tags:[{t:"Hrbet",p:1},{t:"Bicepsi",p:0},{t:"Zadnji deltoid",p:0}],ex:[
+    {title:"Pull B — hrbet + noge",sub:"Hrbet · noge · bicepsi",tags:[{t:"Hrbet",p:1},{t:"Kvadricepsi",p:1},{t:"Bicepsi",p:0}],ex:[
       {n:"Deadlift — capped at 75% (≈140kg)",m:1,r:REST_T.main,rl:"3 min",d:"Maks 75% 1RM med rezanjem. Polna moč vrne pri 80kg.",tip:""},
       {n:"Single-arm DB row",m:0,r:REST_T.acc,rl:"90s",d:"Unilateralno — odpravlja neravnovesje.",tip:""},
       {n:"Lat pulldown — close grip",m:0,r:REST_T.acc,rl:"90s",d:"Nevtralni prijem. Komolci dol k bokom.",tip:""},
       {n:"Reverse fly — machine",m:0,r:REST_T.iso,rl:"60s",d:"Zadnji deltoid izolacija. Lahka, stroga tehnika.",tip:""},
       {n:"Incline dumbbell curl",m:0,r:REST_T.iso,rl:"60s",d:"Raztegne biceps na dnu.",tip:""},
-      {n:"Cable curl 21s",m:0,r:REST_T.iso,rl:"60s",d:"7 spodaj · 7 zgoraj · 7 polno.",tip:""},
+      {n:"Leg press",m:0,r:REST_T.acc,rl:"2 min",d:"2. dan za noge ta teden (2 dni po Nogah). Kvadricepsi — ohranjanje mase med cutom.",tip:"Stopala v sredini platforme."},
+      {n:"Leg extension",m:0,r:REST_T.iso,rl:"60s",d:"Kvadricepsi izolacija. Močan stisk na vrhu.",tip:""},
     ]},
   ]
 };
@@ -1500,6 +1501,7 @@ const EX_MAP = {
   "Romanian deadlift": {p:["Hamstringi","Gluteusi"], s:["Hrbet"], cat:"compound"},
   "Leg press": {p:["Kvadricepsi","Gluteusi"], s:["Hamstringi"], cat:"compound"},
   "Leg curl — seated": {p:["Hamstringi"], s:[], cat:"isolation"},
+  "Leg curl — lying": {p:["Hamstringi"], s:[], cat:"isolation"},
   "Leg extension": {p:["Kvadricepsi"], s:[], cat:"isolation"},
   "Standing calf raise": {p:["Mečni"], s:[], cat:"isolation"},
   // Push B
