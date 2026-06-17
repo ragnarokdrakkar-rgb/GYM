@@ -1078,7 +1078,25 @@ const SWAPS_DB={
 let cw=0,cd=0,TM={},stInt=null,stStart=null,stRun=false,bwChart=null,strengthChart=null,swOpen={},activeLift=0,sessStart=null,restMode='train';
 
 function ls(k){try{return JSON.parse(localStorage.getItem(k)||'{}');}catch{return {};}}
-function lss(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+function lss(k,v){
+  try{localStorage.setItem(k,JSON.stringify(v));return true;}
+  catch(e){
+    // Kritično: shranjevanje ni uspelo (poln localStorage ali zasebni način)
+    if(!window._lssWarned){
+      window._lssWarned=true;
+      try{
+        const msg=(e&&e.name==='QuotaExceededError')
+          ? '⚠️ POMNILNIK POLN! Podatki se NE shranjujejo. Nujno: Tools → Export backup, nato počisti stare podatke.'
+          : '⚠️ Shranjevanje ne deluje (zasebni način?). Podatki bodo izgubljeni ob zaprtju!';
+        if(typeof toast==='function')toast(msg,'err');
+        else alert(msg);
+      }catch(_){}
+      // Reset opozorila čez 30s, da lahko spet opozori
+      setTimeout(()=>{window._lssWarned=false;},30000);
+    }
+    return false;
+  }
+}
 function lsa(k){try{return JSON.parse(localStorage.getItem(k)||'[]');}catch{return [];}}
 function getSets(){return ls(LS.sets);}function saveSets(d){lss(LS.sets,d);}
 function getPRs(){return ls(LS.pr);}function savePRs(d){lss(LS.pr,d);}
@@ -3820,8 +3838,10 @@ function importData(){
     reader.onload=async ev=>{
       try{
         const backup=JSON.parse(ev.target.result);
-        if(!backup.version||!backup.sets){alert('Napačna datoteka. Izberi workout_backup_*.json');return;}
-        if(!confirm(`Uvozi backup iz ${backup.date.split('T')[0]} (v${backup.version})? Trenutni podatki bodo prepisani.`))return;
+        if(!backup.sets){alert('Napačna datoteka — ne vsebuje podatkov o serijah. Izberi pravi workout_backup_*.json');return;}
+        const bd=backup.date?String(backup.date).split('T')[0]:'neznan datum';
+        const bv=backup.version||'?';
+        if(!confirm(`Uvozi backup iz ${bd} (v${bv})? Trenutni podatki bodo prepisani.`))return;
         // Restore vse podatke
         if(backup.sets) lss(LS.sets,backup.sets);
         if(backup.pr) lss(LS.pr,backup.pr);
