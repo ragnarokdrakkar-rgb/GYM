@@ -1580,6 +1580,9 @@ function showDay(idx){
   const origs=d._origEx.map(e=>({...e,extra:false}));
   const extras=getExtraExercises(idx).map(e=>({...e,extra:true}));
   let mixed=[...origs,...extras];
+  // Dedupe: če ima extra isto ime kot osnovna vaja, ga izpusti (prepreči podvojene pozicije → zlom premikanja)
+  const _seenN=new Set();
+  mixed=mixed.filter(e=>{const k=(e.n||'').toLowerCase();if(_seenN.has(k))return false;_seenN.add(k);return true;});
   // Uporabi shranjeni vrstni red (seznam imen)
   mixed=applyExOrderByName(idx,mixed);
   d.ex=mixed;
@@ -1683,12 +1686,14 @@ function renderDataEditor(){
   const origs=(d?(d._origEx||d.ex):[]).map(e=>({...e,extra:false}));
   const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
   let mixed=applyExOrderByName(di,[...origs,...extras]);
+  const _seenDE=new Set();
+  mixed=mixed.filter(e=>{const k=(e.n||'').toLowerCase();if(_seenDE.has(k))return false;_seenDE.add(k);return true;});
   const all=getSets();
   let html='';
   mixed.forEach((e,ei)=>{
     const key=sdk(c,w,di,ei);
     const sets=all[key]||[];
-    const dispName=getSwappedName(key,e.n);
+    const dispName=getSwappedName(key,e.n,e.extra);
     const hasData=sets.some(s=>s.kg||s.reps);
     html+=`<div style="background:var(--bg3);border-radius:8px;padding:8px;margin-bottom:8px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:${hasData?'var(--text)':'var(--text3)'};">${dispName}${e.extra?' <span style="font-size:10px;color:var(--blue-text);">+extra</span>':''}</div>`;
@@ -1762,7 +1767,11 @@ function confirmAddExercise(name,muscle,isMain){
   const di=parseInt(popup.dataset.di);
   if(isNaN(di))return;
   const extras=getExtraExercises(di);
-  if(extras.find(e=>e.n===name)){toast('Vaja že obstaja na tem dnevu','err');return;}
+  if(extras.find(e=>e.n.toLowerCase()===name.toLowerCase())){toast('Vaja je že dodana na tem dnevu','err');return;}
+  // Preveri tudi osnovne vaje programa (prepreči podvajanje imen → zlom premikanja)
+  const d=PROG.days[di];
+  const baseList=(d&&(d._origEx||d.ex))||[];
+  if(baseList.find(e=>e.n.toLowerCase()===name.toLowerCase())){toast('Ta vaja je že v programu tega dne','err');return;}
   // Privzeti parametri za novo vajo
   const newEx={
     n:name,
@@ -1957,12 +1966,12 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const summaryHtml=topSet?`<div class="exc-summary"><span class="es-stats">✓ ${doneSets.length}/${n} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${exKey}')">razširi ▾</button></div>`:'';
   return `<div class="exc${isPR?' pr-card':''}${collapsed?' col-done':''}" id="ec-${exKey}">
     <div class="ex-top">
-      <div class="ex-name-wrap"><div class="ex-name" id="exn-${exKey}">${getSwappedName(exKey,e.n)}</div><button class="hist-btn" onclick="openExHistory(${di},${ei})" title="Zgodovina vaje">📊</button></div>
+      <div class="ex-name-wrap"><div class="ex-name" id="exn-${exKey}">${getSwappedName(exKey,e.n,isExtra)}</div><button class="hist-btn" onclick="openExHistory(${di},${ei})" title="Zgodovina vaje">📊</button></div>
       <div class="sp ${wk.pill}">${n} × ${wk.reps}</div>
     </div>
     ${summaryHtml}
     <div class="ex-body">
-    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button><button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>${getExSwaps()[exKey]?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}')">↺ Original</button>`:''}${isExtra?`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">×</button>`:''}<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExUp(${di},${ei})" title="Premakni gor">↑</button><button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExDown(${di},${ei})" title="Premakni dol">↓</button>${isExtra?'':`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);padding:2px 6px;" onclick="removeExForWeek('${exKey}')" title="Odstrani za ta teden">🗑</button>`}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
+    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button>${isExtra?'':`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`}${(!isExtra&&getExSwaps()[`d${di}|${e.n}`])?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}')">↺ Original</button>`:''}${isExtra?`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">×</button>`:''}<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExUp(${di},${ei})" title="Premakni gor">↑</button><button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExDown(${di},${ei})" title="Premakni dol">↓</button>${isExtra?'':`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);padding:2px 6px;" onclick="removeExForWeek('${exKey}')" title="Odstrani za ta teden">🗑</button>`}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
     <div class="sw-panel" id="sw-${exKey}">
       <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}',this.value)" style="width:100%;margin-bottom:8px;">
       <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,'')}</div>
@@ -2032,9 +2041,34 @@ function removeSet(exKey,di,ei,cn){
 function toggleSwap(key){const p=document.getElementById('sw-'+key);if(p){swOpen[key]=!swOpen[key];p.classList.toggle('open',swOpen[key]);}}
 function getExSwaps(){try{return JSON.parse(localStorage.getItem('wt_exswap')||'{}');}catch{return {};}}
 function saveExSwaps(s){localStorage.setItem('wt_exswap',JSON.stringify(s));}
-// Swap je vezan na POZICIJO (dan+vaja), velja za vse tedne in cikle
+// Swap je vezan na DAN + ORIGINALNO IME vaje (stabilno ob premikanju/dodajanju, velja vsi tedni)
 function swapPosKey(exKey){const m=String(exKey).match(/d(\d+)e(\d+)$/);return m?`d${m[1]}e${m[2]}`:exKey;}
-function getSwappedName(exKey,origName){const s=getExSwaps();return s[swapPosKey(exKey)]||s[exKey]||origName;}
+function diFromKey(exKey){const m=String(exKey).match(/d(\d+)e\d+$/);return m?+m[1]:-1;}
+function origNameForKey(exKey){
+  const m=String(exKey).match(/d(\d+)e(\d+)$/);if(!m)return null;
+  const d=PROG.days[+m[1]];if(!d)return null;
+  const list=d._origEx||d.ex;const e=list&&list[+m[2]];
+  return e?e.n:null;
+}
+function getSwappedName(exKey,origName,isExtra){
+  if(isExtra)return origName; // extra vaje se NIKOLI ne preimenujejo
+  const s=getExSwaps();
+  return s[`d${diFromKey(exKey)}|${origName}`]||origName;
+}
+// Enkratna migracija starih pozicijskih/polnih swap ključev → ime-osnovani
+function migrateSwaps(){
+  const s=getExSwaps();let changed=false;
+  Object.keys(s).forEach(k=>{
+    if(k.indexOf('|')>=0)return;
+    const m=k.match(/d(\d+)e(\d+)$/);
+    if(!m){delete s[k];changed=true;return;}
+    const di=+m[1],ei=+m[2];
+    const d=PROG.days[di];const list=d?(d._origEx||d.ex):null;const orig=list&&list[ei];
+    if(orig&&orig.n&&!s[`d${di}|${orig.n}`]){s[`d${di}|${orig.n}`]=s[k];}
+    delete s[k];changed=true;
+  });
+  if(changed)saveExSwaps(s);
+}
 
 // === SKRIVANJE VAJE ZA DOLOČEN TEDEN+CIKEL ===
 function getHiddenEx(){try{return JSON.parse(localStorage.getItem('wt_hidden_ex')||'{}');}catch{return {};}}
@@ -2233,12 +2267,12 @@ function stepReps(exKey,si,di,ei,cn,delta){
   sv(exKey,si,'reps',String(newVal),di,ei,cn,0);
 }
 function useSwap(key,name){
+  const on=origNameForKey(key);
+  if(!on){toast('Te vaje ni mogoče zamenjati','err');return;}
   const swaps=getExSwaps();
-  const pk=swapPosKey(key);
-  swaps[pk]=name;
-  if(swaps[key]&&key!==pk)delete swaps[key]; // počisti morebiten star per-teden swap
+  swaps[`d${diFromKey(key)}|${on}`]=name;
   saveExSwaps(swaps);
-  showDay(cd); // osveži vse tedne
+  showDay(cd);
   toast('✓ Vaja zamenjana (vsi tedni)','ok');
 }
 function useCustomSwap(key){const inp=document.getElementById('swci-'+key);if(!inp||!inp.value.trim())return;useSwap(key,inp.value.trim());}
@@ -2271,12 +2305,11 @@ function filterSwapDB(exKey,query){
   if(el)el.innerHTML=renderSwapDBList(exKey,query);
 }
 function clearSwap(key){
+  const on=origNameForKey(key);
+  if(!on)return;
   const swaps=getExSwaps();
-  const pk=swapPosKey(key);
-  let changed=false;
-  if(swaps[pk]){delete swaps[pk];changed=true;}
-  if(swaps[key]){delete swaps[key];changed=true;}
-  if(changed){saveExSwaps(swaps);showDay(cd);toast('↺ Original','ok');}
+  const k=`d${diFromKey(key)}|${on}`;
+  if(swaps[k]){delete swaps[k];saveExSwaps(swaps);showDay(cd);toast('↺ Original','ok');}
 }
 
 function wuHint(e,sets){
@@ -2574,7 +2607,8 @@ function sv(key,si,field,val,di,ei,cn,isBarbell){
   while(all[key].length<=si)all[key].push({kg:'',reps:'',done:false});
   all[key][si][field]=val;
   // Shrani ime vaje ob vnosu (za ločeno zgodovino po vaji ob zamenjavi)
-  const _curName=getSwappedName(key,PROG.days[di].ex[ei]?PROG.days[di].ex[ei].n:'');
+  const _exObj=PROG.days[di].ex[ei];
+  const _curName=getSwappedName(key,_exObj?_exObj.n:'',_exObj&&_exObj.extra);
   if(_curName)all[key][si].exName=_curName;
   saveSets(all);
   rebuildRows(key,di,ei,wk,n,all[key]);checkPR(key,di,ei,all[key]);
@@ -2700,7 +2734,8 @@ function tgSet(key,si,di,ei,cn){
   if(!all[key])all[key]=Array.from({length:n},()=>({kg:'',reps:'',done:false}));
   all[key][si].done=!all[key][si].done;
   // Shrani ime vaje (za ločeno zgodovino ob zamenjavi)
-  const _cn=getSwappedName(key,PROG.days[di].ex[ei]?PROG.days[di].ex[ei].n:'');
+  const _exO=PROG.days[di].ex[ei];
+  const _cn=getSwappedName(key,_exO?_exO.n:'',_exO&&_exO.extra);
   if(_cn)all[key][si].exName=_cn;
   saveSets(all);
   const btns=document.querySelectorAll(`#ec-${key} .lb`);
@@ -4099,11 +4134,11 @@ function getExerciseHistory(di,ei,wantName){
   return out;
 }
 
-const WEEK_LBL=['T1 Heavy','T2 Moderate','T3 Volume','T4 Deload'];
+const WEEK_LBL=['T1 Težko','T2 Težko','T3 Zmerno','T4 Deload'];
 function openExHistory(di,ei){
   const exKey=sdk(getCyc().num,cw,di,ei);
   const e=PROG.days[di].ex[ei];
-  const name=getSwappedName(exKey,e?e.n:'Vaja');
+  const name=getSwappedName(exKey,e?e.n:'Vaja',e&&e.extra);
   document.getElementById('ex-hist-title').textContent='📊 '+name;
   const hist=getExerciseHistory(di,ei,name);
   const sumEl=document.getElementById('ex-hist-summary');
@@ -4348,6 +4383,8 @@ function calcVolumeThisWeek(){
     const origs=(d._origEx||d.ex).map(e=>({...e,extra:false}));
     const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
     let allEx=applyExOrderByName(di,[...origs,...extras]);
+    const _seenV=new Set();
+    allEx=allEx.filter(e=>{const k=(e.n||'').toLowerCase();if(_seenV.has(k))return false;_seenV.add(k);return true;});
     allEx.forEach((e,ei)=>{
       let map=EX_MAP[e.n];
       // Če ni v EX_MAP, poišči v built-in DB ali custom
@@ -5108,6 +5145,7 @@ const _lastWeek=parseInt(localStorage.getItem('wt_last_week'));
 const _lastDay=parseInt(localStorage.getItem('wt_last_day'));
 if(!isNaN(_lastWeek)&&_lastWeek>=0&&_lastWeek<=3){cw=_lastWeek;document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===_lastWeek));}
 const _initDay=(!isNaN(_lastDay)&&_lastDay>=0&&_lastDay<=4)?_lastDay:0;
+try{migrateSwaps();}catch(e){}
 showDay(_initDay);
 // Obnovi morebiten aktivni session in rest timer
 restoreSession();restoreTimer();
