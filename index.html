@@ -1971,13 +1971,13 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     </div>
     ${summaryHtml}
     <div class="ex-body">
-    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button>${isExtra?'':`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`}${(!isExtra&&getExSwaps()[`d${di}|${e.n}`])?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}')">↺ Original</button>`:''}${isExtra?`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">×</button>`:''}<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExUp(${di},${ei})" title="Premakni gor">↑</button><button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExDown(${di},${ei})" title="Premakni dol">↓</button>${isExtra?'':`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);padding:2px 6px;" onclick="removeExForWeek('${exKey}')" title="Odstrani za ta teden">🗑</button>`}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
+    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button>${isExtra?'':`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`}${(!isExtra&&getExSwaps()[`d${di}|${e.n}`])?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}','${e.n.replace(/'/g,"\\'")}')">↺ Original</button>`:''}${isExtra?`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">×</button>`:''}<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExUp(${di},${ei})" title="Premakni gor">↑</button><button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExDown(${di},${ei})" title="Premakni dol">↓</button>${isExtra?'':`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);padding:2px 6px;" onclick="removeExForWeek('${exKey}')" title="Odstrani za ta teden">🗑</button>`}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
     <div class="sw-panel" id="sw-${exKey}">
-      <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}',this.value)" style="width:100%;margin-bottom:8px;">
-      <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,'')}</div>
+      <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}','${e.n.replace(/'/g,"\\'")}',this.value)" style="width:100%;margin-bottom:8px;">
+      <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,e.n,'')}</div>
       <div class="sw-custom-row">
         <input class="sw-custom-in" type="text" placeholder="Ali vpiši svojo..." id="swci-${exKey}">
-        <button class="sw-custom-btn" onclick="useCustomSwap('${exKey}')">Uporabi</button>
+        <button class="sw-custom-btn" onclick="useCustomSwap('${exKey}','${e.n.replace(/'/g,"\\'")}')">Uporabi</button>
       </div>
     </div>
     ${sugHtml}
@@ -2266,21 +2266,20 @@ function stepReps(exKey,si,di,ei,cn,delta){
   inp.value=newVal;
   sv(exKey,si,'reps',String(newVal),di,ei,cn,0);
 }
-function useSwap(key,name){
-  const on=origNameForKey(key);
-  if(!on){toast('Te vaje ni mogoče zamenjati','err');return;}
+function useSwap(key,name,origName){
+  if(!origName)origName=origNameForKey(key); // fallback
+  if(!origName){toast('Te vaje ni mogoče zamenjati','err');return;}
   const swaps=getExSwaps();
-  swaps[`d${diFromKey(key)}|${on}`]=name;
+  swaps[`d${diFromKey(key)}|${origName}`]=name;
   saveExSwaps(swaps);
   showDay(cd);
   toast('✓ Vaja zamenjana (vsi tedni)','ok');
 }
-function useCustomSwap(key){const inp=document.getElementById('swci-'+key);if(!inp||!inp.value.trim())return;useSwap(key,inp.value.trim());}
+function useCustomSwap(key,origName){const inp=document.getElementById('swci-'+key);if(!inp||!inp.value.trim())return;useSwap(key,inp.value.trim(),origName);}
 
 // === SWAP DB LIST + SEARCH ===
-function renderSwapDBList(exKey,query){
+function renderSwapDBList(exKey,origName,query){
   const q=(query||'').toLowerCase().trim();
-  // Združi: custom (z ⭐) + built-in DB
   const customs=getCustomExercises().map(c=>({n:c.n,m:c.muscle,c:c.cat,d:c.desc||'',custom:true}));
   const builtins=EXERCISE_DB.map(e=>({n:e.n,m:e.m,c:e.c,d:e.d,s:e.s,eq:e.eq,custom:false}));
   let all=[...customs,...builtins];
@@ -2288,11 +2287,12 @@ function renderSwapDBList(exKey,query){
     all=all.filter(e=>e.n.toLowerCase().includes(q)||e.m.toLowerCase().includes(q)||(e.s&&e.s.toLowerCase().includes(q))||(e.eq&&e.eq.toLowerCase().includes(q)));
   }
   if(all.length===0)return '<div style="font-size:11px;color:var(--text3);padding:.5rem;text-align:center;">Ni zadetkov.</div>';
+  const onEsc=(origName||'').replace(/'/g,"\\'");
   return all.slice(0,50).map(e=>{
     const star=e.custom?'⭐ ':'';
     const eqIcon={barbell:'🏋',dumbbell:'🔔',cable:'🔗',machine:'⚙',bodyweight:'🤸',other:''}[e.eq]||'';
     const meta=`${e.m}${e.s?' · '+e.s:''} · ${e.c==='compound'?'compound':'isolation'}`;
-    return `<div class="sw-item" onclick="useSwap('${exKey}','${e.n.replace(/'/g,"\\'")}')">
+    return `<div class="sw-item" onclick="useSwap('${exKey}','${e.n.replace(/'/g,"\\'")}','${onEsc}')">
       <div class="sw-item-name">${star}${eqIcon} ${e.n}</div>
       <div class="sw-item-note">${meta}</div>
       ${e.d?`<div style="font-size:10px;color:var(--text3);margin-top:3px;line-height:1.3;">${e.d.slice(0,140)}${e.d.length>140?'…':''}</div>`:''}
@@ -2300,15 +2300,15 @@ function renderSwapDBList(exKey,query){
   }).join('');
 }
 
-function filterSwapDB(exKey,query){
+function filterSwapDB(exKey,origName,query){
   const el=document.getElementById('swdb-'+exKey);
-  if(el)el.innerHTML=renderSwapDBList(exKey,query);
+  if(el)el.innerHTML=renderSwapDBList(exKey,origName,query);
 }
-function clearSwap(key){
-  const on=origNameForKey(key);
-  if(!on)return;
+function clearSwap(key,origName){
+  if(!origName)origName=origNameForKey(key);
+  if(!origName)return;
   const swaps=getExSwaps();
-  const k=`d${diFromKey(key)}|${on}`;
+  const k=`d${diFromKey(key)}|${origName}`;
   if(swaps[k]){delete swaps[k];saveExSwaps(swaps);showDay(cd);toast('↺ Original','ok');}
 }
 
