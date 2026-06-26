@@ -1201,21 +1201,35 @@ function allDone(di,ei){
   return all[key].slice(0,n).every(s=>s.done);
 }
 
+// Zgradi seznam vaj dneva ENAKO kot showDay (dedup + vrstni red + extras) — brez mutacije
+function buildDayExList(di){
+  const d=PROG.days[di];
+  if(!d)return [];
+  if(d._origEx===undefined)d._origEx=d.ex.slice();
+  const origs=(d._origEx||d.ex).map(e=>({...e,extra:false}));
+  const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
+  let mixed=[...origs,...extras];
+  const seen=new Set();
+  mixed=mixed.filter(e=>{const k=(e.n||'').toLowerCase();if(seen.has(k))return false;seen.add(k);return true;});
+  mixed=applyExOrderByName(di,mixed);
+  return mixed;
+}
+
 // Ali so v danem dnevu (cikel cn, teden w) vse VIDNE vaje dokončane? (vsaj 1 vaja z done)
 function isDayComplete(cn,w,di){
-  const d=PROG.days[di];if(!d)return false;
-  const list=d._origEx||d.ex;
-  const total=list.length+getExtraExercises(di).length;
+  const list=buildDayExList(di);
+  if(list.length===0)return false;
   const all=getSets();
+  const wk=PROG.weeks[w]||PROG.weeks[cw];
   let anyDone=false;
-  for(let ei=0;ei<total;ei++){
+  for(let ei=0;ei<list.length;ei++){
     const k=sdk(cn,w,di,ei);
     if(getHiddenEx()[k])continue; // skrite ne štejejo
     const sets=all[k];
     if(!sets||sets.length===0)return false;
-    // koliko setov se pričakuje
-    const wk=PROG.weeks[w]||PROG.weeks[cw];
-    const n=nsf(di,ei,wk,k);
+    // pričakovano št. serij — iz dejanske vaje na tej poziciji (ne iz mutiranega d.ex)
+    const base=wk.dl?3:(list[ei].m?wk.sM:wk.sA);
+    const n=Math.max(1,base+getExtraSets(k));
     const slice=sets.slice(0,n);
     if(slice.length===0||!slice.every(s=>s.done))return false;
     anyDone=true;
