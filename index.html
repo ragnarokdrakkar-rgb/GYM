@@ -484,7 +484,8 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 .gym-mode .exc:not(.active-ex).col-done{opacity:.45;}
 .gym-mode .stp-btn{width:34px;height:36px;font-size:18px;}
 .gym-mode .wi,.gym-mode .ri{height:36px;font-size:15px;}
-.gym-mode tr.next-set{outline:1px solid var(--green);outline-offset:-1px;background:rgba(29,158,117,.08);}
+.gym-mode tr.next-set td{background:rgba(29,158,117,.10);}
+.gym-mode tr.next-set td:first-child{box-shadow:inset 3px 0 0 var(--green);}
 .gym-target{display:none;background:var(--green-bg);border:.5px solid var(--green);border-radius:10px;padding:8px 12px;margin-bottom:.75rem;font-size:12px;color:var(--green-text);}
 .gym-mode .gym-target{display:block;}
 .pain-box{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--bg3);border:.5px solid var(--border);border-radius:8px;padding:6px 8px;margin:6px 0;font-size:11px;color:var(--text2);}
@@ -2946,6 +2947,21 @@ function checkPR(key,di,ei,sets){
   }
 }
 
+// Premakni zeleni "next-set" poudarek na prvo nedokončano serijo (gym mode)
+function updateNextSetHighlight(key){
+  const all=getSets();
+  const sets=all[key]||[];
+  let nextSi=-1;
+  for(let i=0;i<sets.length;i++){if(!sets[i].done){nextSi=i;break;}}
+  let i=0;
+  while(true){
+    const r=document.getElementById(`row-${key}-${i}`);
+    if(!r)break;
+    r.classList.toggle('next-set',i===nextSi);
+    i++;
+  }
+}
+
 function tgSet(key,si,di,ei,cn){
   const wk=PROG.weeks[cw],n=nsf(di,ei,wk,key),all=getSets();
   if(!all[key])all[key]=Array.from({length:n},()=>({kg:'',reps:'',done:false}));
@@ -2978,6 +2994,7 @@ function tgSet(key,si,di,ei,cn){
   }
   const cnt=PROG.days[di].ex.filter((_,i)=>!isExHidden(sdk(cn,cw,di,i))&&allDone(di,i)).length;
   const el=document.getElementById('ex-done');if(el)el.textContent=cnt;
+  if(typeof updateNextSetHighlight==='function')updateNextSetHighlight(key);
   if(typeof updateTabColors==='function')updateTabColors();
   if(typeof refreshGymTarget==='function')refreshGymTarget();
   // Auto-scroll na naslednjo nedokončano vajo, ko se trenutna v celoti zaključi
