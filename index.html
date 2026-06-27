@@ -534,6 +534,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <button class="sbt" id="gym-mode-btn" onclick="toggleGymMode()">Gym mode</button>
     <div style="font-size:11px;color:var(--text3);flex:1;text-align:right;line-height:1.5;" id="st-s"></div>
   </div>
+  <div style="text-align:right;font-size:9px;color:var(--text3);margin:-8px 0 6px;" id="app-ver"></div>
   <div class="sl">Teden</div>
   <div class="wtabs">
     <div class="wt active" onclick="setWeek(0)">Teden 1<br>Težko</div>
@@ -941,6 +942,7 @@ const REST_T={main:180,acc:90,iso:60,lat:45};
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
+const APP_VERSION='3.3.4';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -5301,6 +5303,7 @@ const _lastWeek=parseInt(localStorage.getItem('wt_last_week'));
 const _lastDay=parseInt(localStorage.getItem('wt_last_day'));
 if(!isNaN(_lastWeek)&&_lastWeek>=0&&_lastWeek<=3){cw=_lastWeek;document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===_lastWeek));}
 const _initDay=(!isNaN(_lastDay)&&_lastDay>=0&&_lastDay<=4)?_lastDay:0;
+try{const _av=document.getElementById('app-ver');if(_av)_av.textContent='v'+APP_VERSION;}catch(e){}
 try{migrateSwaps();}catch(e){}
 showDay(_initDay);
 try{initP1();}catch(e){console.warn('P1 init failed',e);}

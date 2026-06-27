@@ -1,6 +1,6 @@
 // Workout Tracker — Service Worker
 // Verzija — povečaj ko spremeniš katerokoli datoteko, da se cache osveži
-const VERSION = 'v3.3.3';
+const VERSION = 'v3.3.4';
 const CACHE_NAME = `workout-tracker-${VERSION}`;
 
 // Datoteke ki naj se cachirajo za offline delovanje
@@ -35,27 +35,39 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   // Ne cachiramo non-GET
   if (event.request.method !== 'GET') return;
-  // Ne cachiramo Google Sheets API klicev (sync)
   const url = event.request.url;
+  // Ne cachiramo Google Sheets API klicev (sync)
   if (url.includes('script.google.com') || url.includes('googleusercontent.com')) return;
 
+  // NETWORK-FIRST za HTML/navigacijo in sw.js → vedno najnovejša koda ko si online
+  const isHTML = event.request.mode === 'navigate' || url.endsWith('/') || url.endsWith('/index.html') || url.endsWith('index.html');
+  if (isHTML) {
+    event.respondWith(
+      fetch(event.request).then(resp => {
+        const clone = resp.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(()=>{});
+        return resp;
+      }).catch(() =>
+        caches.match(event.request).then(c => c || caches.match('./index.html'))
+      )
+    );
+    return;
+  }
+
+  // CACHE-FIRST za ostalo (ikone, CDN datoteke)
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
-      // Ne v cache — fetch + dodaj v cache (za CDN-je tipa Chart.js)
       return fetch(event.request).then(resp => {
-        // Samo uspešne odgovore cachiramo
         if (!resp || resp.status !== 200 || resp.type === 'error') return resp;
         const respClone = resp.clone();
         caches.open(CACHE_NAME).then(cache => {
-          // Cachiramo CDN datoteke (Chart.js itd.)
           if (url.startsWith('https://cdn') || url.startsWith('https://cdnjs')) {
             cache.put(event.request, respClone);
           }
         });
         return resp;
       }).catch(() => {
-        // Offline & ni v cache — vrni minimalen fallback za HTML
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
