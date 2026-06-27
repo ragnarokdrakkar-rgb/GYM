@@ -479,13 +479,13 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 .gym-mode .stb{position:sticky;top:0;z-index:60;border-color:var(--green);box-shadow:0 6px 18px rgba(0,0,0,.28);}
 .gym-mode .wtabs,.gym-mode .dtabs{display:none!important;}
 .gym-mode #page-workout>.sl{display:none!important;}
-.gym-mode .exc{padding:1rem;margin-bottom:.85rem;}
+.gym-mode .exc{padding:1rem;margin-bottom:.85rem;overflow:hidden;}
 .gym-mode .exc.active-ex{border:2px solid var(--green);box-shadow:0 6px 18px rgba(0,0,0,.22);}
 .gym-mode .exc:not(.active-ex).col-done{opacity:.45;}
 .gym-mode .stp-btn{width:34px;height:36px;font-size:18px;}
 .gym-mode .wi,.gym-mode .ri{height:36px;font-size:15px;}
-.gym-mode tr.next-set td{background:rgba(29,158,117,.18);}
-.gym-mode tr.next-set td:first-child{border-left:3px solid var(--green);}
+.gym-mode tr.next-set .sn{border-left:4px solid var(--green);color:var(--green-text);font-weight:700;background:rgba(29,158,117,.15);}
+.gym-mode tr.next-set td:nth-child(2){background:rgba(29,158,117,.08);}
 .gym-target{display:none;background:var(--green-bg);border:.5px solid var(--green);border-radius:10px;padding:8px 12px;margin-bottom:.75rem;font-size:12px;color:var(--green-text);}
 .gym-mode .gym-target{display:block;}
 .pain-box{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--bg3);border:.5px solid var(--border);border-radius:8px;padding:6px 8px;margin:6px 0;font-size:11px;color:var(--text2);}
@@ -942,7 +942,7 @@ const REST_T={main:180,acc:90,iso:60,lat:45};
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.3.4';
+const APP_VERSION='3.3.5';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
