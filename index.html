@@ -473,6 +473,28 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 .toggle-sw.on{background:var(--green);border-color:var(--green);}
 .toggle-sw::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:var(--text);border-radius:50%;transition:left .2s;}
 .toggle-sw.on::after{left:21px;background:#fff;}
+/* === P1 additions: gym mode, pain guard, immutable session cards === */
+.gym-mode .topbar,.gym-mode .nav,.gym-mode #bk-banner{display:none!important;}
+.gym-mode body{padding-top:0;}
+.gym-mode .stb{position:sticky;top:0;z-index:60;border-color:var(--green);box-shadow:0 6px 18px rgba(0,0,0,.28);}
+.gym-mode .wtabs,.gym-mode .dtabs{display:none!important;}
+.gym-mode #page-workout>.sl{display:none!important;}
+.gym-mode .exc{padding:1rem;margin-bottom:.85rem;}
+.gym-mode .exc.active-ex{border:1px solid var(--green);box-shadow:0 0 0 1px rgba(29,158,117,.35),0 8px 22px rgba(0,0,0,.22);}
+.gym-mode .exc:not(.active-ex).col-done{opacity:.45;}
+.gym-mode .stp-btn{width:34px;height:36px;font-size:18px;}
+.gym-mode .wi,.gym-mode .ri{height:36px;font-size:15px;}
+.gym-mode tr.next-set{outline:1px solid var(--green);outline-offset:-1px;background:rgba(29,158,117,.08);}
+.gym-target{display:none;background:var(--green-bg);border:.5px solid var(--green);border-radius:10px;padding:8px 12px;margin-bottom:.75rem;font-size:12px;color:var(--green-text);}
+.gym-mode .gym-target{display:block;}
+.pain-box{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--bg3);border:.5px solid var(--border);border-radius:8px;padding:6px 8px;margin:6px 0;font-size:11px;color:var(--text2);}
+.pain-box select{background:var(--bg4);border:.5px solid var(--border2);border-radius:6px;color:var(--text);font-size:12px;padding:4px 6px;}
+.pain-box.warn{background:var(--amber-bg);border-color:var(--amber);color:var(--amber-text);}
+.pain-box.danger{background:var(--red-bg);border-color:var(--red);color:var(--red-text);}
+.pain-msg{font-size:11px;line-height:1.35;flex:1;min-width:150px;}
+.sbt.gym-on{background:var(--green-bg);color:var(--green-text);border-color:var(--green);}
+.snap-badge{font-size:10px;color:var(--purple-text);background:var(--purple-bg);border:.5px solid var(--purple);border-radius:20px;padding:2px 7px;}
+
 </style>
 </head>
 <body>
@@ -508,6 +530,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   <div class="stb">
     <div class="sd" id="st-d">00:00:00</div>
     <button class="sbt" id="st-b" onclick="toggleSess()">Start session</button>
+    <button class="sbt" id="gym-mode-btn" onclick="toggleGymMode()">Gym mode</button>
     <div style="font-size:11px;color:var(--text3);flex:1;text-align:right;line-height:1.5;" id="st-s"></div>
   </div>
   <div class="sl">Teden</div>
@@ -912,7 +935,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const LS={sets:'wt_s6',pr:'wt_p6',notes:'wt_n6',bw:'wt_bw6',cycle:'wt_c6',meas:'wt_m6',gym:'wt_g6',theme:'wt_th6',sessions:'wt_sess6',cynotes:'wt_cyn6',restplan:'wt_rp6',setcounts:'wt_sc6'};
+const LS={sets:'wt_s6',pr:'wt_p6',notes:'wt_n6',bw:'wt_bw6',cycle:'wt_c6',meas:'wt_m6',gym:'wt_g6',theme:'wt_th6',sessions:'wt_sess6',cynotes:'wt_cyn6',restplan:'wt_rp6',setcounts:'wt_sc6',pain:'wt_pain6'};
 const REST_T={main:180,acc:90,iso:60,lat:45};
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
@@ -1111,6 +1134,7 @@ function getSessions(){return lsa(LS.sessions);}function saveSessions(d){lss(LS.
 function getCyNotes(){return ls(LS.cynotes);}function saveCyNotes(d){lss(LS.cynotes,d);}
 function getRestPlan(){return ls(LS.restplan);}function saveRestPlan(d){lss(LS.restplan,d);}
 function getSetCounts(){return ls(LS.setcounts);}function saveSetCounts(d){lss(LS.setcounts,d);}
+function getPainData(){return ls(LS.pain);}function savePainData(d){lss(LS.pain,d);}
 
 function toggleTheme(){
   const html=document.documentElement,isDark=html.getAttribute('data-theme')==='dark';
@@ -1201,6 +1225,7 @@ function allDone(di,ei){
   return all[key].slice(0,n).every(s=>s.done);
 }
 
+// Ali so v danem dnevu (cikel cn, teden w) vse VIDNE vaje dokončane? (vsaj 1 vaja z done)
 // Zgradi seznam vaj dneva ENAKO kot showDay (dedup + vrstni red + extras) — brez mutacije
 function buildDayExList(di){
   const d=PROG.days[di];
@@ -1215,7 +1240,6 @@ function buildDayExList(di){
   return mixed;
 }
 
-// Ali so v danem dnevu (cikel cn, teden w) vse VIDNE vaje dokončane? (vsaj 1 vaja z done)
 function isDayComplete(cn,w,di){
   const list=buildDayExList(di);
   if(list.length===0)return false;
@@ -1605,7 +1629,7 @@ function showDay(idx){
   const done=visIdx.filter(i=>allDone(idx,i)).length;
   const nk=`notes-c${cyc.num}w${cw}d${idx}`;
   const nv=getNotes()[nk]||'';
-  let html=`<div class="day-title">${d.title}</div><div class="day-sub">${d.sub}</div><div class="tags">${d.tags.map(t=>`<span class="tag ${t.p?'tag-p':'tag-s'}">${t.t}</span>`).join('')}</div>`;
+  let html=`<div class="day-title">${d.title}</div><div class="day-sub">${d.sub}</div><div class="tags">${d.tags.map(t=>`<span class="tag ${t.p?'tag-p':'tag-s'}">${t.t}</span>`).join('')}</div><div class="gym-target" id="gym-target">Gym mode: najprej začni session, potem logiraj naslednji set.</div>`;
   if(wk.dl){html+=`<div class="dbox">Deload teden — 60–65% teže iz tedna 1. Ustavi 4–5 pon. pred odpovedjo. Maks 3 serije.</div>`;}
   else{html+=`<div class="pg"><div class="pc"><div class="pn">${visIdx.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
   html+=allEx.map((e,i)=>{
@@ -1623,6 +1647,7 @@ function showDay(idx){
   // Obnovi aktivni rest timer, če teče (re-render je uničil njegov UI)
   if(typeof restoreTimer==='function')restoreTimer();
   if(typeof updateTabColors==='function')updateTabColors();
+  if(typeof refreshGymTarget==='function')refreshGymTarget();
 }
 
 // Vrstni red shranjen kot SEZNAM IMEN vaj per dan
@@ -1894,6 +1919,171 @@ function swapExOrder(di,a,b){
   showDay(di);
 }
 
+
+// === P1 CORE: stable exercise IDs, gym mode, pain guard, session snapshots ===
+function safeHtml(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function slugifyP1(v){return String(v||'vaja').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'vaja';}
+function exStableId(name){return 'ex_'+slugifyP1(name);}
+function currentExerciseName(di,ei,key){const e=PROG.days[di]&&PROG.days[di].ex[ei];return getSwappedName(key,e?e.n:'Vaja',e&&e.extra);}
+function getPain(key){const p=getPainData();return Number(p[key]&&p[key].level)||0;}
+function setExPain(key,val,di,ei,cn){
+  const level=Math.max(0,Math.min(10,parseInt(val)||0));
+  const p=getPainData();
+  if(level>0){p[key]={level,date:new Date().toISOString(),exerciseId:exStableId(currentExerciseName(di,ei,key)),exerciseName:currentExerciseName(di,ei,key),cycle:cn,week:cw+1,day:DAY_NAMES[di]};}
+  else delete p[key];
+  savePainData(p);
+  const box=document.getElementById('pain-'+key);
+  if(box){box.className='pain-box '+(level>=5?'danger':level>=3?'warn':'');const msg=box.querySelector('.pain-msg');if(msg)msg.textContent=painMessage(level,currentExerciseName(di,ei,key));}
+  if(level>=5)toast('Bolečina 5+ — danes ne lovi PR-ja. Zamenjaj ali zmanjšaj.', 'err');
+  else if(level>=3)toast('Bolečina 3–4 — zmanjšaj intenzivnost/volumen.', 'err');
+  else if(level>0)toast('Bolečina zabeležena', 'ok');
+}
+function painMessage(level,name){
+  if(level>=5)return '5+ / 10: stop za PR-je. Zamenjaj vajo ali zmanjšaj ROM/težo.';
+  if(level>=3)return '3–4 / 10: ohrani tehniko, brez grinderjev, manj volumen/intenzivnost.';
+  if(level>0)return '1–2 / 10: spremljaj. Če se stopnjuje, prekini težke sete.';
+  if(/deadlift|rdl|romanian|squat|leg curl|hamstring|good morning|lunge|bulgarian|hip thrust/i.test(name||''))return '0 / 10: OK. Če se pojavi bolečina, jo zabeleži pred naslednjim setom.';
+  return '0 / 10';
+}
+function renderPainBox(key,name,di,ei,cn){
+  const level=getPain(key);
+  const cls=level>=5?'danger':level>=3?'warn':'';
+  const opts=Array.from({length:11},(_,i)=>`<option value="${i}" ${i===level?'selected':''}>${i}</option>`).join('');
+  return `<div class="pain-box ${cls}" id="pain-${key}"><span>🩹 Bolečina</span><select onchange="setExPain('${key}',this.value,${di},${ei},${cn})">${opts}</select><span class="pain-msg">${safeHtml(painMessage(level,name))}</span></div>`;
+}
+function getGymMode(){return localStorage.getItem('wt_gym_mode')==='1';}
+function setGymMode(on){localStorage.setItem('wt_gym_mode',on?'1':'0');document.documentElement.classList.toggle('gym-mode',!!on);document.body.classList.toggle('gym-mode',!!on);const b=document.getElementById('gym-mode-btn');if(b){b.classList.toggle('gym-on',!!on);b.textContent=on?'Gym ON':'Gym mode';}refreshGymTarget();}
+function toggleGymMode(){setGymMode(!getGymMode());}
+function isActiveGymEx(key){return localStorage.getItem('wt_active_ex')===key;}
+function findNextPendingExerciseKey(){
+  const cn=getCyc().num,di=cd,w=cw,all=getSets();
+  const exs=(PROG.days[di]&&PROG.days[di].ex)||[];
+  for(let ei=0;ei<exs.length;ei++){
+    const key=sdk(cn,w,di,ei); if(isExHidden(key))continue;
+    const n=nsf(di,ei,PROG.weeks[w],key),sets=all[key]||[];
+    if(!sets.slice(0,n).every(s=>s.done))return key;
+  }
+  return '';
+}
+function refreshGymTarget(){
+  const next=findNextPendingExerciseKey();
+  if(next)localStorage.setItem('wt_active_ex',next);else localStorage.removeItem('wt_active_ex');
+  document.querySelectorAll('.exc.active-ex').forEach(x=>x.classList.remove('active-ex'));
+  if(next){const c=document.getElementById('ec-'+next);if(c)c.classList.add('active-ex');}
+  const gt=document.getElementById('gym-target');
+  if(gt){
+    if(!getGymMode()){gt.textContent='Gym mode: večji gumbi, označen naslednji set, manj distrakcij.';}
+    else if(next){const m=String(next).match(/d(\d+)e(\d+)$/);let nm='Naslednja vaja';if(m)nm=currentExerciseName(+m[1],+m[2],next);gt.innerHTML=`🎯 Naslednje: <strong>${safeHtml(nm)}</strong> · logiraj prvi označen set.`;}
+    else gt.textContent='Vse vaje za ta dan so zaključene.';
+  }
+}
+function buildImmutableSessionRecord(start,end,durMin){
+  const cn=getCyc().num, w=cw, di=cd;
+  const snap=buildSessionSnapshot(cn,w,di);
+  return {
+    schemaVersion:3,
+    id:'sess_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),
+    date:start.toISOString().split('T')[0],
+    startISO:start.toISOString(),endISO:end.toISOString(),
+    dayName:DAY_NAMES[di],dayIdx:di,weekNum:w+1,weekIdx:w,cycle:cn,profile:getActiveProfile(),
+    startTime:start.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'}),
+    endTime:end.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'}),
+    durationMin:durMin,
+    totals:snap.totals,
+    exercises:snap.exercises,
+    snapshotLocked:true
+  };
+}
+function buildSessionSnapshot(cn,w,di){
+  const all=getSets(),exs=(PROG.days[di]&&PROG.days[di].ex)||[];
+  const exercises=[];let totalSets=0,totalDone=0,totalTonnage=0,maxPain=0;
+  exs.forEach((e,ei)=>{
+    const key=sdk(cn,w,di,ei); if(isExHidden(key))return;
+    const name=getSwappedName(key,e.n,e.extra);
+    const n=nsf(di,ei,PROG.weeks[w],key);
+    const raw=(all[key]||[]).slice(0,n);
+    const pain=getPain(key);maxPain=Math.max(maxPain,pain);
+    const sets=raw.map((s,si)=>{
+      const kg=parseFloat(s.kg)||0,reps=parseInt(s.reps)||0,vol=kg*reps;
+      totalSets++; if(s.done)totalDone++; totalTonnage+=s.done?vol:0;
+      return {set:si+1,kg:s.kg||'',reps:s.reps||'',rpe:s.rpe||null,done:!!s.done,drop:!!s.drop,note:s.note||'',volume:vol,exerciseId:s.exerciseId||exStableId(name),exName:s.exName||name};
+    });
+    exercises.push({key,exerciseId:exStableId(name),name,originalName:e.n||name,isExtra:!!e.extra,isMain:!!e.m,targetSets:n,targetReps:(PROG.weeks[w]||{}).reps||'',pain,sets});
+  });
+  return {exercises,totals:{sets:totalSets,doneSets:totalDone,tonnage:Math.round(totalTonnage),maxPain}};
+}
+function initP1(){setGymMode(getGymMode());migrateSetExerciseIds();}
+function migrateSetExerciseIds(){
+  const all=getSets();let changed=false;
+  Object.keys(all).forEach(k=>{const m=k.match(/^c(\d+)w(\d+)d(\d+)e(\d+)$/);if(!m)return;const di=+m[3],ei=+m[4];const e=PROG.days[di]&&PROG.days[di].ex[ei];const nm=e?e.n:'Vaja';(all[k]||[]).forEach(s=>{if(s&&!s.exerciseId){s.exerciseId=exStableId(s.exName||nm);changed=true;}});});
+  if(changed)saveSets(all);
+}
+function validateBackupP1(backup){
+  if(!backup||typeof backup!=='object')return {ok:false,msg:'Datoteka ni veljaven JSON objekt.'};
+  if(!backup.sets||typeof backup.sets!=='object')return {ok:false,msg:'Backup ne vsebuje sets podatkov.'};
+  if(backup.sessions!==undefined&&!Array.isArray(backup.sessions))return {ok:false,msg:'sessions mora biti seznam.'};
+  if(backup.version&&Number(backup.version)>3)return {ok:false,msg:'Backup je iz novejše verzije aplikacije. Ne uvažam na slepo.'};
+  let bad=0;
+  Object.entries(backup.sets).forEach(([k,v])=>{if(!/^c\d+w\d+d\d+e\d+$/.test(k)||!Array.isArray(v))bad++;});
+  if(bad>0)return {ok:false,msg:`Backup ima ${bad} pokvarjenih set ključev.`};
+  return {ok:true,msg:'OK'};
+}
+function backupSummaryP1(backup){
+  const setKeys=backup.sets?Object.keys(backup.sets).length:0;
+  const setRows=backup.sets?Object.values(backup.sets).reduce((a,v)=>a+(Array.isArray(v)?v.length:0),0):0;
+  const sess=Array.isArray(backup.sessions)?backup.sessions.length:0;
+  const bw=backup.bw?Object.keys(backup.bw).length:0;
+  const pain=backup.pain?Object.keys(backup.pain).length:0;
+  const bd=backup.date?String(backup.date).split('T')[0]:'neznan datum';
+  const bv=backup.version||'?';
+  return `Uvozi backup iz ${bd} (v${bv})?\n\nVse bo prepisano.\n- ${sess} sessionov\n- ${setKeys} vaj / ${setRows} setov\n- ${bw} zapisov teže\n- ${pain} zapisov bolečine\n\nNadaljujem?`;
+}
+async function restoreBackupObjectP1(backup,opts={}){
+  const v=validateBackupP1(backup);if(!v.ok)throw new Error(v.msg);
+  if(backup.sets) lss(LS.sets,backup.sets);
+  if(backup.pr) lss(LS.pr,backup.pr);
+  if(backup.notes) lss(LS.notes,backup.notes);
+  if(backup.bw) lss(LS.bw,backup.bw);
+  if(backup.cycle) lss(LS.cycle,backup.cycle);
+  if(backup.meas) lss(LS.meas,backup.meas);
+  if(backup.gym) lss(LS.gym,backup.gym);
+  lss(LS.sessions,Array.isArray(backup.sessions)?backup.sessions:[]);
+  lss(LS.pain,backup.pain||{});
+  if(backup.cynotes) lss(LS.cynotes,backup.cynotes);
+  if(backup.restplan) lss(LS.restplan,backup.restplan);
+  if(backup.setcounts) lss(LS.setcounts,backup.setcounts);
+  if(backup.bwgoal) localStorage.setItem('wt_bwgoal',backup.bwgoal);
+  if(backup.theme) lss(LS.theme,backup.theme);
+  if(backup.alarm) saveAlarmSettings(backup.alarm);
+  if(backup.collars!==undefined) setCollars(backup.collars);
+  if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
+  if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
+  if(backup.hidden_ex) localStorage.setItem('wt_hidden_ex',JSON.stringify(backup.hidden_ex));
+  if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
+  if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
+  if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
+  if(backup.profile) localStorage.setItem('wt_profile',backup.profile);
+  if(backup.tm531) localStorage.setItem('wt_531tm',JSON.stringify(backup.tm531));
+  if(backup.offset531!==undefined) localStorage.setItem('wt_531offset',String(backup.offset531));
+  if(backup.goals) localStorage.setItem('wt_goals',JSON.stringify(backup.goals));
+  if(backup.daylog) localStorage.setItem('wt_daylog',JSON.stringify(backup.daylog));
+  if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
+  if(backup.kg_step) localStorage.setItem('wt_kg_step',backup.kg_step);
+  if(backup.reps_step) localStorage.setItem('wt_reps_step',backup.reps_step);
+  if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
+  if(opts.photos&&backup.photos&&Array.isArray(backup.photos)&&backup.photos.length>0){
+    if(confirm(`Backup vsebuje ${backup.photos.length} fotografij. Naloži tudi fotografije?\n(Trenutne fotografije bodo zamenjane)`)){
+      const db=await openPhotoDB();
+      await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).clear();tx.oncomplete=res;});
+      for(const p of backup.photos){await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).add({date:p.date,blob:p.blob});tx.oncomplete=res;});}
+    }
+  }
+  PROG=getActiveProfile()==='bulk'?PROG_BULK:PROG_CUT;
+  initTheme();initBWGoal();cw=0;cd=0;
+  document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));
+  showPage('workout');showDay(0);initP1();
+}
+
 function renderEx(e,ei,di,wk,cn,isExtra){
   const exKey=sdk(cn,cw,di,ei);
   const n=nsf(di,ei,wk,exKey);
@@ -1902,9 +2092,9 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   while(all[exKey].length<n) all[exKey].push({kg:'',reps:'',done:false});
   saveSets(all);
   const sets=all[exKey],prs=getPRs(),prk=`pr${di}${ei}`,cpr=prs[prk]||0;
-  // Prikazano ime (upošteva swap od-tedna-naprej). isSwapped = swap dejansko aktiven za TA teden.
-  const dispName=getSwappedName(exKey,e.n,isExtra);
-  const isSwapped=dispName!==e.n;
+  const displayName=getSwappedName(exKey,e.n,isExtra);
+  // Swap dejansko aktiven za TA teden? (upošteva od-tedna-naprej)
+  const isSwapped=displayName!==e.n;
   // Prev cycle hint
   let ph='';
   if(cn>1&&!isSwapped){const pp=getPeakForExercise(cn-1,di,ei);if(pp>0)ph=`<div class="ph">Prejšnji cikel peak: ${pp}kg</div>`;}
@@ -1941,6 +2131,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     const kgVal=parseFloat(s.kg)||0;
     const repsVal=parseFloat(s.reps)||0;
     const isDrop=!!s.drop;
+    const isNextSet=!s.done&&sets.slice(0,si).every(x=>x.done);
     const vol=Math.round(kgVal*repsVal);
     const orm=s.kg&&s.reps?Math.round(kgVal*(1+repsVal/30)):'';
     const pls=isBarbell?platesShort(kgVal):{text:'',cls:''};
@@ -1950,7 +2141,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     const repsStep=getRepsStep();
     const kgInputHtml=`<div class="stp-wrap"><button class="stp-btn" onclick="stepKg('${exKey}',${si},${di},${ei},${cn},-${kgStep},${isBarbell?1:0})">−</button><input class="wi" type="number" inputmode="decimal" placeholder="kg" value="${s.kg}" min="0" step="${kgStep}" onchange="sv('${exKey}',${si},'kg',this.value,${di},${ei},${cn},${isBarbell?1:0})"><button class="stp-btn" onclick="stepKg('${exKey}',${si},${di},${ei},${cn},${kgStep},${isBarbell?1:0})">+</button></div>`;
     const repsInputHtml=`<div class="stp-wrap"><button class="stp-btn" onclick="stepReps('${exKey}',${si},${di},${ei},${cn},-${repsStep})">−</button><input class="ri" type="number" inputmode="numeric" placeholder="pon" value="${s.reps}" min="0" step="${repsStep}" onchange="sv('${exKey}',${si},'reps',this.value,${di},${ei},${cn},0)"><button class="stp-btn" onclick="stepReps('${exKey}',${si},${di},${ei},${cn},${repsStep})">+</button></div>`;
-    return `<tr id="row-${exKey}-${si}" class="${isDrop?'is-drop':''}"><td class="sn">${si+1}${dropMark}</td><td class="kg-cell">${kgInputHtml}${plMini}</td><td>${repsInputHtml}</td><td class="vc${vol>0?' hv':''}">${vol>0?vol+'kg':''}</td><td class="oc">${orm?orm+'kg':''}</td><td><button class="lb${s.done?' done':''}" onclick="tgSet('${exKey}',${si},${di},${ei},${cn})" oncontextmenu="event.preventDefault();toggleDrop('${exKey}',${si},${di},${ei},${cn})">${s.done?'✓':'Log'}</button></td></tr>`;
+    return `<tr id="row-${exKey}-${si}" class="${isDrop?'is-drop':''}${isNextSet?' next-set':''}"><td class="sn">${si+1}${dropMark}</td><td class="kg-cell">${kgInputHtml}${plMini}</td><td>${repsInputHtml}</td><td class="vc${vol>0?' hv':''}">${vol>0?vol+'kg':''}</td><td class="oc">${orm?orm+'kg':''}</td><td><button class="lb${s.done?' done':''}" onclick="tgSet('${exKey}',${si},${di},${ei},${cn})" oncontextmenu="event.preventDefault();toggleDrop('${exKey}',${si},${di},${ei},${cn})">${s.done?'✓':'Log'}</button></td></tr>`;
   }).join('');
   const baseN=wk.dl?3:(e.m?wk.sM:wk.sA);
   const extra=getExtraSets(exKey);
@@ -1979,9 +2170,11 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const topSet=doneSets.length>0?doneSets.reduce((a,b)=>parseFloat(b.kg)>parseFloat(a.kg)?b:a):null;
   const totalVol=doneSets.reduce((a,b)=>a+(parseFloat(b.kg)||0)*(parseFloat(b.reps)||0),0);
   const summaryHtml=topSet?`<div class="exc-summary"><span class="es-stats">✓ ${doneSets.length}/${n} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${exKey}')">razširi ▾</button></div>`:'';
-  return `<div class="exc${isPR?' pr-card':''}${collapsed?' col-done':''}" id="ec-${exKey}">
+  const painHtml=renderPainBox(exKey,displayName,di,ei,cn);
+  const activeCls=(typeof isActiveGymEx==='function'&&isActiveGymEx(exKey))?' active-ex':'';
+  return `<div class="exc${isPR?' pr-card':''}${collapsed?' col-done':''}${activeCls}" id="ec-${exKey}">
     <div class="ex-top">
-      <div class="ex-name-wrap"><div class="ex-name" id="exn-${exKey}">${dispName}</div><button class="hist-btn" onclick="openExHistory(${di},${ei})" title="Zgodovina vaje">📊</button></div>
+      <div class="ex-name-wrap"><div class="ex-name" id="exn-${exKey}">${safeHtml(displayName)}</div><button class="hist-btn" onclick="openExHistory(${di},${ei})" title="Zgodovina vaje">📊</button></div>
       <div class="sp ${wk.pill}">${n} × ${wk.reps}</div>
     </div>
     ${summaryHtml}
@@ -1998,7 +2191,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     ${sugHtml}
     ${p531Html}
     <div id="wu-dyn-${exKey}"></div>
-    <div class="ex-d">${e.d}</div>${e.tip?`<div class="ex-tip">${e.tip}</div>`:''}
+    <div class="ex-d">${safeHtml(e.d||'')}</div>${e.tip?`<div class="ex-tip">${safeHtml(e.tip)}</div>`:''}${painHtml}
     <table class="st"><thead><tr><th>S</th><th>Teža</th><th>Pon</th><th>Vol</th><th>1RM</th><th></th></tr></thead><tbody id="rows-${exKey}">${rows}</tbody></table>
     ${tv>0?`<div class="vol-total" style="font-size:11px;color:var(--green-text);margin-top:4px;text-align:right;">Skupaj: ${Math.round(tv).toLocaleString()} kg</div>`:''}
     <div class="set-ctrl">
@@ -2303,6 +2496,7 @@ function useCustomSwap(key,origName){const inp=document.getElementById('swci-'+k
 // === SWAP DB LIST + SEARCH ===
 function renderSwapDBList(exKey,origName,query){
   const q=(query||'').toLowerCase().trim();
+  // Združi: custom (z ⭐) + built-in DB
   const customs=getCustomExercises().map(c=>({n:c.n,m:c.muscle,c:c.cat,d:c.desc||'',custom:true}));
   const builtins=EXERCISE_DB.map(e=>({n:e.n,m:e.m,c:e.c,d:e.d,s:e.s,eq:e.eq,custom:false}));
   let all=[...customs,...builtins];
@@ -2632,7 +2826,7 @@ function sv(key,si,field,val,di,ei,cn,isBarbell){
   // Shrani ime vaje ob vnosu (za ločeno zgodovino po vaji ob zamenjavi)
   const _exObj=PROG.days[di].ex[ei];
   const _curName=getSwappedName(key,_exObj?_exObj.n:'',_exObj&&_exObj.extra);
-  if(_curName)all[key][si].exName=_curName;
+  if(_curName){all[key][si].exName=_curName;all[key][si].exerciseId=exStableId(_curName);}
   saveSets(all);
   rebuildRows(key,di,ei,wk,n,all[key]);checkPR(key,di,ei,all[key]);
   if(field==='kg'){
@@ -2759,7 +2953,7 @@ function tgSet(key,si,di,ei,cn){
   // Shrani ime vaje (za ločeno zgodovino ob zamenjavi)
   const _exO=PROG.days[di].ex[ei];
   const _cn=getSwappedName(key,_exO?_exO.n:'',_exO&&_exO.extra);
-  if(_cn)all[key][si].exName=_cn;
+  if(_cn){all[key][si].exName=_cn;all[key][si].exerciseId=exStableId(_cn);}
   saveSets(all);
   const btns=document.querySelectorAll(`#ec-${key} .lb`);
   if(btns[si]){btns[si].classList.toggle('done',all[key][si].done);btns[si].textContent=all[key][si].done?'✓':'Log';}
@@ -2785,6 +2979,7 @@ function tgSet(key,si,di,ei,cn){
   const cnt=PROG.days[di].ex.filter((_,i)=>!isExHidden(sdk(cn,cw,di,i))&&allDone(di,i)).length;
   const el=document.getElementById('ex-done');if(el)el.textContent=cnt;
   if(typeof updateTabColors==='function')updateTabColors();
+  if(typeof refreshGymTarget==='function')refreshGymTarget();
   // Auto-scroll na naslednjo nedokončano vajo, ko se trenutna v celoti zaključi
   if(allDone(di,ei)){
     // Auto-collapse trenutno (razen če je user ročno razširil)
@@ -3045,7 +3240,7 @@ function toggleSess(){
     if(dot)dot.classList.remove('on');
     const end=new Date(),dur=Math.floor((end-sessStart)/1000),durMin=Math.floor(dur/60);
     const sessions=getSessions();
-    sessions.unshift({date:sessStart.toISOString().split('T')[0],dayName:DAY_NAMES[cd],weekNum:cw+1,startTime:sessStart.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'}),endTime:end.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'}),durationMin:durMin,cycle:getCyc().num});
+    sessions.unshift(buildImmutableSessionRecord(sessStart,end,durMin));
     saveSessions(sessions);
     document.getElementById('st-b').textContent='Start session';
     document.getElementById('st-b').classList.remove('active');
@@ -3822,7 +4017,8 @@ async function exportData(){
   try{photos=await getAllPhotos();}catch(e){console.warn('Ni fotografij:',e);}
   // Export kot JSON — ohrani vse podatke popolnoma
   const backup={
-    version:2,
+    version:3,
+    schemaVersion:3,
     date:new Date().toISOString(),
     sets:getSets(),
     pr:getPRs(),
@@ -3832,6 +4028,7 @@ async function exportData(){
     meas:getMeas(),
     gym:getGym(),
     sessions:getSessions(),
+    pain:getPainData(),
     cynotes:getCyNotes(),
     restplan:getRestPlan(),
     setcounts:getSetCounts(),
@@ -3898,63 +4095,10 @@ function importData(){
     reader.onload=async ev=>{
       try{
         const backup=JSON.parse(ev.target.result);
-        if(!backup.sets){alert('Napačna datoteka — ne vsebuje podatkov o serijah. Izberi pravi workout_backup_*.json');return;}
-        const bd=backup.date?String(backup.date).split('T')[0]:'neznan datum';
-        const bv=backup.version||'?';
-        if(!confirm(`Uvozi backup iz ${bd} (v${bv})? Trenutni podatki bodo prepisani.`))return;
-        // Restore vse podatke
-        if(backup.sets) lss(LS.sets,backup.sets);
-        if(backup.pr) lss(LS.pr,backup.pr);
-        if(backup.notes) lss(LS.notes,backup.notes);
-        if(backup.bw) lss(LS.bw,backup.bw);
-        if(backup.cycle) lss(LS.cycle,backup.cycle);
-        if(backup.meas) lss(LS.meas,backup.meas);
-        if(backup.gym) lss(LS.gym,backup.gym);
-        if(backup.sessions) lss(LS.sessions,backup.sessions);
-        if(backup.cynotes) lss(LS.cynotes,backup.cynotes);
-        if(backup.restplan) lss(LS.restplan,backup.restplan);
-        if(backup.setcounts) lss(LS.setcounts,backup.setcounts);
-        if(backup.bwgoal) localStorage.setItem('wt_bwgoal',backup.bwgoal);
-        if(backup.theme) lss(LS.theme,backup.theme);
-        // Nove nastavitve (v2)
-        if(backup.alarm) saveAlarmSettings(backup.alarm);
-        // bilateral restore removed
-        if(backup.collars!==undefined) setCollars(backup.collars);
-        if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
-        if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
-        if(backup.hidden_ex) localStorage.setItem('wt_hidden_ex',JSON.stringify(backup.hidden_ex));
-        if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
-        if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
-        if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
-        if(backup.profile) localStorage.setItem('wt_profile',backup.profile);
-        if(backup.tm531) localStorage.setItem('wt_531tm',JSON.stringify(backup.tm531));
-        if(backup.offset531!==undefined) localStorage.setItem('wt_531offset',String(backup.offset531));
-        if(backup.goals) localStorage.setItem('wt_goals',JSON.stringify(backup.goals));
-        if(backup.daylog) localStorage.setItem('wt_daylog',JSON.stringify(backup.daylog));
-        if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
-        if(backup.kg_step) localStorage.setItem('wt_kg_step',backup.kg_step);
-        if(backup.reps_step) localStorage.setItem('wt_reps_step',backup.reps_step);
-        if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
-        // Photos restore (IndexedDB)
-        if(backup.photos&&Array.isArray(backup.photos)&&backup.photos.length>0){
-          if(confirm(`Backup vsebuje ${backup.photos.length} fotografij. Naloži tudi fotografije?\n(Trenutne fotografije bodo zamenjane)`)){
-            try{
-              const db=await openPhotoDB();
-              // Počisti obstoječe
-              await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).clear();tx.oncomplete=res;});
-              // Dodaj nove
-              for(const p of backup.photos){
-                await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).add({date:p.date,blob:p.blob});tx.oncomplete=res;});
-              }
-            }catch(err){console.warn('Photo restore napaka:',err);}
-          }
-        }
-        // Refresh UI
-        PROG = getActiveProfile()==='bulk' ? PROG_BULK : PROG_CUT;
-        initTheme();initBWGoal();
-        cw=0;cd=0;
-        document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));
-        showPage('workout');showDay(0);
+        const v=validateBackupP1(backup);
+        if(!v.ok){alert('Napačna backup datoteka: '+v.msg);return;}
+        if(!confirm(backupSummaryP1(backup)))return;
+        await restoreBackupObjectP1(backup,{photos:true});
         alert('Podatki uspešno uvoženi! 💪');
       }catch(err){alert('Napaka pri uvozu: '+err.message);}
     };
@@ -3962,6 +4106,7 @@ function importData(){
   };
   input.click();
 }
+
 
 function clearAll(){
   if(confirm('Ponastavi vse? Tega ni mogoče razveljaviti.')){
@@ -4962,7 +5107,8 @@ async function buildBackupJSON(includePhotos){
     try{photos=await getAllPhotos();}catch(e){}
   }
   return JSON.stringify({
-    version:2,
+    version:3,
+    schemaVersion:3,
     date:new Date().toISOString(),
     sets:getSets(),
     pr:getPRs(),
@@ -4972,6 +5118,7 @@ async function buildBackupJSON(includePhotos){
     meas:getMeas(),
     gym:getGym(),
     sessions:getSessions(),
+    pain:getPainData(),
     cynotes:getCyNotes(),
     restplan:getRestPlan(),
     setcounts:getSetCounts(),
@@ -5101,49 +5248,18 @@ async function downloadBackupFromIDB(id){
 }
 
 async function restoreBackupFromIDB(id){
-  if(!confirm('⚠️ Trenutni podatki bodo prepisani s tem backupom. Nadaljujem?'))return;
   const list=await getAllBackups();
   const b=list.find(x=>x.id===id);if(!b)return;
   try{
     const backup=JSON.parse(b.blob);
-    // Restore vse podatke (kot v importData ampak brez izbire datoteke)
-    if(backup.sets) lss(LS.sets,backup.sets);
-    if(backup.pr) lss(LS.pr,backup.pr);
-    if(backup.notes) lss(LS.notes,backup.notes);
-    if(backup.bw) lss(LS.bw,backup.bw);
-    if(backup.cycle) lss(LS.cycle,backup.cycle);
-    if(backup.meas) lss(LS.meas,backup.meas);
-    if(backup.gym) lss(LS.gym,backup.gym);
-    if(backup.sessions) lss(LS.sessions,backup.sessions);
-    if(backup.cynotes) lss(LS.cynotes,backup.cynotes);
-    if(backup.restplan) lss(LS.restplan,backup.restplan);
-    if(backup.setcounts) lss(LS.setcounts,backup.setcounts);
-    if(backup.bwgoal) localStorage.setItem('wt_bwgoal',backup.bwgoal);
-    if(backup.theme) lss(LS.theme,backup.theme);
-    if(backup.alarm) saveAlarmSettings(backup.alarm);
-    if(backup.collars!==undefined) setCollars(backup.collars);
-    if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
-        if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
-        if(backup.hidden_ex) localStorage.setItem('wt_hidden_ex',JSON.stringify(backup.hidden_ex));
-        if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
-        if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
-        if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
-        if(backup.profile) localStorage.setItem('wt_profile',backup.profile);
-        if(backup.tm531) localStorage.setItem('wt_531tm',JSON.stringify(backup.tm531));
-        if(backup.offset531!==undefined) localStorage.setItem('wt_531offset',String(backup.offset531));
-        if(backup.goals) localStorage.setItem('wt_goals',JSON.stringify(backup.goals));
-        if(backup.daylog) localStorage.setItem('wt_daylog',JSON.stringify(backup.daylog));
-        if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
-        if(backup.kg_step) localStorage.setItem('wt_kg_step',backup.kg_step);
-        if(backup.reps_step) localStorage.setItem('wt_reps_step',backup.reps_step);
-    if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
-    initTheme();initBWGoal();
-    cw=0;cd=0;
-    document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));
-    showPage('workout');showDay(0);
+    const v=validateBackupP1(backup);
+    if(!v.ok){alert('Backup je pokvarjen: '+v.msg);return;}
+    if(!confirm(backupSummaryP1(backup)))return;
+    await restoreBackupObjectP1(backup,{photos:false});
     toast('✓ Obnovljeno iz backupa','ok');
   }catch(e){alert('Napaka pri obnovi: '+e.message);}
 }
+
 
 async function delBackupConfirm(id){
   if(!confirm('Izbriši ta backup?'))return;
@@ -5170,6 +5286,7 @@ if(!isNaN(_lastWeek)&&_lastWeek>=0&&_lastWeek<=3){cw=_lastWeek;document.querySel
 const _initDay=(!isNaN(_lastDay)&&_lastDay>=0&&_lastDay<=4)?_lastDay:0;
 try{migrateSwaps();}catch(e){}
 showDay(_initDay);
+try{initP1();}catch(e){console.warn('P1 init failed',e);}
 // Obnovi morebiten aktivni session in rest timer
 restoreSession();restoreTimer();
 
