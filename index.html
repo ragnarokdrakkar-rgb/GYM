@@ -792,9 +792,9 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 <!-- TOOLS PAGE -->
 <div class="page" id="page-tools">
   <div class="card">
-    <div class="ct">🎨 Barva teme</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;">Izberi glavno barvo aplikacije (poudarki, gumbi, oznake).</div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;" id="accent-picker"></div>
+    <div class="ct">🎨 Barve teme</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.85rem;">Klikni na kvadratek in izberi poljubno barvo za vsak segment. Odtenki se izračunajo sami.</div>
+    <div id="color-pickers"></div>
   </div>
   <div class="card">
     <div class="ct">🔄 Program profil</div>
@@ -969,7 +969,7 @@ function editRest(name,def){
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.4.0';
+const APP_VERSION='3.4.1';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -1171,36 +1171,62 @@ function toggleTheme(){
   html.setAttribute('data-theme',isDark?'light':'dark');
   document.getElementById('theme-btn').textContent=isDark?'🌙 Dark':'☀ Light';
   lss(LS.theme,isDark?'light':'dark');
-  applyAccent(localStorage.getItem('wt_accent')||'green'); // ponovno za nov theme variant
+  applyAllColors(); // ponovno za nov theme variant
   if(bwChart)renderBW();if(strengthChart)renderStrengthChart();
 }
-// Barvni accenti (glavna barva + ozadje + tekst, za dark/light)
-const ACCENTS={
-  green:{n:'Zelena',dark:['#1d9e75','#0d2a1f','#4ecba0'],light:['#0f6e56','#e1f5ee','#085041']},
-  blue:{n:'Modra',dark:['#2f81f7','#0d1f33','#6cb0ff'],light:['#1559b8','#e1edfb','#0a3a7a']},
-  teal:{n:'Turkizna',dark:['#14b8a6','#0a2a26','#5eead4'],light:['#0d8276','#e0f5f2','#085048']},
-  purple:{n:'Vijolična',dark:['#8b5cf6','#1d1533','#b794ff'],light:['#6d28d9','#ece1fb','#4a1a8a']},
-  orange:{n:'Oranžna',dark:['#ef8b27','#2a1c0a','#f5b060'],light:['#c26512','#faecd9','#7a3f06']},
-  pink:{n:'Roza',dark:['#ec4899','#2a0f1f','#f9a8d4'],light:['#be185d','#fbe1ee','#7a0f3f']},
-  red:{n:'Rdeča',dark:['#e24b4a','#2a0f0f','#f08080'],light:['#c0392b','#fcebeb','#7a1f1f']},
-};
-function applyAccent(key){
-  const a=ACCENTS[key]||ACCENTS.green;
-  localStorage.setItem('wt_accent',key);
+// === BARVE PER SEGMENT (prosta izbira) ===
+const COLOR_FAMILIES=[
+  {k:'green',n:'Glavna (gumbi, poudarki, ✓)'},
+  {k:'blue',n:'Info škatle / timer'},
+  {k:'amber',n:'Deload / naslednja serija'},
+  {k:'purple',n:'Posebno (drop seti, značke)'},
+  {k:'red',n:'Opozorila / brisanje'},
+];
+const COLOR_DEFAULTS={green:'#1d9e75',blue:'#378add',amber:'#ef9f27',purple:'#7f77dd',red:'#e24b4a'};
+function _h2r(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function _r2h(a){return '#'+a.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');}
+function _mix(a,b,t){return a.map((v,i)=>v+(b[i]-v)*t);}
+function deriveShades(hex,isDark){
+  const c=_h2r(hex);
+  if(isDark)return [hex,_r2h(_mix(c,[14,16,18],0.80)),_r2h(_mix(c,[255,255,255],0.34))];
+  return [hex,_r2h(_mix(c,[255,255,255],0.85)),_r2h(_mix(c,[0,0,0],0.46))];
+}
+function getStoredColors(){try{return JSON.parse(localStorage.getItem('wt_colors')||'{}');}catch{return {};}}
+function applyAllColors(){
+  const stored=getStoredColors();
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-  const [g,bg,txt]=isDark?a.dark:a.light;
   const r=document.documentElement.style;
-  r.setProperty('--green',g);r.setProperty('--green-bg',bg);r.setProperty('--green-text',txt);
-  // osveži swatch oznake če so vidne
-  document.querySelectorAll('.accent-sw').forEach(el=>el.classList.toggle('sel',el.dataset.acc===key));
+  COLOR_FAMILIES.forEach(f=>{
+    if(stored[f.k]){
+      const [g,bg,txt]=deriveShades(stored[f.k],isDark);
+      r.setProperty('--'+f.k,g);r.setProperty('--'+f.k+'-bg',bg);r.setProperty('--'+f.k+'-text',txt);
+    }
+  });
 }
-function renderAccentPicker(){
-  const cur=localStorage.getItem('wt_accent')||'green';
-  return Object.keys(ACCENTS).map(k=>{
-    const a=ACCENTS[k];const col=a.dark[0];
-    return `<button class="accent-sw${k===cur?' sel':''}" data-acc="${k}" onclick="applyAccent('${k}')" title="${a.n}" style="background:${col};"></button>`;
-  }).join('');
+function setColorFamily(k,hex){
+  const stored=getStoredColors();stored[k]=hex;localStorage.setItem('wt_colors',JSON.stringify(stored));
+  applyAllColors();
 }
+function resetColors(){
+  localStorage.removeItem('wt_colors');
+  const r=document.documentElement.style;
+  COLOR_FAMILIES.forEach(f=>{r.removeProperty('--'+f.k);r.removeProperty('--'+f.k+'-bg');r.removeProperty('--'+f.k+'-text');});
+  renderColorPickersInto();
+  toast('↺ Barve ponastavljene','ok');
+}
+function renderColorPickers(){
+  const stored=getStoredColors();
+  return COLOR_FAMILIES.map(f=>{
+    const val=stored[f.k]||COLOR_DEFAULTS[f.k];
+    return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:11px;">
+      <input type="color" value="${val}" onchange="setColorFamily('${f.k}',this.value)" style="width:48px;height:38px;border:none;border-radius:8px;background:none;cursor:pointer;padding:0;flex:none;">
+      <span style="font-size:12.5px;color:var(--text2);">${f.n}</span>
+    </div>`;
+  }).join('')+`<button class="sb" onclick="resetColors()" style="background:var(--bg3);margin-top:6px;">↺ Ponastavi vse barve</button>`;
+}
+function renderColorPickersInto(){const el=document.getElementById('color-pickers');if(el)el.innerHTML=renderColorPickers();}
+// Združljivost s starim klicem
+function applyAccent(){applyAllColors();}
 function initTheme(){
   const t=localStorage.getItem(LS.theme)||'dark';
   document.documentElement.setAttribute('data-theme',t);
@@ -1244,7 +1270,7 @@ function showPage(p){
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
-  if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();const _ap=document.getElementById('accent-picker');if(_ap)_ap.innerHTML=renderAccentPicker();}
+  if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();renderColorPickersInto();}
   if(p==='gymlog'){renderSessHist();renderWeeklySummary();renderTonnageChart();const _tc=document.getElementById('train-calendar');if(_tc)_tc.innerHTML=renderTrainCalendar();}
   if(p==='stats'){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
@@ -2136,7 +2162,7 @@ async function restoreBackupObjectP1(backup,opts={}){
     }
   }
   PROG=getActiveProfile()==='bulk'?PROG_BULK:PROG_CUT;
-  initTheme();applyAccent(localStorage.getItem('wt_accent')||'green');initBWGoal();cw=0;cd=0;
+  initTheme();applyAllColors();initBWGoal();cw=0;cd=0;
   document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));
   showPage('workout');showDay(0);initP1();
 }
@@ -5349,7 +5375,7 @@ async function manualAutoBackup(){
   }
 }
 
-initTheme();applyAccent(localStorage.getItem('wt_accent')||'green');initBWGoal();
+initTheme();applyAllColors();initBWGoal();
 // Obnovi zadnji teden in dan
 const _lastWeek=parseInt(localStorage.getItem('wt_last_week'));
 const _lastDay=parseInt(localStorage.getItem('wt_last_day'));
