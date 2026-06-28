@@ -479,7 +479,10 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 .gym-mode .stb{position:sticky;top:0;z-index:60;border-color:var(--green);box-shadow:0 6px 18px rgba(0,0,0,.28);}
 .gym-mode .wtabs,.gym-mode .dtabs{display:none!important;}
 .gym-mode #page-workout>.sl{display:none!important;}
-.gym-mode .exc{padding:1rem;margin-bottom:.85rem;overflow:hidden;}
+.gym-mode .exc{padding:1rem;margin-bottom:.85rem;}
+/* V gym mode skrij Vol in 1RM stolpca → vrstica se prilega zaslonu */
+.gym-mode .st th:nth-child(4),.gym-mode .st td:nth-child(4),
+.gym-mode .st th:nth-child(5),.gym-mode .st td:nth-child(5){display:none;}
 .gym-mode .exc.active-ex{border:2px solid var(--green);box-shadow:0 6px 18px rgba(0,0,0,.22);}
 .gym-mode .exc:not(.active-ex).col-done{opacity:.45;}
 .gym-mode .stp-btn{width:34px;height:36px;font-size:18px;}
@@ -942,7 +945,7 @@ const REST_T={main:180,acc:90,iso:60,lat:45};
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.3.5';
+const APP_VERSION='3.3.6';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
