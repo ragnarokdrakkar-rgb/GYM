@@ -103,6 +103,9 @@ body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;font-siz
 .rh{background:var(--red-bg);color:var(--red-text);}
 .rm{background:var(--amber-bg);color:var(--amber-text);}
 .rl{background:var(--green-bg);color:var(--green-text);}
+.accent-sw{width:38px;height:38px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0;transition:transform .1s;}
+.accent-sw.sel{border-color:var(--text);transform:scale(1.12);box-shadow:0 0 0 2px var(--bg),0 0 0 4px currentColor;}
+.accent-sw:active{transform:scale(.95);}
 .mb{background:var(--purple-bg);color:var(--purple-text);}
 .prb{background:var(--amber-bg);color:var(--amber-text);font-weight:500;}
 .restbtn{font-size:10px;padding:2px 8px;border-radius:20px;border:.5px solid var(--border2);background:var(--bg3);cursor:pointer;color:var(--text2);font-family:system-ui,sans-serif;}
@@ -610,6 +613,12 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Kako pogosto opraviš vsak trening (zadnjih 8 tednov).</div>
     <div id="consistency-stats"></div>
   </div>
+  <!-- Training calendar -->
+  <div class="card">
+    <div class="ct">🗓️ Koledar treningov</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.25rem;">Barva = kateri trening. Drsaj med meseci s puščicami.</div>
+    <div id="train-calendar"></div>
+  </div>
   <!-- Duration trend -->
   <div class="card">
     <div class="ct">⏱ Trajanje treningov</div>
@@ -705,11 +714,6 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div id="vol-grp-view"></div>
   </div>
   <div class="card">
-    <div class="ct">🗓️ Koledar treningov</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:.25rem;">Barva = kateri trening. Drsaj med meseci s puščicami.</div>
-    <div id="train-calendar"></div>
-  </div>
-  <div class="card">
     <div class="ct">💪 Razmerja moči (BW)</div>
     <div id="strength-ratios"></div>
   </div>
@@ -787,6 +791,11 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 
 <!-- TOOLS PAGE -->
 <div class="page" id="page-tools">
+  <div class="card">
+    <div class="ct">🎨 Barva teme</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;">Izberi glavno barvo aplikacije (poudarki, gumbi, oznake).</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;" id="accent-picker"></div>
+  </div>
   <div class="card">
     <div class="ct">🔄 Program profil</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.4;">Preklopi med <strong>Cut</strong> (trenutni 5-dnevni PPL, ohranjanje) in <strong>Bulk</strong> (5/3/1 Boring But Big — moč + masa). Podatki obeh ostanejo ločeni.</div>
@@ -943,10 +952,24 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 <script>
 const LS={sets:'wt_s6',pr:'wt_p6',notes:'wt_n6',bw:'wt_bw6',cycle:'wt_c6',meas:'wt_m6',gym:'wt_g6',theme:'wt_th6',sessions:'wt_sess6',cynotes:'wt_cyn6',restplan:'wt_rp6',setcounts:'wt_sc6',pain:'wt_pain6'};
 const REST_T={main:180,acc:90,iso:60,lat:45};
+// Poljuben počitek per vaja (shranjen po imenu vaje)
+function getCustomRest(){try{return JSON.parse(localStorage.getItem('wt_custom_rest')||'{}');}catch{return {};}}
+function setCustomRestFor(name,secs){const r=getCustomRest();if(secs)r[name]=secs;else delete r[name];localStorage.setItem('wt_custom_rest',JSON.stringify(r));}
+function restForEx(name,def){const r=getCustomRest();return r[name]||def;}
+function fmtRest(s){if(s%60===0)return (s/60)+' min';if(s>60)return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');return s+'s';}
+function editRest(name,def){
+  const cur=restForEx(name,def);
+  const v=prompt('⏱ Počitek za "'+name+'" v sekundah\n(prazno/0 = vrni privzeto):',cur);
+  if(v===null)return;
+  const n=parseInt(v);
+  if(isNaN(n)||n<5){setCustomRestFor(name,0);toast('↺ Vrnjen privzet počitek','ok');}
+  else{const sec=Math.min(900,n);setCustomRestFor(name,sec);toast('✓ Počitek: '+fmtRest(sec),'ok');}
+  showDay(cd);
+}
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.3.7';
+const APP_VERSION='3.4.0';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -1148,7 +1171,35 @@ function toggleTheme(){
   html.setAttribute('data-theme',isDark?'light':'dark');
   document.getElementById('theme-btn').textContent=isDark?'🌙 Dark':'☀ Light';
   lss(LS.theme,isDark?'light':'dark');
+  applyAccent(localStorage.getItem('wt_accent')||'green'); // ponovno za nov theme variant
   if(bwChart)renderBW();if(strengthChart)renderStrengthChart();
+}
+// Barvni accenti (glavna barva + ozadje + tekst, za dark/light)
+const ACCENTS={
+  green:{n:'Zelena',dark:['#1d9e75','#0d2a1f','#4ecba0'],light:['#0f6e56','#e1f5ee','#085041']},
+  blue:{n:'Modra',dark:['#2f81f7','#0d1f33','#6cb0ff'],light:['#1559b8','#e1edfb','#0a3a7a']},
+  teal:{n:'Turkizna',dark:['#14b8a6','#0a2a26','#5eead4'],light:['#0d8276','#e0f5f2','#085048']},
+  purple:{n:'Vijolična',dark:['#8b5cf6','#1d1533','#b794ff'],light:['#6d28d9','#ece1fb','#4a1a8a']},
+  orange:{n:'Oranžna',dark:['#ef8b27','#2a1c0a','#f5b060'],light:['#c26512','#faecd9','#7a3f06']},
+  pink:{n:'Roza',dark:['#ec4899','#2a0f1f','#f9a8d4'],light:['#be185d','#fbe1ee','#7a0f3f']},
+  red:{n:'Rdeča',dark:['#e24b4a','#2a0f0f','#f08080'],light:['#c0392b','#fcebeb','#7a1f1f']},
+};
+function applyAccent(key){
+  const a=ACCENTS[key]||ACCENTS.green;
+  localStorage.setItem('wt_accent',key);
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const [g,bg,txt]=isDark?a.dark:a.light;
+  const r=document.documentElement.style;
+  r.setProperty('--green',g);r.setProperty('--green-bg',bg);r.setProperty('--green-text',txt);
+  // osveži swatch oznake če so vidne
+  document.querySelectorAll('.accent-sw').forEach(el=>el.classList.toggle('sel',el.dataset.acc===key));
+}
+function renderAccentPicker(){
+  const cur=localStorage.getItem('wt_accent')||'green';
+  return Object.keys(ACCENTS).map(k=>{
+    const a=ACCENTS[k];const col=a.dark[0];
+    return `<button class="accent-sw${k===cur?' sel':''}" data-acc="${k}" onclick="applyAccent('${k}')" title="${a.n}" style="background:${col};"></button>`;
+  }).join('');
 }
 function initTheme(){
   const t=localStorage.getItem(LS.theme)||'dark';
@@ -1193,12 +1244,11 @@ function showPage(p){
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
-  if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();}
-  if(p==='gymlog'){renderSessHist();renderWeeklySummary();renderTonnageChart();}
+  if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();const _ap=document.getElementById('accent-picker');if(_ap)_ap.innerHTML=renderAccentPicker();}
+  if(p==='gymlog'){renderSessHist();renderWeeklySummary();renderTonnageChart();const _tc=document.getElementById('train-calendar');if(_tc)_tc.innerHTML=renderTrainCalendar();}
   if(p==='stats'){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
     document.getElementById('strength-ratios').innerHTML=renderStrengthRatios();
-    document.getElementById('train-calendar').innerHTML=renderTrainCalendar();
     renderE1RMChart();
     renderAICoach();
   }
@@ -2086,7 +2136,7 @@ async function restoreBackupObjectP1(backup,opts={}){
     }
   }
   PROG=getActiveProfile()==='bulk'?PROG_BULK:PROG_CUT;
-  initTheme();initBWGoal();cw=0;cd=0;
+  initTheme();applyAccent(localStorage.getItem('wt_accent')||'green');initBWGoal();cw=0;cd=0;
   document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));
   showPage('workout');showDay(0);initP1();
 }
@@ -2186,7 +2236,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     </div>
     ${summaryHtml}
     <div class="ex-body">
-    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${e.r})">${e.rl} ▶</button>${isExtra?'':`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`}${(!isExtra&&isSwapped)?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}','${e.n.replace(/'/g,"\\'")}')">↺ Original</button>`:''}${isExtra?`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">×</button>`:''}<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExUp(${di},${ei})" title="Premakni gor">↑</button><button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExDown(${di},${ei})" title="Premakni dol">↓</button>${isExtra?'':`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);padding:2px 6px;" onclick="removeExForWeek('${exKey}')" title="Odstrani za ta teden">🗑</button>`}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
+    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${restForEx(displayName,e.r)})" oncontextmenu="event.preventDefault();editRest('${displayName.replace(/'/g,"\\'")}',${e.r})" title="Dolg pritisk = nastavi počitek">${fmtRest(restForEx(displayName,e.r))} ▶</button>${isExtra?'':`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`}${(!isExtra&&isSwapped)?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}','${e.n.replace(/'/g,"\\'")}')">↺ Original</button>`:''}${isExtra?`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">×</button>`:''}<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExUp(${di},${ei})" title="Premakni gor">↑</button><button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExDown(${di},${ei})" title="Premakni dol">↓</button>${isExtra?'':`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);padding:2px 6px;" onclick="removeExForWeek('${exKey}')" title="Odstrani za ta teden">🗑</button>`}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
     <div class="sw-panel" id="sw-${exKey}">
       <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}','${e.n.replace(/'/g,"\\'")}',this.value)" style="width:100%;margin-bottom:8px;">
       <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,e.n,'')}</div>
@@ -2206,7 +2256,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
       <span class="set-count-label">${n} serij${extra>0?` (+${extra})`:extra<0?` (${extra})`:''}</span>
       <button class="set-ctrl-btn rem" onclick="removeSet('${exKey}',${di},${ei},${cn})">−</button>
     </div>
-    <div class="tbar" id="tb-${exKey}"><div class="tc" id="tc-${exKey}">—</div><div class="tl2">${e.rl} odmor</div><button class="txb" onclick="stopT('${exKey}')">X</button></div>
+    <div class="tbar" id="tb-${exKey}"><div class="tc" id="tc-${exKey}">—</div><div class="tl2">${fmtRest(restForEx(displayName,e.r))} odmor</div><button class="txb" onclick="stopT('${exKey}')">X</button></div>
     </div>
   </div>`;
 }
@@ -2995,8 +3045,6 @@ function tgSet(key,si,di,ei,cn){
       }
       saveSets(all);
     }
-    // Smart deload check
-    setTimeout(()=>checkDeloadNeeded(di,ei,cn),200);
   }
   const cnt=PROG.days[di].ex.filter((_,i)=>!isExHidden(sdk(cn,cw,di,i))&&allDone(di,i)).length;
   const el=document.getElementById('ex-done');if(el)el.textContent=cnt;
@@ -5301,7 +5349,7 @@ async function manualAutoBackup(){
   }
 }
 
-initTheme();initBWGoal();
+initTheme();applyAccent(localStorage.getItem('wt_accent')||'green');initBWGoal();
 // Obnovi zadnji teden in dan
 const _lastWeek=parseInt(localStorage.getItem('wt_last_week'));
 const _lastDay=parseInt(localStorage.getItem('wt_last_day'));
