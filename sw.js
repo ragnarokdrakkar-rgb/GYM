@@ -1,6 +1,6 @@
 // Workout Tracker — Service Worker
 // Verzija — povečaj ko spremeniš katerokoli datoteko, da se cache osveži
-const VERSION = 'v3.5.0';
+const VERSION = 'v3.5.1';
 const CACHE_NAME = `workout-tracker-${VERSION}`;
 
 // Datoteke ki naj se cachirajo za offline delovanje
@@ -43,7 +43,7 @@ self.addEventListener('fetch', event => {
   const isHTML = event.request.mode === 'navigate' || url.endsWith('/') || url.endsWith('/index.html') || url.endsWith('index.html');
   if (isHTML) {
     event.respondWith(
-      fetch(event.request).then(resp => {
+      fetch(event.request, { cache: 'no-store' }).then(resp => {
         const clone = resp.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(()=>{});
         return resp;
