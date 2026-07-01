@@ -1011,7 +1011,7 @@ function confirmRestEdit(){
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.5.1';
+const APP_VERSION='3.5.3';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -3352,21 +3352,28 @@ function pad(n){return String(n).padStart(2,'0');}
 // === SERVICE WORKER REGISTRACIJA ===
 let swReg=null;
 if('serviceWorker' in navigator){
+  // Ko nov SW prevzame nadzor → samodejno osveži stran (dobiš novo vsebino brez ročnega reloada)
+  let _swRefreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(_swRefreshing)return;
+    _swRefreshing=true;
+    window.location.reload();
+  });
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('sw.js').then(reg=>{
+    // updateViaCache:'none' → brskalnik VEDNO preveri sw.js po mreži (ne iz HTTP predpomnilnika)
+    navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
       swReg=reg;
       console.log('SW registriran');
-      // Če je nova verzija na voljo
+      reg.update(); // takoj preveri za novo verzijo
       reg.addEventListener('updatefound',()=>{
         const nw=reg.installing;
         if(nw){nw.addEventListener('statechange',()=>{
           if(nw.state==='installed'&&navigator.serviceWorker.controller){
-            toast('🔄 Nova verzija — osveži stran','ok');
+            toast('🔄 Posodabljam na novo verzijo...','ok');
           }
         });}
       });
     }).catch(err=>console.warn('SW registracija ni uspela:',err));
-    // Ko se SW menja, dobi referenco
     navigator.serviceWorker.ready.then(reg=>{swReg=reg;});
   });
 }

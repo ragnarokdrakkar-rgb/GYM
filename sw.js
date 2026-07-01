@@ -1,6 +1,6 @@
 // Workout Tracker — Service Worker
 // Verzija — povečaj ko spremeniš katerokoli datoteko, da se cache osveži
-const VERSION = 'v3.5.2';
+const VERSION = 'v3.5.3';
 const CACHE_NAME = `workout-tracker-${VERSION}`;
 
 // Datoteke ki naj se cachirajo za offline delovanje
@@ -14,9 +14,15 @@ const CACHE_FILES = [
 // === INSTALL: precachiramo ===
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(CACHE_FILES))
-      .then(() => self.skipWaiting()) // takoj aktiviraj nov SW
+    caches.open(CACHE_NAME).then(async cache => {
+      // HTML sveže (brez HTTP predpomnilnika), da je offline kopija najnovejša
+      try{
+        const idx=await fetch('./index.html',{cache:'no-store'});
+        if(idx&&idx.ok){await cache.put('./index.html',idx.clone());await cache.put('./',idx.clone());}
+      }catch(e){}
+      // Ostale datoteke normalno
+      try{await cache.addAll(CACHE_FILES.filter(f=>f!=='./'&&f!=='./index.html'));}catch(e){}
+    }).then(() => self.skipWaiting())
   );
 });
 
