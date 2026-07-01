@@ -43,6 +43,7 @@ body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;font-siz
 .icon-btn:hover{background:var(--bg4);}
 .nav{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:1.5rem;}
 .nt{padding:8px 2px;text-align:center;border-radius:8px;border:.5px solid var(--border);cursor:pointer;background:var(--bg2);font-size:10px;color:var(--text2);font-weight:500;line-height:1.3;}
+.nt-i{font-size:15px;margin-bottom:2px;line-height:1;}
 .nt.active{border:.5px solid var(--green);background:var(--green-bg);color:var(--green-text);}
 .page{display:none;}.page.active{display:block;}
 .wtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:.75rem;}
@@ -91,7 +92,7 @@ body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;font-siz
 .ex-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:5px;}
 .ex-name-wrap{flex:1;display:flex;align-items:center;gap:6px;}
 .ex-name{font-size:13px;font-weight:500;color:var(--text);cursor:pointer;}
-.hist-btn{background:var(--bg3);border:.5px solid var(--border);border-radius:6px;font-size:13px;padding:2px 7px;cursor:pointer;flex-shrink:0;line-height:1.4;}
+.hist-btn{background:var(--bg3);border:.5px solid var(--border);border-radius:6px;font-size:15px;padding:5px 10px;cursor:pointer;flex-shrink:0;line-height:1.4;}
 .hist-btn:active{background:var(--border2);}
 .ex-name:hover{color:var(--blue-text);}
 .sp{font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;white-space:nowrap;}
@@ -300,6 +301,13 @@ select.si option{background:var(--bg3);color:var(--text);}
 .exc-summary .es-stats{color:var(--green-text);font-weight:500;}
 .exc .toggle-fold{cursor:pointer;font-size:11px;color:var(--text3);padding:2px 6px;border:.5px solid var(--border);border-radius:4px;background:transparent;}
 .exc .toggle-fold:hover{color:var(--text);border-color:var(--border2);}
+.ex-menu-btn{font-size:15px;font-weight:700;padding:2px 11px;border-radius:20px;border:.5px solid var(--border2);background:var(--bg3);cursor:pointer;color:var(--text2);line-height:1.5;letter-spacing:1px;}
+.ex-menu-btn:active{background:var(--bg4);}
+.ex-menu{display:none;background:var(--bg3);border:.5px solid var(--border2);border-radius:8px;padding:4px;margin-top:6px;flex-direction:column;gap:2px;}
+.ex-menu.open{display:flex;}
+.ex-menu-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:6px;border:none;background:none;cursor:pointer;color:var(--text2);font-size:13px;text-align:left;font-family:system-ui,sans-serif;width:100%;}
+.ex-menu-item:active{background:var(--bg4);}
+.ex-menu-item.danger{color:var(--red-text);}
 
 /* RPE chips per set */
 .rpe-row{display:flex;gap:3px;justify-content:center;margin-top:3px;}
@@ -517,12 +525,12 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   </div>
 </div>
 <div class="nav">
-  <div class="nt active" onclick="showPage('workout')">Workout</div>
-  <div class="nt" onclick="showPage('cycle')">Cikli</div>
-  <div class="nt" onclick="showPage('gymlog')">Gym log</div>
-  <div class="nt" onclick="showPage('bodyweight')">Teža</div>
-  <div class="nt" onclick="showPage('stats')">Stats</div>
-  <div class="nt" onclick="showPage('tools')">Tools</div>
+  <div class="nt active" onclick="showPage('workout')"><div class="nt-i">🏋️</div>Workout</div>
+  <div class="nt" onclick="showPage('cycle')"><div class="nt-i">🔄</div>Cikli</div>
+  <div class="nt" onclick="showPage('gymlog')"><div class="nt-i">📅</div>Gym log</div>
+  <div class="nt" onclick="showPage('bodyweight')"><div class="nt-i">⚖️</div>Teža</div>
+  <div class="nt" onclick="showPage('stats')"><div class="nt-i">📊</div>Stats</div>
+  <div class="nt" onclick="showPage('tools')"><div class="nt-i">🛠️</div>Tools</div>
 </div>
 
 <!-- BACKUP REMINDER BANNER -->
@@ -772,6 +780,20 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 </div>
 
 <!-- NOTE POPUP -->
+<div class="note-pop" id="rest-edit-pop">
+  <div class="note-pop-card">
+    <h3 id="rest-edit-title">⏱ Počitek</h3>
+    <div style="display:flex;align-items:center;gap:8px;margin:.5rem 0;">
+      <input type="number" id="rest-edit-input" min="5" max="900" inputmode="numeric" onkeydown="if(event.key==='Enter')confirmRestEdit()" style="flex:1;font-size:16px;padding:8px 10px;border:.5px solid var(--border2);border-radius:8px;background:var(--bg3);color:var(--text);text-align:center;box-sizing:border-box;">
+      <span style="font-size:12px;color:var(--text3);">sek</span>
+    </div>
+    <div style="font-size:11px;color:var(--text3);">Prazno ali 0 = privzeta vrednost</div>
+    <div class="note-pop-actions">
+      <button class="sb" onclick="closeRestEdit()" style="background:var(--bg3);">Prekliči</button>
+      <button class="sb" onclick="confirmRestEdit()">Shrani</button>
+    </div>
+  </div>
+</div>
 <div class="note-pop" id="note-pop">
   <div class="note-pop-card">
     <h3>Opomba za set</h3>
@@ -793,7 +815,9 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 <div class="page" id="page-tools">
   <div class="card">
     <div class="ct">🎨 Barve teme</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:.85rem;">Klikni na kvadratek in izberi poljubno barvo za vsak segment. Odtenki se izračunajo sami.</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.6rem;">Hitra tema:</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;" id="color-presets"></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.85rem;">Ali ročno, po segmentih:</div>
     <div id="color-pickers"></div>
   </div>
   <div class="card">
@@ -957,10 +981,22 @@ function getCustomRest(){try{return JSON.parse(localStorage.getItem('wt_custom_r
 function setCustomRestFor(name,secs){const r=getCustomRest();if(secs)r[name]=secs;else delete r[name];localStorage.setItem('wt_custom_rest',JSON.stringify(r));}
 function restForEx(name,def){const r=getCustomRest();return r[name]||def;}
 function fmtRest(s){if(s%60===0)return (s/60)+' min';if(s>60)return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');return s+'s';}
+let _restEditCtx=null;
 function editRest(name,def,exKey){
-  const cur=restForEx(name,def);
-  const v=prompt('⏱ Počitek za "'+name+'" v sekundah\n(prazno/0 = vrni privzeto):',cur);
-  if(v===null)return;
+  _restEditCtx={name,def,exKey};
+  document.getElementById('rest-edit-title').textContent='⏱ Počitek — '+name;
+  document.getElementById('rest-edit-input').value=restForEx(name,def);
+  document.getElementById('rest-edit-pop').classList.add('on');
+  setTimeout(()=>document.getElementById('rest-edit-input').focus(),50);
+}
+function closeRestEdit(){
+  document.getElementById('rest-edit-pop').classList.remove('on');
+  _restEditCtx=null;
+}
+function confirmRestEdit(){
+  if(!_restEditCtx)return;
+  const {name,def,exKey}=_restEditCtx;
+  const v=document.getElementById('rest-edit-input').value;
   const n=parseInt(v);
   let sec;
   if(isNaN(n)||n<5){setCustomRestFor(name,0);sec=def;toast('↺ Vrnjen privzet počitek','ok');}
@@ -968,13 +1004,14 @@ function editRest(name,def,exKey){
   // Če za to vajo trenutno teče časomer, ga ponovno zaženi z NOVIM trajanjem
   let wasRunning=false;
   try{const t=JSON.parse(localStorage.getItem('wt_active_timer')||'null');wasRunning=!!(t&&exKey&&t.key===exKey);}catch(e){}
+  closeRestEdit();
   showDay(cd);
   if(wasRunning&&exKey)startT(exKey,sec);
 }
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.4.2';
+const APP_VERSION='3.5.0';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -1232,6 +1269,30 @@ function renderColorPickers(){
 function renderColorPickersInto(){const el=document.getElementById('color-pickers');if(el)el.innerHTML=renderColorPickers();}
 // Združljivost s starim klicem
 function applyAccent(){applyAllColors();}
+
+// === Hitre barvne teme (presети) ===
+const COLOR_PRESETS={
+  default:{n:'Privzeto',c:{green:'#1d9e75',blue:'#378add',amber:'#ef9f27',purple:'#7f77dd',red:'#e24b4a'}},
+  fire:{n:'Ognjena',c:{green:'#e0453f',blue:'#f59e0b',amber:'#fbbf24',purple:'#dc2626',red:'#991b1b'}},
+  ice:{n:'Ledena',c:{green:'#2f81f7',blue:'#0ea5e9',amber:'#f59e0b',purple:'#6366f1',red:'#ef4444'}},
+  violet:{n:'Vijolična',c:{green:'#8b5cf6',blue:'#6366f1',amber:'#f59e0b',purple:'#a855f7',red:'#e24b4a'}},
+};
+function applyColorPreset(key){
+  const p=COLOR_PRESETS[key];if(!p)return;
+  const stored=getStoredColors();
+  Object.keys(p.c).forEach(k=>stored[k]=p.c[k]);
+  localStorage.setItem('wt_colors',JSON.stringify(stored));
+  applyAllColors();
+  renderColorPickersInto();
+  toast('✓ Tema: '+p.n,'ok');
+}
+function renderColorPresets(){
+  return Object.keys(COLOR_PRESETS).map(k=>{
+    const p=COLOR_PRESETS[k];
+    const dots=Object.values(p.c).map(c=>`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};margin-right:1px;"></span>`).join('');
+    return `<button class="sb" onclick="applyColorPreset('${k}')" style="background:var(--bg3);display:inline-flex;align-items:center;gap:6px;">${dots}<span>${p.n}</span></button>`;
+  }).join('');
+}
 function initTheme(){
   const t=localStorage.getItem(LS.theme)||'dark';
   document.documentElement.setAttribute('data-theme',t);
@@ -1275,7 +1336,7 @@ function showPage(p){
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
-  if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();renderColorPickersInto();}
+  if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();renderColorPickersInto();const _cp=document.getElementById('color-presets');if(_cp)_cp.innerHTML=renderColorPresets();}
   if(p==='gymlog'){renderSessHist();renderWeeklySummary();renderTonnageChart();const _tc=document.getElementById('train-calendar');if(_tc)_tc.innerHTML=renderTrainCalendar();}
   if(p==='stats'){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
@@ -2267,7 +2328,8 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     </div>
     ${summaryHtml}
     <div class="ex-body">
-    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${restForEx(displayName,e.r)})" oncontextmenu="event.preventDefault();editRest('${displayName.replace(/'/g,"\\'")}',${e.r},'${exKey}')" title="Dolg pritisk = nastavi počitek">${fmtRest(restForEx(displayName,e.r))} ▶</button>${isExtra?'':`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`}${(!isExtra&&isSwapped)?`<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);" onclick="clearSwap('${exKey}','${e.n.replace(/'/g,"\\'")}')">↺ Original</button>`:''}${isExtra?`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">×</button>`:''}<button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExUp(${di},${ei})" title="Premakni gor">↑</button><button class="swbtn" style="background:var(--bg3);border-color:var(--border2);color:var(--text3);padding:2px 6px;" onclick="moveExDown(${di},${ei})" title="Premakni dol">↓</button>${isExtra?'':`<button class="swbtn" style="background:var(--red-bg);border-color:var(--red);color:var(--red-text);padding:2px 6px;" onclick="removeExForWeek('${exKey}')" title="Odstrani za ta teden">🗑</button>`}${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
+    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${restForEx(displayName,e.r)})" oncontextmenu="event.preventDefault();editRest('${displayName.replace(/'/g,"\\'")}',${e.r},'${exKey}')" title="Dolg pritisk = nastavi počitek">${fmtRest(restForEx(displayName,e.r))} ▶</button>${isExtra?'':`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`}<button class="ex-menu-btn" onclick="toggleExMenu('${exKey}')" title="Več možnosti">⋯</button>${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
+    <div class="ex-menu" id="exm-${exKey}">${(!isExtra&&isSwapped)?`<button class="ex-menu-item" onclick="clearSwap('${exKey}','${e.n.replace(/'/g,"\\'")}')">↺ Original vaja</button>`:''}<button class="ex-menu-item" onclick="moveExUp(${di},${ei})">↑ Premakni gor</button><button class="ex-menu-item" onclick="moveExDown(${di},${ei})">↓ Premakni dol</button>${isExtra?`<button class="ex-menu-item danger" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">× Odstrani vajo</button>`:`<button class="ex-menu-item danger" onclick="removeExForWeek('${exKey}')">🗑 Odstrani za ta teden</button>`}</div>
     <div class="sw-panel" id="sw-${exKey}">
       <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}','${e.n.replace(/'/g,"\\'")}',this.value)" style="width:100%;margin-bottom:8px;">
       <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,e.n,'')}</div>
@@ -2295,6 +2357,10 @@ function renderEx(e,ei,di,wk,cn,isExtra){
 // Fold state per exercise (override avto-collapse) — samo session storage
 const foldState={};
 function isFolded(key){return key in foldState?foldState[key]:null;}
+function toggleExMenu(key){
+  const p=document.getElementById('exm-'+key);
+  if(p)p.classList.toggle('open');
+}
 function toggleFold(key){
   const card=document.getElementById('ec-'+key);if(!card)return;
   const cur=card.classList.contains('col-done');
@@ -5379,6 +5445,33 @@ async function manualAutoBackup(){
     toast('Napaka','err');
   }
 }
+
+// === Swipe med vajami (samo v gym mode) ===
+(function(){
+  let tsX=0,tsY=0,startCard=null;
+  const dc=document.getElementById('day-content');
+  if(!dc)return;
+  dc.addEventListener('touchstart',e=>{
+    if(!document.body.classList.contains('gym-mode'))return;
+    const t=e.touches[0];
+    tsX=t.clientX;tsY=t.clientY;
+    startCard=e.target.closest('.exc');
+  },{passive:true});
+  dc.addEventListener('touchend',e=>{
+    if(!document.body.classList.contains('gym-mode')||!startCard)return;
+    const t=e.changedTouches[0];
+    const dx=t.clientX-tsX,dy=t.clientY-tsY;
+    const card=startCard;startCard=null;
+    if(Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.4)return; // premalo horizontalno
+    const startEl=document.elementFromPoint(tsX,tsY);
+    if(startEl&&startEl.closest('input,button,select,textarea'))return; // ne moti tipkanja/gumbov
+    const cards=Array.from(dc.querySelectorAll('.exc'));
+    const idx=cards.indexOf(card);
+    if(idx<0)return;
+    const next=dx<0?cards[idx+1]:cards[idx-1]; // levo=naslednja, desno=prejšnja
+    if(next)next.scrollIntoView({behavior:'smooth',block:'center'});
+  },{passive:true});
+})();
 
 initTheme();applyAllColors();initBWGoal();
 // Obnovi zadnji teden in dan
