@@ -34,29 +34,30 @@
   --purple:#534ab7;--purple-bg:#eeedfe;--purple-text:#3c3489;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;font-size:14px;color:var(--text);transition:background .2s,color .2s;}
+body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;padding-bottom:calc(84px + env(safe-area-inset-bottom));font-size:14px;color:var(--text);transition:background .2s,color .2s;}
 .sl{font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;margin-top:1.25rem;}
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;}
 .appname{font-size:16px;font-weight:500;color:var(--text);}
 .topbtns{display:flex;gap:6px;flex-wrap:wrap;}
-.icon-btn{font-size:11px;padding:5px 10px;border-radius:20px;border:.5px solid var(--border2);background:var(--bg3);cursor:pointer;color:var(--text2);font-family:system-ui,sans-serif;}
+.icon-btn{font-size:12px;padding:7px 12px;border-radius:20px;border:.5px solid var(--border2);background:var(--bg3);cursor:pointer;color:var(--text2);font-family:system-ui,sans-serif;}
 .icon-btn:hover{background:var(--bg4);}
-.nav{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:1.5rem;}
-.nt{padding:8px 2px;text-align:center;border-radius:8px;border:.5px solid var(--border);cursor:pointer;background:var(--bg2);font-size:10px;color:var(--text2);font-weight:500;line-height:1.3;}
-.nt-i{font-size:15px;margin-bottom:2px;line-height:1;}
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:80;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:0;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--bg2);border-top:.5px solid var(--border);box-shadow:0 -4px 14px rgba(0,0,0,.25);}
+.nt{padding:6px 2px;text-align:center;border-radius:8px;border:.5px solid transparent;cursor:pointer;background:transparent;font-size:11px;color:var(--text2);font-weight:500;line-height:1.3;}
+.nt-i{font-size:18px;margin-bottom:2px;line-height:1;}
 .nt.active{border:.5px solid var(--green);background:var(--green-bg);color:var(--green-text);}
 .page{display:none;}.page.active{display:block;}
+.tabs-wrap{position:sticky;top:0;z-index:40;background:var(--bg);margin:0 -1rem;padding:2px 1rem 8px;}
 .wtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:.75rem;}
-.wt{padding:7px 4px;text-align:center;border-radius:8px;border:.5px solid var(--border);cursor:pointer;background:var(--bg2);font-size:11px;color:var(--text2);line-height:1.4;position:relative;}
+.wt{padding:8px 4px;text-align:center;border-radius:8px;border:.5px solid var(--border);cursor:pointer;background:var(--bg2);font-size:12px;color:var(--text2);line-height:1.4;position:relative;}
 .wt.active{border:.5px solid var(--blue);background:var(--blue-bg);color:var(--blue-text);font-weight:500;}
 .wt.deload{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber);}
 .wt.done{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green);}
 .wt.done::after{content:"✓";position:absolute;top:2px;right:4px;color:var(--green-text);font-size:10px;font-weight:700;}
-.dtabs{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:1.25rem;}
+.dtabs{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:.25rem;}
 .dt{padding:8px 4px;text-align:center;border-radius:8px;border:.5px solid var(--border);cursor:pointer;background:var(--bg2);position:relative;}
 .dt.active{border:.5px solid var(--green);background:var(--green-bg);}
-.dt-n{font-size:10px;color:var(--text3);margin-bottom:2px;}
-.dt-l{font-size:11px;font-weight:500;color:var(--text);}
+.dt-n{font-size:11px;color:var(--text3);margin-bottom:2px;}
+.dt-l{font-size:12px;font-weight:500;color:var(--text);}
 .dt.active .dt-l{color:var(--green-text);}
 .dt.done{border-color:var(--green);background:rgba(29,158,117,0.12);}
 .dt.done::after{content:"✓";position:absolute;top:2px;right:4px;color:var(--green-text);font-size:9px;font-weight:700;}
@@ -100,7 +101,7 @@ body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;font-siz
 .gr{background:var(--green-bg);color:var(--green-text);}
 .am{background:var(--amber-bg);color:var(--amber-text);}
 .bdg{display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap;align-items:center;}
-.b{font-size:10px;padding:2px 7px;border-radius:20px;}
+.b{font-size:11px;padding:3px 9px;border-radius:20px;}
 .rh{background:var(--red-bg);color:var(--red-text);}
 .rm{background:var(--amber-bg);color:var(--amber-text);}
 .rl{background:var(--green-bg);color:var(--green-text);}
@@ -109,26 +110,26 @@ body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;font-siz
 .accent-sw:active{transform:scale(.95);}
 .mb{background:var(--purple-bg);color:var(--purple-text);}
 .prb{background:var(--amber-bg);color:var(--amber-text);font-weight:500;}
-.restbtn{font-size:10px;padding:2px 8px;border-radius:20px;border:.5px solid var(--border2);background:var(--bg3);cursor:pointer;color:var(--text2);font-family:system-ui,sans-serif;}
+.restbtn{font-size:12px;padding:7px 12px;border-radius:20px;border:.5px solid var(--border2);background:var(--bg3);cursor:pointer;color:var(--text2);font-family:system-ui,sans-serif;}
 .restbtn:hover{background:var(--bg4);}
-.swbtn{font-size:10px;padding:2px 8px;border-radius:20px;border:.5px solid var(--purple);background:var(--purple-bg);cursor:pointer;color:var(--purple-text);font-family:system-ui,sans-serif;}
-.ex-d{font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:5px;}
+.swbtn{font-size:12px;padding:7px 12px;border-radius:20px;border:.5px solid var(--purple);background:var(--purple-bg);cursor:pointer;color:var(--purple-text);font-family:system-ui,sans-serif;}
+.ex-d{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:5px;}
 .ex-tip{font-size:11px;color:var(--text3);font-style:italic;margin-bottom:6px;}
 .ph{font-size:11px;color:var(--green-text);margin-bottom:6px;padding:4px 8px;background:var(--green-bg);border-radius:6px;border:.5px solid var(--green);}
 .st{width:100%;border-collapse:collapse;margin-bottom:4px;}
-.st th{font-size:10px;color:var(--text3);text-align:left;padding:3px 4px;border-bottom:.5px solid var(--border);font-weight:500;}
-.st td{padding:4px 4px;border-bottom:.5px solid var(--border);vertical-align:middle;}
+.st th{font-size:11px;color:var(--text3);text-align:left;padding:3px 4px;border-bottom:.5px solid var(--border);font-weight:500;}
+.st td{padding:5px 4px;border-bottom:.5px solid var(--border);vertical-align:middle;}
 .st tr:last-child td{border-bottom:none;}
 .sn{font-size:11px;color:var(--text3);width:22px;}
-.wi{width:56px;font-size:12px;padding:4px 5px;border:.5px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);text-align:center;}
+.wi{width:56px;font-size:13px;padding:6px 5px;border:.5px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);text-align:center;}
 .wi:focus{outline:none;border-color:var(--green);background:var(--bg4);}
-.ri{width:40px;font-size:12px;padding:4px 5px;border:.5px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);text-align:center;}
+.ri{width:40px;font-size:13px;padding:6px 5px;border:.5px solid var(--border2);border-radius:6px;background:var(--bg3);color:var(--text);text-align:center;}
 .ri:focus{outline:none;border-color:var(--green);background:var(--bg4);}
-.lb{font-size:10px;padding:3px 8px;border-radius:20px;border:.5px solid var(--border2);background:none;cursor:pointer;color:var(--text2);white-space:nowrap;}
+.lb{font-size:12px;padding:7px 12px;border-radius:20px;border:.5px solid var(--border2);background:none;cursor:pointer;color:var(--text2);white-space:nowrap;}
 .lb.done{background:var(--green-bg);color:var(--green-text);border-color:var(--green);}
-.vc{font-size:10px;color:var(--text3);text-align:right;width:44px;}
+.vc{font-size:10px;color:var(--text3);text-align:right;width:40px;}
 .vc.hv{color:var(--green-text);}
-.oc{font-size:10px;color:var(--purple-text);text-align:right;width:40px;}
+.oc{font-size:10px;color:var(--purple-text);text-align:right;width:38px;}
 .set-ctrl{display:flex;gap:5px;align-items:center;margin-top:6px;}
 .set-ctrl-btn{font-size:12px;width:28px;height:28px;border-radius:50%;border:.5px solid var(--border2);background:var(--bg3);cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;}
 .set-ctrl-btn:hover{background:var(--bg4);color:var(--text);}
@@ -264,9 +265,19 @@ select.si option{background:var(--bg3);color:var(--text);}
 
 /* Stepper gumbi za kg in pon */
 .stp-wrap{display:flex;align-items:center;gap:2px;}
-.stp-btn{flex-shrink:0;width:24px;height:30px;border-radius:5px;border:.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;}
+.stp-btn{flex-shrink:0;width:28px;height:34px;border-radius:5px;border:.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;}
 .stp-btn:active{background:var(--bg4);transform:scale(.95);}
 .stp-wrap input{flex:1;min-width:0;text-align:center;padding-left:2px!important;padding-right:2px!important;}
+/* Kompaktne kartice vaj: skrij opis/nasvet/nevtralno bolečino, (i) razkrije */
+.info-btn{background:var(--bg3);border:.5px solid var(--border);border-radius:6px;font-size:14px;padding:5px 10px;cursor:pointer;flex-shrink:0;line-height:1.4;color:var(--text2);}
+body:not(.compact-cards) .info-btn{display:none;}
+body.compact-cards .exc:not(.show-info) .ex-d,
+body.compact-cards .exc:not(.show-info) .ex-tip,
+body.compact-cards .exc:not(.show-info) .pain-box:not(.warn):not(.danger){display:none;}
+/* FAB: skoči na aktivno vajo (gym mode) */
+.gym-fab{display:none;position:fixed;right:14px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:70;width:54px;height:54px;border-radius:50%;background:var(--green);color:#fff;font-size:24px;border:none;box-shadow:0 6px 16px rgba(0,0,0,.35);cursor:pointer;}
+.gym-fab:active{transform:scale(.93);}
+.gym-mode .gym-fab{display:flex;align-items:center;justify-content:center;}
 /* Timer end alert flash */
 @keyframes flashAlert{
   0%,100%{background:var(--green-bg);border-color:var(--green);}
@@ -486,9 +497,9 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 .toggle-sw.on::after{left:21px;background:#fff;}
 /* === P1 additions: gym mode, pain guard, immutable session cards === */
 .gym-mode .topbar,.gym-mode .nav,.gym-mode #bk-banner{display:none!important;}
-.gym-mode body{padding-top:0;}
+.gym-mode body{padding-top:0;padding-bottom:1rem;}
 .gym-mode .stb{position:sticky;top:0;z-index:60;border-color:var(--green);box-shadow:0 6px 18px rgba(0,0,0,.28);}
-.gym-mode .wtabs,.gym-mode .dtabs{display:none!important;}
+.gym-mode .tabs-wrap,.gym-mode .wtabs,.gym-mode .dtabs{display:none!important;}
 .gym-mode #page-workout>.sl{display:none!important;}
 .gym-mode .exc{padding:1rem;margin-bottom:.85rem;}
 /* V gym mode skrij Vol in 1RM stolpca → vrstica se prilega zaslonu */
@@ -550,20 +561,22 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div style="font-size:11px;color:var(--text3);flex:1;text-align:right;line-height:1.5;" id="st-s"></div>
   </div>
   <div style="text-align:right;font-size:9px;color:var(--text3);margin:-8px 0 6px;" id="app-ver"></div>
-  <div class="sl">Teden</div>
+  <div class="tabs-wrap">
+  <div class="sl" style="margin-top:.25rem;">Teden</div>
   <div class="wtabs">
     <div class="wt active" onclick="setWeek(0)">Teden 1<br>Težko</div>
     <div class="wt" onclick="setWeek(1)">Teden 2<br>Težko</div>
     <div class="wt" onclick="setWeek(2)">Teden 3<br>Zmerno</div>
     <div class="wt deload" onclick="setWeek(3)">Teden 4<br>Deload</div>
   </div>
-  <div class="sl">Dan</div>
+  <div class="sl" style="margin-top:.5rem;">Dan</div>
   <div class="dtabs">
     <div class="dt active" onclick="showDay(0)"><div class="dt-n">Dan 1</div><div class="dt-l">Push A</div></div>
     <div class="dt" onclick="showDay(1)"><div class="dt-n">Dan 2</div><div class="dt-l">Pull A</div></div>
     <div class="dt" onclick="showDay(2)"><div class="dt-n">Dan 3</div><div class="dt-l">Noge</div></div>
     <div class="dt" onclick="showDay(3)"><div class="dt-n">Dan 4</div><div class="dt-l">Push B</div></div>
     <div class="dt" onclick="showDay(4)"><div class="dt-n">Dan 5</div><div class="dt-l">Pull B</div></div>
+  </div>
   </div>
   <div id="day-content"></div>
 </div>
@@ -591,13 +604,13 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <button class="cfb" onclick="confirmNext()">Potrdi — začni cikel <span id="next-num">2</span></button>
   </div>
   <div class="card" id="cy-hist-card" style="display:none;">
-    <div class="ct">Napredek po ciklih</div>
+    <div class="ct">📈 Napredek po ciklih</div>
     <div class="lift-selector" id="lift-selector"></div>
     <div class="cw"><canvas id="strength-chart"></canvas></div>
     <div style="margin-top:1rem;"><div style="font-size:13px;font-weight:500;margin-bottom:.5rem;">Peak teže</div><div id="cy-hist-content"></div></div>
   </div>
   <div class="card" id="cy-notes-hist-card" style="display:none;">
-    <div class="ct">Cikel opombe</div>
+    <div class="ct">📝 Cikel opombe</div>
     <div id="cy-notes-hist"></div>
   </div>
 </div>
@@ -606,7 +619,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 <div class="page" id="page-gymlog">
   <!-- Weekly Summary -->
   <div class="card" id="summary-card">
-    <div class="ct">Tedenski povzetek</div>
+    <div class="ct">📊 Tedenski povzetek</div>
     <div class="sum-grid" id="sum-grid"></div>
     <div id="sum-detail" style="font-size:12px;color:var(--text2);"></div>
   </div>
@@ -641,7 +654,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   </div>
   <!-- Session history -->
   <div class="card">
-    <div class="ct">Session zgodovina</div>
+    <div class="ct">📜 Session zgodovina</div>
     <div style="display:flex;gap:6px;margin-bottom:.5rem;flex-wrap:wrap;">
       <button class="sb" onclick="addManualSession()" style="background:var(--bg3);">+ Ročno dodaj</button>
       <select class="si" id="sess-filter" onchange="renderSessHist()" style="flex:1;min-width:100px;">
@@ -660,7 +673,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 <!-- BODYWEIGHT PAGE -->
 <div class="page" id="page-bodyweight">
   <div class="card">
-    <div class="ct">Telesna teža</div>
+    <div class="ct">⚖️ Telesna teža</div>
     <div style="display:flex;gap:8px;margin-bottom:.75rem;">
       <input class="bwi" type="number" id="bw-in" placeholder="kg" step="0.1" min="40" max="200">
       <button class="bwbtn" onclick="logBW()">Shrani</button>
@@ -693,20 +706,20 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     </div>
     <div id="phase-list" style="margin-top:.5rem;"></div>
   </div>
-  <div class="card" id="bw-chart-card" style="display:none;"><div class="ct">Trend</div><div class="cw"><canvas id="bw-chart"></canvas></div></div>
-  <div class="card" id="bw-log-card" style="display:none;"><div class="ct">Zgodovina</div><div id="bw-log"></div></div>
+  <div class="card" id="bw-chart-card" style="display:none;"><div class="ct">📉 Trend</div><div class="cw"><canvas id="bw-chart"></canvas></div></div>
+  <div class="card" id="bw-log-card" style="display:none;"><div class="ct">🕐 Zgodovina</div><div id="bw-log"></div></div>
 </div>
 
 <!-- BODY MEASUREMENTS PAGE -->
 <div class="page" id="page-body">
   <div class="card">
-    <div class="ct">Telesne mere</div>
+    <div class="ct">📏 Telesne mere</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;">Enkrat mesečno, zjutraj. Vse v cm.</div>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:1rem;" id="meas-inputs"></div>
     <button class="bwbtn" onclick="saveMeasurements()">Shrani</button>
   </div>
-  <div class="card" id="meas-curr-card" style="display:none;"><div class="ct">Trenutne mere</div><div class="meas-grid" id="meas-curr"></div></div>
-  <div class="card" id="meas-hist-card" style="display:none;"><div class="ct">Zgodovina</div><div id="meas-hist"></div></div>
+  <div class="card" id="meas-curr-card" style="display:none;"><div class="ct">📐 Trenutne mere</div><div class="meas-grid" id="meas-curr"></div></div>
+  <div class="card" id="meas-hist-card" style="display:none;"><div class="ct">🕐 Zgodovina</div><div id="meas-hist"></div></div>
 </div>
 
 <!-- STATS PAGE -->
@@ -780,6 +793,28 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 </div>
 
 <!-- NOTE POPUP -->
+<button class="gym-fab" onclick="scrollToActiveEx()" title="Skoči na aktivno vajo">🎯</button>
+<div class="note-pop" id="confirm-pop">
+  <div class="note-pop-card">
+    <h3 id="confirm-title">Potrditev</h3>
+    <div id="confirm-msg" style="font-size:13px;color:var(--text2);line-height:1.5;white-space:pre-wrap;margin:.25rem 0 .5rem;"></div>
+    <div class="note-pop-actions">
+      <button class="sb" id="confirm-cancel" style="background:var(--bg3);">Prekliči</button>
+      <button class="sb" id="confirm-ok">Potrdi</button>
+    </div>
+  </div>
+</div>
+<div class="note-pop" id="prompt-pop">
+  <div class="note-pop-card">
+    <h3 id="prompt-title">Vnos</h3>
+    <div id="prompt-msg" style="font-size:13px;color:var(--text2);line-height:1.5;white-space:pre-wrap;margin:.25rem 0 .5rem;"></div>
+    <input type="text" id="prompt-input" onkeydown="if(event.key==='Enter')document.getElementById('prompt-ok').click()" style="width:100%;font-size:15px;padding:8px 10px;border:.5px solid var(--border2);border-radius:8px;background:var(--bg3);color:var(--text);box-sizing:border-box;">
+    <div class="note-pop-actions">
+      <button class="sb" id="prompt-cancel" style="background:var(--bg3);">Prekliči</button>
+      <button class="sb" id="prompt-ok">V redu</button>
+    </div>
+  </div>
+</div>
 <div class="note-pop" id="rest-edit-pop">
   <div class="note-pop-card">
     <h3 id="rest-edit-title">⏱ Počitek</h3>
@@ -813,6 +848,13 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 
 <!-- TOOLS PAGE -->
 <div class="page" id="page-tools">
+  <div class="card">
+    <div class="ct">📱 Prikaz</div>
+    <div class="set-row">
+      <span class="sl-l">Kompaktne kartice vaj<br><span style="font-size:10px;color:var(--text3);">Skrije opis in nasvet — (i) na vaji ju razkrije</span></span>
+      <div class="toggle-sw" id="compact-toggle" onclick="toggleCompactSetting()"></div>
+    </div>
+  </div>
   <div class="card">
     <div class="ct">🎨 Barve teme</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:.6rem;">Hitra tema:</div>
@@ -913,7 +955,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     </div>
   </div>
   <div class="card">
-    <div class="ct">Nastavitve alarma</div>
+    <div class="ct">⏰ Nastavitve alarma</div>
     <div class="set-row"><span class="sl-l">🔊 Zvok</span><div class="toggle-sw" id="tg-sound" onclick="toggleAlarmOpt('sound')"></div></div>
     <div class="set-row"><span class="sl-l">📳 Vibracija</span><div class="toggle-sw" id="tg-vib" onclick="toggleAlarmOpt('vibrate')"></div></div>
     <div class="set-row"><span class="sl-l">🔔 Push obvestila</span><div class="toggle-sw" id="tg-notif" onclick="toggleAlarmOpt('notif')"></div></div>
@@ -940,7 +982,7 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     </div>
   </div>
   <div class="card">
-    <div class="ct">Plate calculator</div>
+    <div class="ct">🧮 Plate calculator</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;">Nastavi palico in plošče — samodejno pri barbell vajah.</div>
     <div class="ir"><span class="lbl">Palica</span>
       <select class="si" id="bar-w" onchange="barChanged()">
@@ -956,14 +998,14 @@ tr.is-drop{background:rgba(167,139,250,.04);}
     <div class="plate-result" id="plate-result"></div>
   </div>
   <div class="card">
-    <div class="ct">Ocenjeni 1RM</div>
+    <div class="ct">📈 Ocenjeni 1RM</div>
     <div class="ir"><span class="lbl">Dvignjena teža</span><input class="si" type="number" id="orm-kg" placeholder="kg" min="0" step="2.5"></div>
     <div class="ir"><span class="lbl">Ponovitve</span><input class="si" type="number" id="orm-reps" placeholder="reps" min="1" max="30"></div>
     <button class="sb" onclick="calcORM()">Izračunaj</button>
     <div class="rb2" id="orm-res"></div>
   </div>
   <div class="card">
-    <div class="ct">Ogrevanje</div>
+    <div class="ct">🔥 Ogrevanje</div>
     <div class="ir"><span class="lbl">Delovna teža</span><input class="si" type="number" id="wu-kg" placeholder="kg" min="0" step="2.5"></div>
     <div class="ir"><span class="lbl">Tip</span><select class="si" id="wu-t"><option value="upper">Zgornji del</option><option value="lower">Spodnji del</option></select></div>
     <button class="sb" onclick="calcWU()">Pokaži</button>
@@ -982,6 +1024,59 @@ function setCustomRestFor(name,secs){const r=getCustomRest();if(secs)r[name]=sec
 function restForEx(name,def){const r=getCustomRest();return r[name]||def;}
 function fmtRest(s){if(s%60===0)return (s/60)+' min';if(s>60)return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');return s+'s';}
 let _restEditCtx=null;
+// === Lastni potrditveni / vnosni modali (nadomestijo confirm/prompt) ===
+let _confirmResolve=null,_promptResolve=null;
+function uiConfirm(msg,okText){
+  return new Promise(res=>{
+    _confirmResolve=res;
+    document.getElementById('confirm-msg').textContent=msg;
+    document.getElementById('confirm-ok').textContent=okText||'Potrdi';
+    document.getElementById('confirm-pop').classList.add('on');
+  });
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const cok=document.getElementById('confirm-ok'),ccn=document.getElementById('confirm-cancel');
+  if(cok)cok.onclick=()=>{document.getElementById('confirm-pop').classList.remove('on');if(_confirmResolve){_confirmResolve(true);_confirmResolve=null;}};
+  if(ccn)ccn.onclick=()=>{document.getElementById('confirm-pop').classList.remove('on');if(_confirmResolve){_confirmResolve(false);_confirmResolve=null;}};
+  const pok=document.getElementById('prompt-ok'),pcn=document.getElementById('prompt-cancel');
+  if(pok)pok.onclick=()=>{const v=document.getElementById('prompt-input').value;document.getElementById('prompt-pop').classList.remove('on');if(_promptResolve){_promptResolve(v);_promptResolve=null;}};
+  if(pcn)pcn.onclick=()=>{document.getElementById('prompt-pop').classList.remove('on');if(_promptResolve){_promptResolve(null);_promptResolve=null;}};
+});
+function uiPrompt(msg,defVal){
+  return new Promise(res=>{
+    _promptResolve=res;
+    document.getElementById('prompt-msg').textContent=msg;
+    const inp=document.getElementById('prompt-input');
+    inp.value=(defVal===undefined||defVal===null)?'':defVal;
+    document.getElementById('prompt-pop').classList.add('on');
+    setTimeout(()=>inp.focus(),50);
+  });
+}
+// === FAB: skoči na aktivno vajo (gym mode) ===
+function scrollToActiveEx(){
+  const el=document.querySelector('.exc.active-ex')||
+           (document.querySelector('tr.next-set')&&document.querySelector('tr.next-set').closest('.exc'))||
+           document.querySelector('.exc:not(.col-done)')||
+           document.querySelector('.exc');
+  if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+// === Kompaktne kartice: (i) razkrije opis/nasvet/bolečino ===
+function toggleExInfo(key){
+  const card=document.getElementById('ec-'+key);
+  if(card)card.classList.toggle('show-info');
+}
+function isCompact(){return localStorage.getItem('wt_compact')==='1';}
+function setCompactMode(on){
+  localStorage.setItem('wt_compact',on?'1':'0');
+  document.body.classList.toggle('compact-cards',!!on);
+  const t=document.getElementById('compact-toggle');
+  if(t)t.classList.toggle('on',!!on);
+}
+function toggleCompactSetting(){setCompactMode(!isCompact());}
+function initDisplayUI(){
+  const t=document.getElementById('compact-toggle');
+  if(t)t.classList.toggle('on',isCompact());
+}
 function editRest(name,def,exKey){
   _restEditCtx={name,def,exKey};
   document.getElementById('rest-edit-title').textContent='⏱ Počitek — '+name;
@@ -1011,7 +1106,7 @@ function confirmRestEdit(){
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.5.4';
+const APP_VERSION='3.6.0';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -1339,7 +1434,7 @@ function showPage(p){
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
-  if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();renderColorPickersInto();const _cp=document.getElementById('color-presets');if(_cp)_cp.innerHTML=renderColorPresets();}
+  if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();renderColorPickersInto();initDisplayUI();const _cp=document.getElementById('color-presets');if(_cp)_cp.innerHTML=renderColorPresets();}
   if(p==='gymlog'){renderSessHist();renderWeeklySummary();renderTonnageChart();const _tc=document.getElementById('train-calendar');if(_tc)_tc.innerHTML=renderTrainCalendar();}
   if(p==='stats'){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
@@ -1655,15 +1750,15 @@ function render531Current(){
   el.innerHTML=parts.length?`Trenutni TM (cikel ${offset+1}): ${parts.join(' · ')}`:'Ni vnesenih 1RM-jev.';
 }
 
-function advance531Cycle(){
-  if(!confirm('Zaključi cikel? TM se poveča: +2.5kg bench/OHP, +5kg squat/deadlift.'))return;
+async function advance531Cycle(){
+  if(!await uiConfirm('Zaključi cikel? TM se poveča: +2.5kg bench/OHP, +5kg squat/deadlift.'))return;
   set531CycleOffset(get531CycleOffset()+1);
   render531Current();
   if(getActiveProfile()==='bulk')showDay(cd);
   toast('✓ Nov cikel — TM povišan','ok');
 }
-function reset531Cycle(){
-  if(!confirm('Resetiraj progresijo ciklov na začetek (TM nazaj na osnovne 1RM)?'))return;
+async function reset531Cycle(){
+  if(!await uiConfirm('Resetiraj progresijo ciklov na začetek (TM nazaj na osnovne 1RM)?'))return;
   set531CycleOffset(0);
   render531Current();
   if(getActiveProfile()==='bulk')showDay(cd);
@@ -1978,8 +2073,8 @@ function confirmAddExercise(name,muscle,isMain){
   showDay(di);
   toast('✓ Vaja dodana','ok');
 }
-function removeExtraExercise(di,localIdx){
-  if(!confirm('Odstranim to vajo? Vsi vneseni podatki bodo izgubljeni.'))return;
+async function removeExtraExercise(di,localIdx){
+  if(!await uiConfirm('Odstranim to vajo? Vsi vneseni podatki bodo izgubljeni.'))return;
   const extras=getExtraExercises(di);
   if(localIdx<0||localIdx>=extras.length){
     toast('Napaka pri odstranjevanju','err');return;
@@ -1994,8 +2089,8 @@ function removeExtraExercise(di,localIdx){
 }
 
 // Zanesljivo briše po imenu — neodvisno od indeksov
-function removeExtraByName(di,name){
-  if(!confirm(`Odstranim "${name}"? Vsi vneseni podatki bodo izgubljeni.`))return;
+async function removeExtraByName(di,name){
+  if(!await uiConfirm(`Odstranim "${name}"? Vsi vneseni podatki bodo izgubljeni.`))return;
   const extras=getExtraExercises(di);
   const idx=extras.findIndex(e=>e.n===name);
   if(idx<0){toast('Vaja ni najdena','err');return;}
@@ -2224,7 +2319,7 @@ async function restoreBackupObjectP1(backup,opts={}){
   if(backup.reps_step) localStorage.setItem('wt_reps_step',backup.reps_step);
   if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
   if(opts.photos&&backup.photos&&Array.isArray(backup.photos)&&backup.photos.length>0){
-    if(confirm(`Backup vsebuje ${backup.photos.length} fotografij. Naloži tudi fotografije?\n(Trenutne fotografije bodo zamenjane)`)){
+    if(await uiConfirm(`Backup vsebuje ${backup.photos.length} fotografij. Naloži tudi fotografije?\n(Trenutne fotografije bodo zamenjane)`)){
       const db=await openPhotoDB();
       await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).clear();tx.oncomplete=res;});
       for(const p of backup.photos){await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).add({date:p.date,blob:p.blob});tx.oncomplete=res;});}
@@ -2326,7 +2421,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const activeCls=(typeof isActiveGymEx==='function'&&isActiveGymEx(exKey))?' active-ex':'';
   return `<div class="exc${isPR?' pr-card':''}${collapsed?' col-done':''}${activeCls}" id="ec-${exKey}">
     <div class="ex-top">
-      <div class="ex-name-wrap"><div class="ex-name" id="exn-${exKey}">${safeHtml(displayName)}</div><button class="hist-btn" onclick="openExHistory(${di},${ei})" title="Zgodovina vaje">📊</button></div>
+      <div class="ex-name-wrap"><div class="ex-name" id="exn-${exKey}">${safeHtml(displayName)}</div><button class="info-btn" onclick="toggleExInfo('${exKey}')" title="Opis vaje">ⓘ</button><button class="hist-btn" onclick="openExHistory(${di},${ei})" title="Zgodovina vaje">📊</button></div>
       <div class="sp ${wk.pill}">${n} × ${wk.reps}</div>
     </div>
     ${summaryHtml}
@@ -2446,8 +2541,8 @@ function migrateSwaps(){
 function getHiddenEx(){try{return JSON.parse(localStorage.getItem('wt_hidden_ex')||'{}');}catch{return {};}}
 function saveHiddenEx(h){localStorage.setItem('wt_hidden_ex',JSON.stringify(h));}
 function isExHidden(exKey){return !!getHiddenEx()[exKey];}
-function removeExForWeek(exKey){
-  if(!confirm('Odstrani to vajo samo za ta teden? (ostane v drugih tednih, podatki se ohranijo)'))return;
+async function removeExForWeek(exKey){
+  if(!await uiConfirm('Odstrani to vajo samo za ta teden? (ostane v drugih tednih, podatki se ohranijo)'))return;
   const h=getHiddenEx();h[exKey]=true;saveHiddenEx(h);
   showDay(cd);toast('🗑 Vaja odstranjena za ta teden','ok');
 }
@@ -2598,8 +2693,8 @@ function addCustomExercise(){
   toast('✓ Vaja dodana','ok');
   renderCustomExList();
 }
-function deleteCustomExercise(name){
-  if(!confirm('Izbrišem vajo "'+name+'"?'))return;
+async function deleteCustomExercise(name){
+  if(!await uiConfirm('Izbrišem vajo "'+name+'"?'))return;
   const list=getCustomExercises().filter(e=>e.n!==name);
   saveCustomExercises(list);
   renderCustomExList();
@@ -2950,7 +3045,7 @@ function renderCaffeineSleep(){
   el.innerHTML=html;
 }
 
-function sv(key,si,field,val,di,ei,cn,isBarbell){
+async function sv(key,si,field,val,di,ei,cn,isBarbell){
   // Validacija
   let inpSel='.ri';
   if(field==='kg'||field==='kgR'){
@@ -2965,12 +3060,12 @@ function sv(key,si,field,val,di,ei,cn,isBarbell){
       return;
     }
     if((field==='kg'||field==='kgR')&&num>500){
-      if(!confirm(`${num}kg — si prepričan? (verjetno tipkarska napaka)`)){
+      if(!await uiConfirm(`${num}kg — si prepričan? (verjetno tipkarska napaka)`)){
         if(inpEl)inpEl.value='';return;
       }
     }
     if(field==='reps'&&num>100){
-      if(!confirm(`${num} ponovitev — si prepričan?`)){
+      if(!await uiConfirm(`${num} ponovitev — si prepričan?`)){
         if(inpEl)inpEl.value='';return;
       }
     }
@@ -3122,6 +3217,7 @@ function tgSet(key,si,di,ei,cn){
   const wk=PROG.weeks[cw],n=nsf(di,ei,wk,key),all=getSets();
   if(!all[key])all[key]=Array.from({length:n},()=>({kg:'',reps:'',done:false}));
   all[key][si].done=!all[key][si].done;
+  if(all[key][si].done&&navigator.vibrate)navigator.vibrate(25);
   // Shrani ime vaje (za ločeno zgodovino ob zamenjavi)
   const _exO=PROG.days[di].ex[ei];
   const _cn=getSwappedName(key,_exO?_exO.n:'',_exO&&_exO.extra);
@@ -3583,7 +3679,7 @@ function confirmNext(){
   cw=0;cd=0;
   document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));
   showPage('workout');showDay(0);
-  alert(`Cikel ${newN} začet! Predlagane teže predizpolnjene v T1.`);
+  toast(`Cikel ${newN} začet! Teže predizpolnjene v T1.`,'ok');
 }
 
 // GYM LOG
@@ -3751,13 +3847,13 @@ function renderDurationChart(){
   });
 }
 
-function editSession(idx){
+async function editSession(idx){
   const sessions=getSessions();
   const s=sessions[idx];if(!s)return;
-  const newDur=prompt(`Trajanje sesije v minutah:\n${s.dayName} ${s.date}`,s.durationMin);
+  const newDur=await uiPrompt(`Trajanje sesije v minutah:\n${s.dayName} ${s.date}`,s.durationMin);
   if(newDur===null)return;
   const n=parseInt(newDur);
-  if(isNaN(n)||n<1||n>500){alert('Napačna vrednost (1-500 min)');return;}
+  if(isNaN(n)||n<1||n>500){toast('Napačna vrednost (1-500 min)','err');return;}
   s.durationMin=n;
   // Posodobi tudi končni čas, če imamo začetni
   if(s.startTime){
@@ -3772,29 +3868,29 @@ function editSession(idx){
   toast('✓ Sesija posodobljena','ok');
 }
 
-function deleteSession(idx){
+async function deleteSession(idx){
   const sessions=getSessions();
   const s=sessions[idx];if(!s)return;
-  if(!confirm(`Izbrišem sesijo ${s.dayName} ${s.date}?`))return;
+  if(!await uiConfirm(`Izbrišem sesijo ${s.dayName} ${s.date}?`))return;
   sessions.splice(idx,1);
   saveSessions(sessions);
   renderSessHist();renderWeeklySummary();
   toast('Izbrisana','ok');
 }
 
-function addManualSession(){
-  const date=prompt('Datum (npr. '+new Date().toISOString().split('T')[0]+'):',new Date().toISOString().split('T')[0]);
+async function addManualSession(){
+  const date=await uiPrompt('Datum (npr. '+new Date().toISOString().split('T')[0]+'):',new Date().toISOString().split('T')[0]);
   if(!date)return;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){alert('Format mora biti YYYY-MM-DD');return;}
-  const dayChoice=prompt('Kateri dan?\n1 = Push A\n2 = Pull A\n3 = Noge\n4 = Push B\n5 = Pull B','1');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){toast('Format mora biti YYYY-MM-DD','err');return;}
+  const dayChoice=await uiPrompt('Kateri dan?\n1 = Push A\n2 = Pull A\n3 = Noge\n4 = Push B\n5 = Pull B','1');
   const dayIdx=parseInt(dayChoice)-1;
-  if(isNaN(dayIdx)||dayIdx<0||dayIdx>4){alert('Napačen dan');return;}
-  const dur=prompt('Trajanje v minutah:','60');
+  if(isNaN(dayIdx)||dayIdx<0||dayIdx>4){toast('Napačen dan','err');return;}
+  const dur=await uiPrompt('Trajanje v minutah:','60');
   const durMin=parseInt(dur);
-  if(isNaN(durMin)||durMin<1||durMin>500){alert('Napačno trajanje');return;}
-  const week=prompt('Teden v ciklu (1-4):',String(cw+1));
+  if(isNaN(durMin)||durMin<1||durMin>500){toast('Napačno trajanje','err');return;}
+  const week=await uiPrompt('Teden v ciklu (1-4):',String(cw+1));
   const wn=parseInt(week);
-  if(isNaN(wn)||wn<1||wn>4){alert('Napačen teden');return;}
+  if(isNaN(wn)||wn<1||wn>4){toast('Napačen teden','err');return;}
   const sessions=getSessions();
   const cyc=getCyc();
   sessions.unshift({
@@ -3913,16 +4009,16 @@ function toggleRestDay(idx){
 function getBWGoal(){const v=parseFloat(localStorage.getItem('wt_bwgoal'));return isNaN(v)?80:v;}
 function saveBWGoal(v){const n=parseFloat(v);if(!isNaN(n)&&n>40&&n<200){localStorage.setItem('wt_bwgoal',n);renderBW();}}
 function initBWGoal(){const g=getBWGoal();const el=document.getElementById('bw-goal');if(el)el.value=g;}
-function editBW(date,curKg){
-  const newVal=prompt(`Nova teža za ${date}:`,curKg);
+async function editBW(date,curKg){
+  const newVal=await uiPrompt(`Nova teža za ${date}:`,curKg);
   if(newVal===null)return;
   const n=parseFloat(newVal);
-  if(isNaN(n)||n<30||n>250){alert('Napačna vrednost');return;}
+  if(isNaN(n)||n<30||n>250){toast('Napačna vrednost','err');return;}
   const d=getBW();d[date]=n;saveBW(d);renderBW();
   toast('✓ Teža posodobljena','ok');
 }
-function deleteBW(date){
-  if(!confirm(`Izbrišem vnos teže za ${date}?`))return;
+async function deleteBW(date){
+  if(!await uiConfirm(`Izbrišem vnos teže za ${date}?`))return;
   const d=getBW();delete d[date];saveBW(d);renderBW();
   toast('Izbrisano','ok');
 }
@@ -4138,7 +4234,7 @@ function renderMeas(){
 function saveMeasurements(){
   const data=getMeas(),today=new Date().toISOString().split('T')[0],entry={};
   MEAS_FIELDS.forEach(f=>{const v=document.getElementById('mi-'+f)?.value;if(v)entry[f]=parseFloat(v);});
-  if(Object.keys(entry).length===0){alert('Vnesi vsaj eno mero.');return;}
+  if(Object.keys(entry).length===0){toast('Vnesi vsaj eno mero','err');return;}
   data[today]=entry;saveMeas(data);renderMeas();
   MEAS_FIELDS.forEach(f=>{const el=document.getElementById('mi-'+f);if(el)el.value='';});
 }
@@ -4166,7 +4262,7 @@ function togglePlate(p){
 }
 function calcPlatesManual(){
   const target=parseFloat(document.getElementById('plate-target').value);
-  if(isNaN(target)||target<=0){alert('Vnesi ciljno težo.');return;}
+  if(isNaN(target)||target<=0){toast('Vnesi ciljno težo','err');return;}
   const pl=calcPlatesFor(target);
   const res=document.getElementById('plate-result');
   if(!pl){res.innerHTML=`Ni možno sestaviti ${target}kg.`;res.classList.add('visible');return;}
@@ -4274,11 +4370,11 @@ function importData(){
       try{
         const backup=JSON.parse(ev.target.result);
         const v=validateBackupP1(backup);
-        if(!v.ok){alert('Napačna backup datoteka: '+v.msg);return;}
-        if(!confirm(backupSummaryP1(backup)))return;
+        if(!v.ok){toast('Napačna backup datoteka: '+v.msg,'err');return;}
+        if(!await uiConfirm(backupSummaryP1(backup)))return;
         await restoreBackupObjectP1(backup,{photos:true});
-        alert('Podatki uspešno uvoženi! 💪');
-      }catch(err){alert('Napaka pri uvozu: '+err.message);}
+        toast('Podatki uspešno uvoženi! 💪','ok');
+      }catch(err){toast('Napaka pri uvozu: '+err.message,'err');}
     };
     reader.readAsText(file);
   };
@@ -4286,8 +4382,8 @@ function importData(){
 }
 
 
-function clearAll(){
-  if(confirm('Ponastavi vse? Tega ni mogoče razveljaviti.')){
+async function clearAll(){
+  if(await uiConfirm('Ponastavi vse? Tega ni mogoče razveljaviti.')){
     [...Object.values(LS),'wt_sugs6','wt_bwgoal'].forEach(k=>localStorage.removeItem(k));
     showDay(cd);
   }
@@ -4298,9 +4394,9 @@ function getGSUrl(){return localStorage.getItem('wt_gsurl')||'';}
 function saveGSUrl(v){localStorage.setItem('wt_gsurl',v.trim());updateGSStatus();}
 function saveGSUrlBtn(){
   const el=document.getElementById('gs-url');
-  if(!el||!el.value.trim()){alert('Vpiši URL najprej.');return;}
+  if(!el||!el.value.trim()){toast('Vpiši URL najprej','err');return;}
   saveGSUrl(el.value.trim());
-  alert('URL shranjen! ✓');
+  toast('URL shranjen ✓','ok');
 }
 function updateGSStatus(){
   const url=getGSUrl();
@@ -4331,7 +4427,7 @@ async function sendToSheets(type,data){
 async function testGSConnection(){
   const url=getGSUrl();
   const el=document.getElementById('gs-status');
-  if(!url){alert('Najprej shrani Apps Script URL.');return;}
+  if(!url){toast('Najprej shrani Apps Script URL','err');return;}
   el.textContent='● Pošiljam...';el.style.color='var(--blue-text)';
   try{
     await fetch(url,{
@@ -4347,7 +4443,7 @@ async function testGSConnection(){
 
 async function syncAllToSheets(){
   const url=getGSUrl();
-  if(!url){alert('Najprej shrani Apps Script URL.');return;}
+  if(!url){toast('Najprej shrani Apps Script URL','err');return;}
   const el=document.getElementById('gs-status');
   el.textContent='● Pošiljam...';el.style.color='var(--blue-text)';
   try{
@@ -5216,7 +5312,7 @@ function viewPhoto(src){
 }
 function closePhotoViewer(){document.getElementById('photo-viewer').classList.remove('on');}
 async function delPhotoConfirm(id){
-  if(!confirm('Izbriši fotko?'))return;
+  if(!await uiConfirm('Izbriši fotko?'))return;
   await deletePhoto(id);await renderPhotos();
 }
 async function handlePhotoUpload(input){
@@ -5431,16 +5527,16 @@ async function restoreBackupFromIDB(id){
   try{
     const backup=JSON.parse(b.blob);
     const v=validateBackupP1(backup);
-    if(!v.ok){alert('Backup je pokvarjen: '+v.msg);return;}
-    if(!confirm(backupSummaryP1(backup)))return;
+    if(!v.ok){toast('Backup je pokvarjen: '+v.msg,'err');return;}
+    if(!await uiConfirm(backupSummaryP1(backup)))return;
     await restoreBackupObjectP1(backup,{photos:false});
     toast('✓ Obnovljeno iz backupa','ok');
-  }catch(e){alert('Napaka pri obnovi: '+e.message);}
+  }catch(e){toast('Napaka pri obnovi: '+e.message,'err');}
 }
 
 
 async function delBackupConfirm(id){
-  if(!confirm('Izbriši ta backup?'))return;
+  if(!await uiConfirm('Izbriši ta backup?'))return;
   await deleteBackup(id);
   await renderBackupList();
   toast('Izbrisan','ok');
@@ -5484,6 +5580,7 @@ async function manualAutoBackup(){
 })();
 
 initTheme();applyAllColors();initBWGoal();
+if(isCompact())document.body.classList.add('compact-cards');
 // Obnovi zadnji teden in dan
 const _lastWeek=parseInt(localStorage.getItem('wt_last_week'));
 const _lastDay=parseInt(localStorage.getItem('wt_last_day'));
