@@ -1112,7 +1112,7 @@ function confirmRestEdit(){
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.6.1';
+const APP_VERSION='3.6.2';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -2586,6 +2586,66 @@ function diagnoseExNameMismatches(){
   });
   return out;
 }
+// Poišče na kateri poziciji TA TRENUTEK (za dan dan c/w) dejansko živi vaja z imenom wantName
+function findCurrentPosForName(di,c,w,wantName){
+  const list=buildDayExList(di);
+  for(let i=0;i<list.length;i++){
+    const k=sdk(c,w,di,i);
+    const nm=getSwappedName(k,list[i].n,list[i].extra);
+    if(nm===wantName)return i;
+  }
+  return -1;
+}
+// Popravi EN najden primer neskladja: prestavi podatke na pravo pozicijo (ali izbriši, če vaje ni več)
+async function fixMismatchItem(wrongKey,wantName,silent){
+  const m=wrongKey.match(/^c(\d+)w(\d+)d(\d+)e(\d+)$/);
+  if(!m){if(!silent)toast('Napačen ključ','err');return 'error';}
+  const c=+m[1],w=+m[2],di=+m[3],wrongEi=+m[4];
+  const correctEi=findCurrentPosForName(di,c,w,wantName);
+  if(correctEi<0){
+    if(!silent&&!await uiConfirm(`Vaja "${wantName}" ne obstaja več na tem dnevu — podatkov ni kam prestaviti. Izbrišem jih?`))return 'skipped';
+    if(silent)return 'orphan'; // pri "popravi vse" osirotelih ne brišemo samodejno brez potrditve
+    const allSets=getSets();delete allSets[wrongKey];saveSets(allSets);
+    const sc=getSetCounts();delete sc[wrongKey];saveSetCounts(sc);
+    const hidden=getHiddenEx();delete hidden[wrongKey];saveHiddenEx(hidden);
+    const pain=getPainData();delete pain[wrongKey];savePainData(pain);
+    if(!silent)toast('🗑 Osiroteli podatki izbrisani','ok');
+    return 'deleted';
+  }
+  if(correctEi===wrongEi)return 'already-ok';
+  const correctKey=sdk(c,w,di,correctEi);
+  const allSets=getSets();
+  const destHasData=allSets[correctKey]&&allSets[correctKey].some(s=>s&&s.kg&&s.reps);
+  if(destHasData){
+    if(!silent)toast('⚠ Na pravi poziciji že obstajajo podatki — preveri ročno','err');
+    return 'conflict';
+  }
+  if(allSets[wrongKey]!==undefined){allSets[correctKey]=allSets[wrongKey];delete allSets[wrongKey];saveSets(allSets);}
+  const sc=getSetCounts();if(sc[wrongKey]!==undefined){sc[correctKey]=sc[wrongKey];delete sc[wrongKey];saveSetCounts(sc);}
+  const hidden=getHiddenEx();if(hidden[wrongKey]!==undefined){hidden[correctKey]=hidden[wrongKey];delete hidden[wrongKey];saveHiddenEx(hidden);}
+  const pain=getPainData();if(pain[wrongKey]!==undefined){pain[correctKey]=pain[wrongKey];delete pain[wrongKey];savePainData(pain);}
+  if(!silent)toast('✓ Podatki prestavljeni na pravo vajo','ok');
+  return 'fixed';
+}
+async function fixOneAndRefresh(wrongKey,wantName){
+  await fixMismatchItem(wrongKey,wantName,false);
+  runDataDiagnostic();
+  if(cd!==null&&cd!==undefined)showDay(cd);
+}
+// Popravi VSE najdene primere naenkrat (varno — konflikte in osirotele preskoči, samo poroča)
+async function fixAllMismatches(){
+  const results=diagnoseExNameMismatches();
+  if(results.length===0)return;
+  if(!await uiConfirm(`Popravim ${results.length} najdenih neskladij? Prestavi podatke na pravo vajo. Konflikte in osirotele podatke preskoči (tiste ročno).`))return;
+  let fixed=0,conflict=0,orphan=0;
+  for(const r of results){
+    const res=await fixMismatchItem(r.key,r.zabeleženoIme,true);
+    if(res==='fixed')fixed++;else if(res==='conflict')conflict++;else if(res==='orphan')orphan++;
+  }
+  toast(`✓ Popravljenih: ${fixed}${conflict?' · Konfliktov: '+conflict:''}${orphan?' · Osirotelih (preveri ročno): '+orphan:''}`,'ok');
+  runDataDiagnostic();
+  if(cd!==null&&cd!==undefined)showDay(cd);
+}
 function runDataDiagnostic(){
   const results=diagnoseExNameMismatches();
   const el=document.getElementById('diag-results');
@@ -2594,11 +2654,13 @@ function runDataDiagnostic(){
     el.innerHTML='<div style="font-size:12px;color:var(--green-text);padding:.5rem;">✓ Ni najdenih neskladij — podatki so v redu.</div>';
     return;
   }
-  el.innerHTML=`<div style="font-size:12px;color:var(--amber-text);margin-bottom:.5rem;">⚠ Najdenih ${results.length} neskladij (podatki drugje kot pričakovano):</div>`+
+  el.innerHTML=`<div style="font-size:12px;color:var(--amber-text);margin-bottom:.5rem;">⚠ Najdenih ${results.length} neskladij:</div>`+
+    `<button class="sb" style="width:100%;margin-bottom:.5rem;background:var(--green-bg);border-color:var(--green);color:var(--green-text);" onclick="fixAllMismatches()">🔧 Popravi vse (varno)</button>`+
     results.map(r=>`<div style="font-size:11px;color:var(--text2);padding:6px 8px;background:var(--bg3);border-radius:6px;margin-bottom:4px;">
-      <strong>${r.dan}</strong>, Cikel ${r.cikel}, Teden ${r.teden} — na poziciji je zdaj <strong>${r.trenutnoIme}</strong>, a ${r.steviloSetov} set(ov) je zabeleženih pod imenom <strong>${r.zabeleženoIme}</strong>.
+      <div style="margin-bottom:5px;"><strong>${r.dan}</strong>, Cikel ${r.cikel}, Teden ${r.teden} — na poziciji je zdaj <strong>${r.trenutnoIme}</strong>, a ${r.steviloSetov} set(ov) je zabeleženih pod imenom <strong>${r.zabeleženoIme}</strong>.</div>
+      <button class="sb" style="font-size:10px;padding:4px 10px;" onclick="fixOneAndRefresh('${r.key}','${r.zabeleženoIme.replace(/'/g,"\\'")}')">Popravi to</button>
     </div>`).join('')+
-    `<div style="font-size:10px;color:var(--text3);margin-top:6px;">Vzrok: v starejši verziji je odstranjevanje/premikanje vaj lahko zamenjalo podatke med pozicijami. Od te verzije naprej se to ne more več zgoditi. Za popravilo obstoječih primerov mi povej, kateri od zgornjih so narobe — ročno jih bom prestavil na pravo vajo.</div>`;
+    `<div style="font-size:10px;color:var(--text3);margin-top:6px;">Vzrok: v starejši verziji je odstranjevanje/premikanje vaj lahko zamenjalo podatke med pozicijami. Od te verzije naprej se to ne more več zgoditi. "Popravi" prestavi podatke na pravo vajo (ali vpraša za brisanje, če vaje ni več).</div>`;
 }
 function toggleFold(key){
   const card=document.getElementById('ec-'+key);if(!card)return;
