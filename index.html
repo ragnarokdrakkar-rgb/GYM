@@ -849,6 +849,12 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 <!-- TOOLS PAGE -->
 <div class="page" id="page-tools">
   <div class="card">
+    <div class="ct">🔍 Diagnostika podatkov</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;">Preveri, ali imajo katere vaje podatke, ki pripadajo drugi (npr. iz starejše verzije, pred popravkom premikanja/brisanja vaj).</div>
+    <button class="sb" onclick="runDataDiagnostic()">Zaženi preverbo</button>
+    <div id="diag-results" style="margin-top:.75rem;"></div>
+  </div>
+  <div class="card">
     <div class="ct">📱 Prikaz</div>
     <div class="set-row">
       <span class="sl-l">Kompaktne kartice vaj<br><span style="font-size:10px;color:var(--text3);">Skrije opis in nasvet — (i) na vaji ju razkrije</span></span>
@@ -1106,7 +1112,7 @@ function confirmRestEdit(){
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.6.0';
+const APP_VERSION='3.6.1';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -2067,6 +2073,9 @@ function confirmAddExercise(name,muscle,isMain){
     m:false,  // ni glavna
     extra:true  // marker
   };
+  // Nova vaja pristane na trenutno-zadnjo pozicijo — preventivno počisti morebitne duhove
+  const newPos=(d&&d.ex?d.ex.length:(baseList.length+extras.length));
+  clearPositionalDataAt(di,newPos);
   extras.push(newEx);
   saveExtraExercises(di,extras);
   closeAddExercise();
@@ -2080,10 +2089,15 @@ async function removeExtraExercise(di,localIdx){
     toast('Napaka pri odstranjevanju','err');return;
   }
   const removedName=extras[localIdx].n;
+  const d=PROG.days[di];
+  const curList=(d&&d.ex)||[];
+  const removedPos=curList.findIndex(e=>e.n===removedName);
+  const oldTotal=curList.length;
   extras.splice(localIdx,1);
   saveExtraExercises(di,extras);
   const orders=getExOrderNames();
   if(orders[di]){orders[di]=orders[di].filter(n=>n!==removedName);saveExOrderNames(orders);}
+  if(removedPos>=0)shiftPositionalDataAfterRemoval(di,removedPos,oldTotal);
   showDay(di);
   toast('Vaja odstranjena','ok');
 }
@@ -2091,6 +2105,10 @@ async function removeExtraExercise(di,localIdx){
 // Zanesljivo briše po imenu — neodvisno od indeksov
 async function removeExtraByName(di,name){
   if(!await uiConfirm(`Odstranim "${name}"? Vsi vneseni podatki bodo izgubljeni.`))return;
+  const d=PROG.days[di];
+  const curList=(d&&d.ex)||[];
+  const removedPos=curList.findIndex(e=>e.n===name);
+  const oldTotal=curList.length;
   const extras=getExtraExercises(di);
   const idx=extras.findIndex(e=>e.n===name);
   if(idx<0){toast('Vaja ni najdena','err');return;}
@@ -2099,6 +2117,8 @@ async function removeExtraByName(di,name){
   // Posodobi vrstni red imen — odstrani to ime
   const orders=getExOrderNames();
   if(orders[di]){orders[di]=orders[di].filter(n=>n!==name);saveExOrderNames(orders);}
+  // KRITIČNO: premakni podatke vaj ZA to pozicijo za 1 nazaj, da ne "podedujejo" te vaje podatkov
+  if(removedPos>=0)shiftPositionalDataAfterRemoval(di,removedPos,oldTotal);
   showDay(di);
   toast('✓ Odstranjena','ok');
 }
@@ -2458,6 +2478,127 @@ function isFolded(key){return key in foldState?foldState[key]:null;}
 function toggleExMenu(key){
   const p=document.getElementById('exm-'+key);
   if(p)p.classList.toggle('open');
+}
+// === KORENSKI POPRAVEK: pozicijsko-vezani podatki (sets/setCounts/hiddenEx/pain so ključani po
+// sdk(cikel,teden,dan,ei); PR-ji po dan+ei). Ko se vaja ODSTRANI, se vse ZA njo premakne za 1 mesto
+// nazaj — sicer naslednja vaja na tisti poziciji "podeduje" stare podatke prejšnje vaje. ===
+function shiftPositionalDataAfterRemoval(di,removedPos,oldTotal){
+  if(removedPos<0||oldTotal<=0)return;
+  const cyc=getCyc();
+  const allSets=getSets(),sc=getSetCounts(),hidden=getHiddenEx(),pain=getPainData();
+  for(let c=1;c<=cyc.num;c++){
+    for(let w=0;w<4;w++){
+      for(let i=removedPos+1;i<oldTotal;i++){
+        const kFrom=sdk(c,w,di,i),kTo=sdk(c,w,di,i-1);
+        if(allSets[kFrom]!==undefined)allSets[kTo]=allSets[kFrom];else delete allSets[kTo];
+        if(sc[kFrom]!==undefined)sc[kTo]=sc[kFrom];else delete sc[kTo];
+        if(hidden[kFrom]!==undefined)hidden[kTo]=hidden[kFrom];else delete hidden[kTo];
+        if(pain[kFrom]!==undefined)pain[kTo]=pain[kFrom];else delete pain[kTo];
+      }
+      const kLast=sdk(c,w,di,oldTotal-1);
+      delete allSets[kLast];delete sc[kLast];delete hidden[kLast];delete pain[kLast];
+    }
+  }
+  saveSets(allSets);saveSetCounts(sc);saveHiddenEx(hidden);savePainData(pain);
+  // PR-ji so globalni po poziciji (ne po ciklu/tednu)
+  const prs=getPRs();
+  for(let i=removedPos+1;i<oldTotal;i++){
+    const kFrom=`pr${di}${i}`,kTo=`pr${di}${i-1}`;
+    if(prs[kFrom]!==undefined)prs[kTo]=prs[kFrom];else delete prs[kTo];
+  }
+  delete prs[`pr${di}${oldTotal-1}`];
+  savePRs(prs);
+}
+// Ko dodamo NOVO vajo na pozicijo, ki jo je nekoč zasedala druga (že odstranjena) vaja,
+// preventivno počistimo morebitne "duhove" — nova vaja mora vedno začeti prazna.
+function clearPositionalDataAt(di,pos){
+  if(pos<0)return;
+  const cyc=getCyc();
+  const allSets=getSets(),sc=getSetCounts(),hidden=getHiddenEx(),pain=getPainData();
+  let changed=false;
+  for(let c=1;c<=cyc.num;c++){
+    for(let w=0;w<4;w++){
+      const k=sdk(c,w,di,pos);
+      if(allSets[k]!==undefined){delete allSets[k];changed=true;}
+      if(sc[k]!==undefined){delete sc[k];changed=true;}
+      if(hidden[k]!==undefined){delete hidden[k];changed=true;}
+      if(pain[k]!==undefined){delete pain[k];changed=true;}
+    }
+  }
+  if(changed){saveSets(allSets);saveSetCounts(sc);saveHiddenEx(hidden);savePainData(pain);}
+  const prs=getPRs(),pk=`pr${di}${pos}`;
+  if(prs[pk]!==undefined){delete prs[pk];savePRs(prs);}
+}
+// Ob zagonu: podatki na pozicijah ZA trenutnim dejanskim številom vaj za ta dan so matematično
+// nedosegljivi (noben render jih ne more prikazati) — 100% varno za brisanje, brez tveganja izgube
+// vidljivih podatkov. Lovi ostanke iz starejših verzij (pred tem popravkom).
+function cleanupTrailingOrphans(){
+  try{
+    const cyc=getCyc();
+    const allSets=getSets(),sc=getSetCounts(),hidden=getHiddenEx(),pain=getPainData();
+    let changed=false;
+    for(let di=0;di<PROG.days.length;di++){
+      const d=PROG.days[di];if(!d)continue;
+      if(d._origEx===undefined)d._origEx=d.ex.slice();
+      const origs=d._origEx.map(e=>({...e,extra:false}));
+      const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
+      let mixed=[...origs,...extras];
+      const seen=new Set();
+      mixed=mixed.filter(e=>{const k=(e.n||'').toLowerCase();if(seen.has(k))return false;seen.add(k);return true;});
+      const maxCount=mixed.length;
+      for(let c=1;c<=cyc.num;c++){
+        for(let w=0;w<4;w++){
+          // Preveri do razumne zgornje meje (20) da ne iščemo v neskončnost
+          for(let i=maxCount;i<maxCount+20;i++){
+            const k=sdk(c,w,di,i);
+            if(allSets[k]!==undefined){delete allSets[k];changed=true;}
+            if(sc[k]!==undefined){delete sc[k];changed=true;}
+            if(hidden[k]!==undefined){delete hidden[k];changed=true;}
+            if(pain[k]!==undefined){delete pain[k];changed=true;}
+          }
+        }
+      }
+    }
+    if(changed){saveSets(allSets);saveSetCounts(sc);saveHiddenEx(hidden);savePainData(pain);console.log('Počiščeni nedosegljivi ostanki podatkov.');}
+  }catch(e){console.warn('cleanupTrailingOrphans napaka:',e);}
+}
+// === DIAGNOSTIKA (samo za branje — nič ne spremeni) ===
+// Primerja exName, ki je bil zabeležen ob vnosu seta, s trenutnim imenom vaje na tisti poziciji.
+// Neujemanje = dokaz da so podatki "podedovani" od prej odstranjene/premaknjene vaje.
+function diagnoseExNameMismatches(){
+  const allSets=getSets();
+  const out=[];
+  Object.keys(allSets).forEach(k=>{
+    const m=k.match(/^c(\d+)w(\d+)d(\d+)e(\d+)$/);
+    if(!m)return;
+    const [,c,w,di,ei]=m.map(Number);
+    const d=PROG.days[di];if(!d)return;
+    const list=d.ex||d._origEx;
+    const curEx=list&&list[ei];
+    const curName=curEx?getSwappedName(k,curEx.n,curEx.extra):null;
+    const sets=allSets[k]||[];
+    const tagged=sets.filter(s=>s&&s.exName&&s.kg&&s.reps);
+    if(tagged.length===0||!curName)return;
+    const mismatched=tagged.filter(s=>s.exName!==curName);
+    if(mismatched.length>0){
+      out.push({key:k,cikel:c,teden:w+1,dan:DAY_NAMES[di]||('Dan '+(di+1)),trenutnoIme:curName,zabeleženoIme:mismatched[0].exName,steviloSetov:mismatched.length});
+    }
+  });
+  return out;
+}
+function runDataDiagnostic(){
+  const results=diagnoseExNameMismatches();
+  const el=document.getElementById('diag-results');
+  if(!el)return;
+  if(results.length===0){
+    el.innerHTML='<div style="font-size:12px;color:var(--green-text);padding:.5rem;">✓ Ni najdenih neskladij — podatki so v redu.</div>';
+    return;
+  }
+  el.innerHTML=`<div style="font-size:12px;color:var(--amber-text);margin-bottom:.5rem;">⚠ Najdenih ${results.length} neskladij (podatki drugje kot pričakovano):</div>`+
+    results.map(r=>`<div style="font-size:11px;color:var(--text2);padding:6px 8px;background:var(--bg3);border-radius:6px;margin-bottom:4px;">
+      <strong>${r.dan}</strong>, Cikel ${r.cikel}, Teden ${r.teden} — na poziciji je zdaj <strong>${r.trenutnoIme}</strong>, a ${r.steviloSetov} set(ov) je zabeleženih pod imenom <strong>${r.zabeleženoIme}</strong>.
+    </div>`).join('')+
+    `<div style="font-size:10px;color:var(--text3);margin-top:6px;">Vzrok: v starejši verziji je odstranjevanje/premikanje vaj lahko zamenjalo podatke med pozicijami. Od te verzije naprej se to ne more več zgoditi. Za popravilo obstoječih primerov mi povej, kateri od zgornjih so narobe — ročno jih bom prestavil na pravo vajo.</div>`;
 }
 function toggleFold(key){
   const card=document.getElementById('ec-'+key);if(!card)return;
@@ -5588,6 +5729,7 @@ if(!isNaN(_lastWeek)&&_lastWeek>=0&&_lastWeek<=3){cw=_lastWeek;document.querySel
 const _initDay=(!isNaN(_lastDay)&&_lastDay>=0&&_lastDay<=4)?_lastDay:0;
 try{const _av=document.getElementById('app-ver');if(_av)_av.textContent='v'+APP_VERSION;}catch(e){}
 try{migrateSwaps();}catch(e){}
+try{cleanupTrailingOrphans();}catch(e){}
 showDay(_initDay);
 try{initP1();}catch(e){console.warn('P1 init failed',e);}
 // Obnovi morebiten aktivni session in rest timer
