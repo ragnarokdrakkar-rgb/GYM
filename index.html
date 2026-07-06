@@ -1110,9 +1110,9 @@ function confirmRestEdit(){
   if(wasRunning&&exKey)startT(exKey,sec);
 }
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
-const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Deadlift — capped at 75% (≈140kg)","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
-const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift — capped at 75% (≈140kg)","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.6.3';
+const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
+const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift","Overhead press — barbell","Weighted pull-ups","Barbell row"];
+const APP_VERSION='3.7.0';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -1239,7 +1239,7 @@ const SWAPS_DB={
     {n:"Cable overhead ext",note:"Konstanten pritisk"},
     {n:"Single-arm DB ext",note:"Unilateralno — popravlja neravnovesje"}
   ],
-  "Deadlift — capped at 75% (≈140kg)":[
+  "Deadlift":[
     {n:"Trap bar deadlift",note:"Manj stresa na spodnji hrbet"},
     {n:"Rack pull",note:"Krajši razpon — bolj hrbet kot noge"},
     {n:"Romanian deadlift",note:"Manj obremenitve CNS"}
@@ -1570,7 +1570,7 @@ const PROG_CUT={
       {n:"Overhead tricep extension",m:0,r:REST_T.iso,rl:"60s",d:"Samo dolga glava raztegnjena nad glavo.",tip:""},
     ]},
     {title:"Pull B — hrbet + noge",sub:"Hrbet · noge · bicepsi",tags:[{t:"Hrbet",p:1},{t:"Kvadricepsi",p:1},{t:"Bicepsi",p:0}],ex:[
-      {n:"Deadlift — capped at 75% (≈140kg)",m:1,r:REST_T.main,rl:"3 min",d:"Maks 75% 1RM med rezanjem. Polna moč vrne pri 80kg.",tip:""},
+      {n:"Deadlift",m:1,r:REST_T.main,rl:"3 min",d:"Glavni dvig za zadnjo verigo. Nevtralen hrbet, drive skozi pete.",tip:"Reset med ponovitvami — brez bounce."},
       {n:"Single-arm DB row",m:0,r:REST_T.acc,rl:"90s",d:"Unilateralno — odpravlja neravnovesje.",tip:""},
       {n:"Lat pulldown — close grip",m:0,r:REST_T.acc,rl:"90s",d:"Nevtralni prijem. Komolci dol k bokom.",tip:""},
       {n:"Reverse fly — machine",m:0,r:REST_T.iso,rl:"60s",d:"Zadnji deltoid izolacija. Lahka, stroga tehnika.",tip:""},
@@ -1803,7 +1803,7 @@ const EX_MAP = {
   "Weighted dips": {p:["Prsa","Tricepsi"], s:[], cat:"compound"},
   "Overhead tricep extension": {p:["Tricepsi"], s:[], cat:"isolation"},
   // Pull B
-  "Deadlift — capped at 75% (≈140kg)": {p:["Hrbet","Hamstringi","Gluteusi"], s:["Trapezius"], cat:"compound"},
+  "Deadlift": {p:["Hrbet","Hamstringi","Gluteusi"], s:["Trapezius"], cat:"compound"},
   "Single-arm DB row": {p:["Hrbet"], s:["Bicepsi"], cat:"compound"},
   "Lat pulldown — close grip": {p:["Hrbet"], s:["Bicepsi"], cat:"compound"},
   "Reverse fly — machine": {p:["Zadnji deltoid"], s:[], cat:"isolation"},
@@ -1846,7 +1846,7 @@ const STRENGTH_TIERS = {
 const BIG_LIFTS = {
   bench:"Barbell bench press",
   squat:"Barbell squat",
-  deadlift:"Deadlift — capped at 75% (≈140kg)",
+  deadlift:"Deadlift",
   ohp:"Overhead press — barbell"
 };
 
@@ -5793,6 +5793,21 @@ if(!isNaN(_lastWeek)&&_lastWeek>=0&&_lastWeek<=3){cw=_lastWeek;document.querySel
 const _initDay=(!isNaN(_lastDay)&&_lastDay>=0&&_lastDay<=4)?_lastDay:0;
 try{const _av=document.getElementById('app-ver');if(_av)_av.textContent='v'+APP_VERSION;}catch(e){}
 try{migrateSwaps();}catch(e){}
+// Enkratna migracija: "Deadlift — capped..." → "Deadlift" (ohrani zgodovino, PR-je, red, swape)
+try{
+  if(!localStorage.getItem('wt_dl_renamed')){
+    const OLDN='Deadlift — capped at 75% (≈140kg)',NEWN='Deadlift';
+    const _as=getSets();let _ch=false;
+    Object.keys(_as).forEach(k=>{(_as[k]||[]).forEach(s=>{if(s&&s.exName===OLDN){s.exName=NEWN;if(typeof exStableId==='function')s.exerciseId=exStableId(NEWN);_ch=true;}});});
+    if(_ch)saveSets(_as);
+    const _ord=getExOrderNames();Object.keys(_ord).forEach(di=>{const i=(_ord[di]||[]).indexOf(OLDN);if(i>=0){_ord[di][i]=NEWN;}});saveExOrderNames(_ord);
+    const _sw=getExSwaps();Object.keys(_sw).forEach(k=>{if(k.endsWith('|'+OLDN)){const nk=k.replace('|'+OLDN,'|'+NEWN);if(_sw[nk]===undefined)_sw[nk]=_sw[k];delete _sw[k];}});saveExSwaps(_sw);
+    try{const _rp=JSON.parse(localStorage.getItem('wt_rep_prs')||'{}');if(_rp[OLDN]){if(!_rp[NEWN])_rp[NEWN]=_rp[OLDN];else Object.keys(_rp[OLDN]).forEach(r=>{if((_rp[OLDN][r]||0)>(_rp[NEWN][r]||0))_rp[NEWN][r]=_rp[OLDN][r];});delete _rp[OLDN];localStorage.setItem('wt_rep_prs',JSON.stringify(_rp));}}catch(e){}
+    try{const _cr=JSON.parse(localStorage.getItem('wt_custom_rest')||'{}');if(_cr[OLDN]!==undefined){if(_cr[NEWN]===undefined)_cr[NEWN]=_cr[OLDN];delete _cr[OLDN];localStorage.setItem('wt_custom_rest',JSON.stringify(_cr));}}catch(e){}
+    const _prs=getPRs();let _pch=false;Object.keys(_prs).forEach(k=>{if(_prs[k]&&_prs[k].exName===OLDN){_prs[k].exName=NEWN;_pch=true;}});if(_pch)savePRs(_prs);
+    localStorage.setItem('wt_dl_renamed','1');
+  }
+}catch(e){console.warn('DL rename migracija:',e);}
 try{cleanupTrailingOrphans();}catch(e){}
 showDay(_initDay);
 try{initP1();}catch(e){console.warn('P1 init failed',e);}
