@@ -1112,7 +1112,7 @@ function confirmRestEdit(){
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.7.0';
+const APP_VERSION='3.7.2';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -1480,6 +1480,18 @@ function allDone(di,ei){
 
 // Ali so v danem dnevu (cikel cn, teden w) vse VIDNE vaje dokončane? (vsaj 1 vaja z done)
 // Zgradi seznam vaj dneva ENAKO kot showDay (dedup + vrstni red + extras) — brez mutacije
+// Dedupe po PRIKAZANEM imenu (upošteva zamenjave) — base ima prednost pred extra (base so prvi v seznamu)
+function dedupeByDisplayName(list,di,c,w){
+  const refKey=sdk(c,w,di,0); // swap lookup uporablja samo dan+ime (ne pozicije), zato je e0 dovolj
+  const seen=new Set();
+  return list.filter(e=>{
+    const disp=getSwappedName(refKey,e.n,e.extra);
+    const k=(disp||'').toLowerCase();
+    if(seen.has(k))return false;
+    seen.add(k);
+    return true;
+  });
+}
 function buildDayExList(di){
   const d=PROG.days[di];
   if(!d)return [];
@@ -1487,8 +1499,7 @@ function buildDayExList(di){
   const origs=(d._origEx||d.ex).map(e=>({...e,extra:false}));
   const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
   let mixed=[...origs,...extras];
-  const seen=new Set();
-  mixed=mixed.filter(e=>{const k=(e.n||'').toLowerCase();if(seen.has(k))return false;seen.add(k);return true;});
+  mixed=dedupeByDisplayName(mixed,di,getCyc().num,cw);
   mixed=applyExOrderByName(di,mixed);
   return mixed;
 }
@@ -1871,9 +1882,8 @@ function showDay(idx){
   const origs=d._origEx.map(e=>({...e,extra:false}));
   const extras=getExtraExercises(idx).map(e=>({...e,extra:true}));
   let mixed=[...origs,...extras];
-  // Dedupe: če ima extra isto ime kot osnovna vaja, ga izpusti (prepreči podvojene pozicije → zlom premikanja)
-  const _seenN=new Set();
-  mixed=mixed.filter(e=>{const k=(e.n||'').toLowerCase();if(_seenN.has(k))return false;_seenN.add(k);return true;});
+  // Dedupe po PRIKAZANEM imenu (upošteva zamenjave) — prepreči podvojene kartice in zlom premikanja
+  mixed=dedupeByDisplayName(mixed,idx,cyc.num,cw);
   // Uporabi shranjeni vrstni red (seznam imen)
   mixed=applyExOrderByName(idx,mixed);
   d.ex=mixed;
@@ -1978,8 +1988,7 @@ function renderDataEditor(){
   const origs=(d?(d._origEx||d.ex):[]).map(e=>({...e,extra:false}));
   const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
   let mixed=applyExOrderByName(di,[...origs,...extras]);
-  const _seenDE=new Set();
-  mixed=mixed.filter(e=>{const k=(e.n||'').toLowerCase();if(_seenDE.has(k))return false;_seenDE.add(k);return true;});
+  mixed=dedupeByDisplayName(mixed,di,c,w);
   const all=getSets();
   let html='';
   mixed.forEach((e,ei)=>{
@@ -2060,10 +2069,11 @@ function confirmAddExercise(name,muscle,isMain){
   if(isNaN(di))return;
   const extras=getExtraExercises(di);
   if(extras.find(e=>e.n.toLowerCase()===name.toLowerCase())){toast('Vaja je že dodana na tem dnevu','err');return;}
-  // Preveri tudi osnovne vaje programa (prepreči podvajanje imen → zlom premikanja)
+  // Preveri tudi osnovne vaje programa — po SUROVEM in PRIKAZANEM (zamenjanem) imenu
   const d=PROG.days[di];
   const baseList=(d&&(d._origEx||d.ex))||[];
-  if(baseList.find(e=>e.n.toLowerCase()===name.toLowerCase())){toast('Ta vaja je že v programu tega dne','err');return;}
+  const refKeyAdd=sdk(getCyc().num,cw,di,0);
+  if(baseList.find(e=>e.n.toLowerCase()===name.toLowerCase()||getSwappedName(refKeyAdd,e.n,false).toLowerCase()===name.toLowerCase())){toast('Ta vaja je že v programu tega dne','err');return;}
   // Privzeti parametri za novo vajo
   const newEx={
     n:name,
@@ -2146,42 +2156,25 @@ function swapExOrder(di,a,b){
   orders[di]=currentNames;
   saveExOrderNames(orders);
 
-  // Zamenjaj VSE shranjene sete med pozicijama a in b (vsi cikli, vsi tedni)
-  const allSets=getSets();
+  // Zamenjaj VSE pozicijsko-vezane podatke med a in b (vsi cikli, vsi tedni):
+  // seti, dodatne serije, skrite oznake, bolečina — da podatki potujejo z vajo
+  const allSets=getSets(),sc=getSetCounts(),hidden=getHiddenEx(),pain=getPainData();
   const cyc=getCyc();
+  const swapKey=(obj,kA,kB)=>{const t=obj[kA];if(obj[kB]!==undefined)obj[kA]=obj[kB];else delete obj[kA];if(t!==undefined)obj[kB]=t;else delete obj[kB];};
   for(let c=1;c<=cyc.num;c++){
     for(let w=0;w<4;w++){
       const kA=sdk(c,w,di,a),kB=sdk(c,w,di,b);
-      const tmp=allSets[kA];
-      if(allSets[kB]!==undefined)allSets[kA]=allSets[kB];else delete allSets[kA];
-      if(tmp!==undefined)allSets[kB]=tmp;else delete allSets[kB];
+      swapKey(allSets,kA,kB);
+      swapKey(sc,kA,kB);
+      swapKey(hidden,kA,kB);
+      swapKey(pain,kA,kB);
     }
   }
-  saveSets(allSets);
-
-  // Zamenjaj set-counts (dodatne serije)
-  const sc=getSetCounts();
-  for(let c=1;c<=cyc.num;c++){
-    for(let w=0;w<4;w++){
-      const kA=sdk(c,w,di,a),kB=sdk(c,w,di,b);
-      const t=sc[kA];
-      if(sc[kB]!==undefined)sc[kA]=sc[kB];else delete sc[kA];
-      if(t!==undefined)sc[kB]=t;else delete sc[kB];
-    }
-  }
-  saveSetCounts(sc);
-
-  // Zamenjaj swaps (zamenjave imen vaj)
-  const sw=getExSwaps();
-  for(let c=1;c<=cyc.num;c++){
-    for(let w=0;w<4;w++){
-      const kA=sdk(c,w,di,a),kB=sdk(c,w,di,b);
-      const t=sw[kA];
-      if(sw[kB]!==undefined)sw[kA]=sw[kB];else delete sw[kA];
-      if(t!==undefined)sw[kB]=t;else delete sw[kB];
-    }
-  }
-  saveExSwaps(sw);
+  saveSets(allSets);saveSetCounts(sc);saveHiddenEx(hidden);savePainData(pain);
+  // PR-ji so globalni po poziciji (pr{di}{ei}) — zamenjaj tudi te
+  const prs=getPRs();
+  swapKey(prs,`pr${di}${a}`,`pr${di}${b}`);
+  savePRs(prs);
 
   showDay(di);
 }
@@ -2939,6 +2932,16 @@ function stepReps(exKey,si,di,ei,cn,delta){
 function useSwap(key,name,origName){
   if(!origName)origName=origNameForKey(key); // fallback
   if(!origName){toast('Te vaje ni mogoče zamenjati','err');return;}
+  // Blokiraj: novo ime ne sme biti enako prikazanemu imenu KATEREKOLI druge vaje tega dne
+  const di=diFromKey(key);
+  const list=buildDayExList(di);
+  const refKey=sdk(getCyc().num,cw,di,0);
+  const clash=list.some(e=>{
+    if(e.n===origName&&!e.extra)return false; // sama sebe preskoči
+    const disp=getSwappedName(refKey,e.n,e.extra);
+    return disp.toLowerCase()===name.toLowerCase();
+  });
+  if(clash){toast('Ta vaja že obstaja na tem dnevu — izberi drugo','err');return;}
   const swaps=getExSwaps();
   // Shrani od katerega cikla+tedna velja (ne spreminja že dokončanih prejšnjih tednov)
   swaps[`d${diFromKey(key)}|${origName}`]={n:name,c:getCyc().num,w:cw};
@@ -5030,8 +5033,7 @@ function calcVolumeThisWeek(){
     const origs=(d._origEx||d.ex).map(e=>({...e,extra:false}));
     const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
     let allEx=applyExOrderByName(di,[...origs,...extras]);
-    const _seenV=new Set();
-    allEx=allEx.filter(e=>{const k=(e.n||'').toLowerCase();if(_seenV.has(k))return false;_seenV.add(k);return true;});
+    allEx=dedupeByDisplayName(allEx,di,cn,cw);
     allEx.forEach((e,ei)=>{
       let map=EX_MAP[e.n];
       // Če ni v EX_MAP, poišči v built-in DB ali custom
