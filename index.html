@@ -1026,8 +1026,8 @@ const LS={sets:'wt_s6',pr:'wt_p6',notes:'wt_n6',bw:'wt_bw6',cycle:'wt_c6',meas:'
 const REST_T={main:180,acc:90,iso:60,lat:45};
 // Poljuben počitek per vaja (shranjen po imenu vaje)
 function getCustomRest(){try{return JSON.parse(localStorage.getItem('wt_custom_rest')||'{}');}catch{return {};}}
-function setCustomRestFor(name,secs){const r=getCustomRest();if(secs)r[name]=secs;else delete r[name];localStorage.setItem('wt_custom_rest',JSON.stringify(r));}
-function restForEx(name,def){const r=getCustomRest();return r[name]||def;}
+function setCustomRestFor(key,secs){const r=getCustomRest();if(secs)r[key]=secs;else delete r[key];localStorage.setItem('wt_custom_rest',JSON.stringify(r));}
+function restForEx(id,name,def){const r=getCustomRest();return r[id]||r[name]||def;}
 function fmtRest(s){if(s%60===0)return (s/60)+' min';if(s>60)return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');return s+'s';}
 let _restEditCtx=null;
 // === Lastni potrditveni / vnosni modali (nadomestijo confirm/prompt) ===
@@ -1083,10 +1083,10 @@ function initDisplayUI(){
   const t=document.getElementById('compact-toggle');
   if(t)t.classList.toggle('on',isCompact());
 }
-function editRest(name,def,exKey){
-  _restEditCtx={name,def,exKey};
+function editRest(name,def,exKey,id){
+  _restEditCtx={name,def,exKey,id};
   document.getElementById('rest-edit-title').textContent='⏱ Počitek — '+name;
-  document.getElementById('rest-edit-input').value=restForEx(name,def);
+  document.getElementById('rest-edit-input').value=restForEx(id,name,def);
   document.getElementById('rest-edit-pop').classList.add('on');
   setTimeout(()=>document.getElementById('rest-edit-input').focus(),50);
 }
@@ -1096,12 +1096,12 @@ function closeRestEdit(){
 }
 function confirmRestEdit(){
   if(!_restEditCtx)return;
-  const {name,def,exKey}=_restEditCtx;
+  const {name,def,exKey,id}=_restEditCtx;
   const v=document.getElementById('rest-edit-input').value;
   const n=parseInt(v);
   let sec;
-  if(isNaN(n)||n<5){setCustomRestFor(name,0);sec=def;toast('↺ Vrnjen privzet počitek','ok');}
-  else{sec=Math.min(900,n);setCustomRestFor(name,sec);toast('✓ Počitek: '+fmtRest(sec),'ok');}
+  if(isNaN(n)||n<5){setCustomRestFor(id||name,0);sec=def;toast('↺ Vrnjen privzet počitek','ok');}
+  else{sec=Math.min(900,n);setCustomRestFor(id||name,sec);toast('✓ Počitek: '+fmtRest(sec),'ok');}
   // Če za to vajo trenutno teče časomer, ga ponovno zaženi z NOVIM trajanjem
   let wasRunning=false;
   try{const t=JSON.parse(localStorage.getItem('wt_active_timer')||'null');wasRunning=!!(t&&exKey&&t.key===exKey);}catch(e){}
@@ -1112,7 +1112,7 @@ function confirmRestEdit(){
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='3.7.2';
+const APP_VERSION='4.0.0';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -1492,7 +1492,117 @@ function dedupeByDisplayName(list,di,c,w){
     return true;
   });
 }
+// ====== V4 JEDRO: EN SEZNAM VAJ NA DAN (edini vir resnice), stabilni ID-ji ======
+function _dlKey(){return 'wt_daylist_'+getActiveProfile();}
+function _newExId(n){const slug=(n||'ex').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,24);return slug+'-'+Math.random().toString(36).slice(2,7);}
+function getDayLists(){try{return JSON.parse(localStorage.getItem(_dlKey())||'null');}catch{return null;}}
+function saveDayLists(all){localStorage.setItem(_dlKey(),JSON.stringify(all));}
+// Prikazano ime vaje za (cikel,teden) — upošteva zgodovino preimenovanj (sw: [{n,c,w},...])
+function dispNameForItem(it,c,w){
+  let n=it.n0;
+  if(Array.isArray(it.sw)){for(const s of it.sw){if(c>s.c||(c===s.c&&w>=s.w))n=s.n;}}
+  return n;
+}
+// Seznam za prikaz: item + n=prikazano ime za trenutni teden
+function getDayList(di){
+  const all=getDayLists();
+  const arr=(all&&all[di])?all[di]:null;
+  if(!arr)return null;
+  const c=getCyc().num;
+  return arr.map(it=>({...it,n:dispNameForItem(it,c,cw)}));
+}
+// Seznam za POLJUBEN (cikel,teden) — za DataEditor in preglede preteklih tednov
+function dayListFor(di,c,w){
+  const all=getDayLists();
+  const arr=all&&all[di];
+  if(arr)return arr.map(it=>({...it,n:dispNameForItem(it,c,w)}));
+  // legacy fallback
+  const d=PROG.days[di];if(!d)return [];
+  if(d._origEx===undefined)d._origEx=d.ex.slice();
+  const origs=(d._origEx||d.ex).map(e=>({...e,extra:false}));
+  const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
+  let mixed=applyExOrderByName(di,[...origs,...extras]);
+  return dedupeByDisplayName(mixed,di,c,w);
+}
+// ENKRATNA migracija iz starih plasti (program+extras+vrstni red+zamenjave) v en seznam
+function ensureDayLists(){
+  if(getDayLists())return;
+  const all={};
+  const c=getCyc().num;
+  const swaps=getExSwaps();
+  for(let di=0;di<PROG.days.length;di++){
+    const d=PROG.days[di];if(!d){all[di]=[];continue;}
+    if(d._origEx===undefined)d._origEx=d.ex.slice();
+    const origs=(d._origEx||[]).map(e=>({...e,extra:false}));
+    const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
+    let mixed=[...origs,...extras];
+    mixed=dedupeByDisplayName(mixed,di,c,cw);
+    mixed=applyExOrderByName(di,mixed);
+    all[di]=mixed.map(e=>{
+      const it={id:_newExId(e.n),n0:e.n,m:!!e.m,r:e.r||90,rl:e.rl||'90s',d:e.d||'',tip:e.tip||'',extra:!!e.extra};
+      const sw=swaps['d'+di+'|'+e.n];
+      if(sw)it.sw=[typeof sw==='string'?{n:sw,c:1,w:0}:sw];
+      return it;
+    });
+  }
+  saveDayLists(all);
+  // Počisti duhove: pozicijski ključi za dolžino seznama (nedosegljivi) — vsi cikli/tedni
+  try{
+    const allSets=getSets(),sc=getSetCounts(),hid=getHiddenEx(),pain=getPainData();let ch=false;
+    for(let di=0;di<PROG.days.length;di++){
+      const len=(all[di]||[]).length;
+      for(let cc=1;cc<=c;cc++)for(let w=0;w<4;w++)for(let i=len;i<len+25;i++){
+        const k=sdk(cc,w,di,i);
+        if(allSets[k]!==undefined){delete allSets[k];ch=true;}
+        if(sc[k]!==undefined){delete sc[k];ch=true;}
+        if(hid[k]!==undefined){delete hid[k];ch=true;}
+        if(pain[k]!==undefined){delete pain[k];ch=true;}
+      }
+    }
+    if(ch){saveSets(allSets);saveSetCounts(sc);saveHiddenEx(hid);savePainData(pain);}
+  }catch(e){}
+  // Stare plasti so vgrajene v seznam — odstrani (da ne ustvarjajo duhov)
+  localStorage.removeItem('wt_extra_ex');
+  localStorage.removeItem('wt_ex_ordernames');
+  localStorage.removeItem('wt_exswap');
+}
+// CENTRALNA PORAVNAVA: ob VSAKI spremembi seznama preslika pozicijske podatke (seti,
+// dodatne serije, skrite oznake, bolečina, PR-ji) iz starega vrstnega reda ID-jev v novega.
+// Deluje za poljubno permutacijo, vstavljanje in brisanje — brez izjem, brez duhov.
+function reconcilePositions(di,oldIds,newIds){
+  const cyc=getCyc();
+  const allSets=getSets(),sc=getSetCounts(),hid=getHiddenEx(),pain=getPainData();
+  for(let c=1;c<=cyc.num;c++){
+    for(let w=0;w<4;w++){
+      const bag={};
+      oldIds.forEach((id,i)=>{const k=sdk(c,w,di,i);bag[id]={s:allSets[k],c:sc[k],h:hid[k],p:pain[k]};delete allSets[k];delete sc[k];delete hid[k];delete pain[k];});
+      newIds.forEach((id,i)=>{const k=sdk(c,w,di,i);const b=bag[id];if(!b)return;
+        if(b.s!==undefined)allSets[k]=b.s;
+        if(b.c!==undefined)sc[k]=b.c;
+        if(b.h!==undefined)hid[k]=b.h;
+        if(b.p!==undefined)pain[k]=b.p;});
+    }
+  }
+  saveSets(allSets);saveSetCounts(sc);saveHiddenEx(hid);savePainData(pain);
+  const prs=getPRs();const pb={};
+  oldIds.forEach((id,i)=>{const k='pr'+di+i;pb[id]=prs[k];delete prs[k];});
+  newIds.forEach((id,i)=>{const k='pr'+di+i;if(pb[id]!==undefined)prs[k]=pb[id];});
+  savePRs(prs);
+}
+// Edina pot za spremembo seznama: mutiraj + shrani + poravnaj podatke
+function mutateDayList(di,fn){
+  const all=getDayLists()||{};
+  const arr=all[di]||[];
+  const oldIds=arr.map(x=>x.id);
+  fn(arr);
+  all[di]=arr;
+  saveDayLists(all);
+  reconcilePositions(di,oldIds,arr.map(x=>x.id));
+}
 function buildDayExList(di){
+  const L=getDayList(di);
+  if(L)return L;
+  // fallback (pred migracijo)
   const d=PROG.days[di];
   if(!d)return [];
   if(d._origEx===undefined)d._origEx=d.ex.slice();
@@ -1879,13 +1989,7 @@ function showDay(idx){
   if(d._origEx===undefined)d._origEx=d.ex.slice();
   if(d._origLen===undefined)d._origLen=d._origEx.length;
   // Original vaje (vedno prisotne) + extra (uporabnikove) — vedno iz stabilnega vira
-  const origs=d._origEx.map(e=>({...e,extra:false}));
-  const extras=getExtraExercises(idx).map(e=>({...e,extra:true}));
-  let mixed=[...origs,...extras];
-  // Dedupe po PRIKAZANEM imenu (upošteva zamenjave) — prepreči podvojene kartice in zlom premikanja
-  mixed=dedupeByDisplayName(mixed,idx,cyc.num,cw);
-  // Uporabi shranjeni vrstni red (seznam imen)
-  mixed=applyExOrderByName(idx,mixed);
+  let mixed=buildDayExList(idx);
   d.ex=mixed;
   const allEx=d.ex;
   const visIdx=allEx.map((_,i)=>i).filter(i=>!isExHidden(sdk(cyc.num,cw,idx,i)));
@@ -1983,12 +2087,7 @@ function renderDataEditor(){
   const el=document.getElementById('de-content');
   // Vaje tega dne v PRAVILNEM vrstnem redu (ujema exKey e0,e1... indekse).
   // d.ex vzdržuje showDay kot urejen mixed; dodamo morebitne manjkajoče extra.
-  const d=PROG.days[di];
-  if(d&&d._origEx===undefined)d._origEx=d.ex.slice();
-  const origs=(d?(d._origEx||d.ex):[]).map(e=>({...e,extra:false}));
-  const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
-  let mixed=applyExOrderByName(di,[...origs,...extras]);
-  mixed=dedupeByDisplayName(mixed,di,c,w);
+  const mixed=dayListFor(di,c,w);
   const all=getSets();
   let html='';
   mixed.forEach((e,ei)=>{
@@ -2067,68 +2166,36 @@ function confirmAddExercise(name,muscle,isMain){
   const popup=document.getElementById('add-ex-pop');
   const di=parseInt(popup.dataset.di);
   if(isNaN(di))return;
-  const extras=getExtraExercises(di);
-  if(extras.find(e=>e.n.toLowerCase()===name.toLowerCase())){toast('Vaja je že dodana na tem dnevu','err');return;}
-  // Preveri tudi osnovne vaje programa — po SUROVEM in PRIKAZANEM (zamenjanem) imenu
-  const d=PROG.days[di];
-  const baseList=(d&&(d._origEx||d.ex))||[];
-  const refKeyAdd=sdk(getCyc().num,cw,di,0);
-  if(baseList.find(e=>e.n.toLowerCase()===name.toLowerCase()||getSwappedName(refKeyAdd,e.n,false).toLowerCase()===name.toLowerCase())){toast('Ta vaja je že v programu tega dne','err');return;}
-  // Privzeti parametri za novo vajo
-  const newEx={
-    n:name,
-    d:`${muscle} — moja dodatna vaja`,  // opis
-    r:90,  // rest 90s privzeto
-    rl:'90s',
-    m:false,  // ni glavna
-    extra:true  // marker
-  };
-  // Nova vaja pristane na trenutno-zadnjo pozicijo — preventivno počisti morebitne duhove
-  const newPos=(d&&d.ex?d.ex.length:(baseList.length+extras.length));
-  clearPositionalDataAt(di,newPos);
-  extras.push(newEx);
-  saveExtraExercises(di,extras);
+  ensureDayLists();
+  const arr=(getDayLists()||{})[di]||[];
+  const cN=getCyc().num;
+  if(arr.some(x=>dispNameForItem(x,cN,cw).toLowerCase()===name.toLowerCase()||x.n0.toLowerCase()===name.toLowerCase())){
+    toast('Ta vaja že obstaja na tem dnevu','err');return;
+  }
+  mutateDayList(di,list=>{
+    list.push({id:_newExId(name),n0:name,m:!!isMain,r:90,rl:'90s',d:`${muscle} — moja dodatna vaja`,tip:'',extra:true});
+  });
   closeAddExercise();
   showDay(di);
   toast('✓ Vaja dodana','ok');
 }
 async function removeExtraExercise(di,localIdx){
-  if(!await uiConfirm('Odstranim to vajo? Vsi vneseni podatki bodo izgubljeni.'))return;
-  const extras=getExtraExercises(di);
-  if(localIdx<0||localIdx>=extras.length){
-    toast('Napaka pri odstranjevanju','err');return;
-  }
-  const removedName=extras[localIdx].n;
-  const d=PROG.days[di];
-  const curList=(d&&d.ex)||[];
-  const removedPos=curList.findIndex(e=>e.n===removedName);
-  const oldTotal=curList.length;
-  extras.splice(localIdx,1);
-  saveExtraExercises(di,extras);
-  const orders=getExOrderNames();
-  if(orders[di]){orders[di]=orders[di].filter(n=>n!==removedName);saveExOrderNames(orders);}
-  if(removedPos>=0)shiftPositionalDataAfterRemoval(di,removedPos,oldTotal);
-  showDay(di);
-  toast('Vaja odstranjena','ok');
+  ensureDayLists();
+  const arr=(getDayLists()||{})[di]||[];
+  const extras=arr.filter(x=>x.extra);
+  if(localIdx<0||localIdx>=extras.length){toast('Napaka pri odstranjevanju','err');return;}
+  return removeExtraByName(di,extras[localIdx].n0);
 }
 
 // Zanesljivo briše po imenu — neodvisno od indeksov
 async function removeExtraByName(di,name){
   if(!await uiConfirm(`Odstranim "${name}"? Vsi vneseni podatki bodo izgubljeni.`))return;
-  const d=PROG.days[di];
-  const curList=(d&&d.ex)||[];
-  const removedPos=curList.findIndex(e=>e.n===name);
-  const oldTotal=curList.length;
-  const extras=getExtraExercises(di);
-  const idx=extras.findIndex(e=>e.n===name);
-  if(idx<0){toast('Vaja ni najdena','err');return;}
-  extras.splice(idx,1);
-  saveExtraExercises(di,extras);
-  // Posodobi vrstni red imen — odstrani to ime
-  const orders=getExOrderNames();
-  if(orders[di]){orders[di]=orders[di].filter(n=>n!==name);saveExOrderNames(orders);}
-  // KRITIČNO: premakni podatke vaj ZA to pozicijo za 1 nazaj, da ne "podedujejo" te vaje podatkov
-  if(removedPos>=0)shiftPositionalDataAfterRemoval(di,removedPos,oldTotal);
+  ensureDayLists();
+  const arr=(getDayLists()||{})[di]||[];
+  const cN=getCyc().num;
+  const it=arr.find(x=>x.extra&&(x.n0===name||dispNameForItem(x,cN,cw)===name));
+  if(!it){toast('Vaja ni najdena','err');return;}
+  mutateDayList(di,list=>{const i=list.findIndex(x=>x.id===it.id);if(i>=0)list.splice(i,1);});
   showDay(di);
   toast('✓ Odstranjena','ok');
 }
@@ -2137,47 +2204,18 @@ async function removeExtraByName(di,name){
 
 function moveExUp(di,ei){
   if(ei===0){toast('Že na vrhu','err');return;}
-  swapExOrder(di,ei,ei-1);
-}
-function moveExDown(di,ei){
-  const d=PROG.days[di];
-  if(ei>=d.ex.length-1){toast('Že na dnu','err');return;}
-  swapExOrder(di,ei,ei+1);
-}
-
-function swapExOrder(di,a,b){
-  const d=PROG.days[di];
-  // Trenutni prikazani vrstni red (imena) — d.ex je že urejen po showDay
-  const currentNames=d.ex.map(e=>e.n);
-  // Zamenjaj imeni na poziciji a in b
-  [currentNames[a],currentNames[b]]=[currentNames[b],currentNames[a]];
-  // Shrani nov vrstni red imen
-  const orders=getExOrderNames();
-  orders[di]=currentNames;
-  saveExOrderNames(orders);
-
-  // Zamenjaj VSE pozicijsko-vezane podatke med a in b (vsi cikli, vsi tedni):
-  // seti, dodatne serije, skrite oznake, bolečina — da podatki potujejo z vajo
-  const allSets=getSets(),sc=getSetCounts(),hidden=getHiddenEx(),pain=getPainData();
-  const cyc=getCyc();
-  const swapKey=(obj,kA,kB)=>{const t=obj[kA];if(obj[kB]!==undefined)obj[kA]=obj[kB];else delete obj[kA];if(t!==undefined)obj[kB]=t;else delete obj[kB];};
-  for(let c=1;c<=cyc.num;c++){
-    for(let w=0;w<4;w++){
-      const kA=sdk(c,w,di,a),kB=sdk(c,w,di,b);
-      swapKey(allSets,kA,kB);
-      swapKey(sc,kA,kB);
-      swapKey(hidden,kA,kB);
-      swapKey(pain,kA,kB);
-    }
-  }
-  saveSets(allSets);saveSetCounts(sc);saveHiddenEx(hidden);savePainData(pain);
-  // PR-ji so globalni po poziciji (pr{di}{ei}) — zamenjaj tudi te
-  const prs=getPRs();
-  swapKey(prs,`pr${di}${a}`,`pr${di}${b}`);
-  savePRs(prs);
-
+  ensureDayLists();
+  mutateDayList(di,list=>{if(ei>0&&ei<list.length)[list[ei-1],list[ei]]=[list[ei],list[ei-1]];});
   showDay(di);
 }
+function moveExDown(di,ei){
+  ensureDayLists();
+  const L=(getDayLists()||{})[di]||[];
+  if(ei>=L.length-1){toast('Že na dnu','err');return;}
+  mutateDayList(di,list=>{if(ei>=0&&ei<list.length-1)[list[ei],list[ei+1]]=[list[ei+1],list[ei]];});
+  showDay(di);
+}
+
 
 
 // === P1 CORE: stable exercise IDs, gym mode, pain guard, session snapshots ===
@@ -2319,6 +2357,14 @@ async function restoreBackupObjectP1(backup,opts={}){
   if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
   if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
   if(backup.hidden_ex) localStorage.setItem('wt_hidden_ex',JSON.stringify(backup.hidden_ex));
+  // V4 kanonični seznami: iz backupa če obstajajo, sicer rebuild iz legacy plasti
+  if(backup.daylists&&(backup.daylists.cut||backup.daylists.bulk)){
+    if(backup.daylists.cut)localStorage.setItem('wt_daylist_cut',JSON.stringify(backup.daylists.cut));else localStorage.removeItem('wt_daylist_cut');
+    if(backup.daylists.bulk)localStorage.setItem('wt_daylist_bulk',JSON.stringify(backup.daylists.bulk));else localStorage.removeItem('wt_daylist_bulk');
+  }else{
+    localStorage.removeItem('wt_daylist_cut');localStorage.removeItem('wt_daylist_bulk');
+    try{ensureDayLists();}catch(e){}
+  }
   if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
   if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
   if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
@@ -2339,6 +2385,7 @@ async function restoreBackupObjectP1(backup,opts={}){
     }
   }
   PROG=getActiveProfile()==='bulk'?PROG_BULK:PROG_CUT;
+  try{ensureDayLists();}catch(e){}
   initTheme();applyAllColors();initBWGoal();cw=0;cd=0;
   document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));
   showPage('workout');showDay(0);initP1();
@@ -2352,9 +2399,8 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   while(all[exKey].length<n) all[exKey].push({kg:'',reps:'',done:false});
   saveSets(all);
   const sets=all[exKey],prs=getPRs(),prk=`pr${di}${ei}`,cpr=prs[prk]||0;
-  const displayName=getSwappedName(exKey,e.n,isExtra);
-  // Swap dejansko aktiven za TA teden? (upošteva od-tedna-naprej)
-  const isSwapped=displayName!==e.n;
+  const displayName=e.n; // kanoničen seznam že nosi prikazano ime
+  const isSwapped=e.n0?(e.n!==e.n0):false;
   // Prev cycle hint
   let ph='';
   if(cn>1&&!isSwapped){const pp=getPeakForExercise(cn-1,di,ei);if(pp>0)ph=`<div class="ph">Prejšnji cikel peak: ${pp}kg</div>`;}
@@ -2439,14 +2485,14 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     </div>
     ${summaryHtml}
     <div class="ex-body">
-    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${restForEx(displayName,e.r)})" oncontextmenu="event.preventDefault();editRest('${displayName.replace(/'/g,"\\'")}',${e.r},'${exKey}')" title="Dolg pritisk = nastavi počitek">${fmtRest(restForEx(displayName,e.r))} ▶</button>${isExtra?'':`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`}<button class="ex-menu-btn" onclick="toggleExMenu('${exKey}')" title="Več možnosti">⋯</button>${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
-    <div class="ex-menu" id="exm-${exKey}">${(!isExtra&&isSwapped)?`<button class="ex-menu-item" onclick="clearSwap('${exKey}','${e.n.replace(/'/g,"\\'")}')">↺ Original vaja</button>`:''}<button class="ex-menu-item" onclick="moveExUp(${di},${ei})">↑ Premakni gor</button><button class="ex-menu-item" onclick="moveExDown(${di},${ei})">↓ Premakni dol</button>${isExtra?`<button class="ex-menu-item danger" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">× Odstrani vajo</button>`:`<button class="ex-menu-item danger" onclick="removeExForWeek('${exKey}')">🗑 Odstrani za ta teden</button>`}</div>
+    <div class="bdg"><span class="b ${wk.rb}">${wk.rpe}</span>${e.m?'<span class="b mb">Glavna</span>':''}${isExtra?'<span class="b" style="background:var(--blue-bg);color:var(--blue-text);">+ Extra</span>':''}${isPR?'<span class="b prb">PR</span>':''}<button class="restbtn" onclick="startT('${exKey}',${restForEx(e.id,displayName,e.r)})" oncontextmenu="event.preventDefault();editRest('${displayName.replace(/'/g,"\\'")}',${e.r},'${exKey}','${e.id||''}')" title="Dolg pritisk = nastavi počitek">${fmtRest(restForEx(e.id,displayName,e.r))} ▶</button>${isExtra?'':`<button class="swbtn" onclick="toggleSwap('${exKey}')">Zamenjave ▾</button>`}<button class="ex-menu-btn" onclick="toggleExMenu('${exKey}')" title="Več možnosti">⋯</button>${isAllDone?`<button class="toggle-fold" onclick="toggleFold('${exKey}')">skrči ▴</button>`:''}</div>
+    <div class="ex-menu" id="exm-${exKey}">${(!isExtra&&isSwapped)?`<button class="ex-menu-item" onclick="clearSwap('${exKey}','${(e.n0||e.n).replace(/'/g,"\\'")}')">↺ Original vaja</button>`:''}<button class="ex-menu-item" onclick="moveExUp(${di},${ei})">↑ Premakni gor</button><button class="ex-menu-item" onclick="moveExDown(${di},${ei})">↓ Premakni dol</button>${isExtra?`<button class="ex-menu-item danger" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">× Odstrani vajo</button>`:`<button class="ex-menu-item danger" onclick="removeExForWeek('${exKey}')">🗑 Odstrani za ta teden</button>`}</div>
     <div class="sw-panel" id="sw-${exKey}">
-      <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}','${e.n.replace(/'/g,"\\'")}',this.value)" style="width:100%;margin-bottom:8px;">
-      <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,e.n,'')}</div>
+      <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}','${(e.n0||e.n).replace(/'/g,"\\'")}',this.value)" style="width:100%;margin-bottom:8px;">
+      <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,(e.n0||e.n),'')}</div>
       <div class="sw-custom-row">
         <input class="sw-custom-in" type="text" placeholder="Ali vpiši svojo..." id="swci-${exKey}">
-        <button class="sw-custom-btn" onclick="useCustomSwap('${exKey}','${e.n.replace(/'/g,"\\'")}')">Uporabi</button>
+        <button class="sw-custom-btn" onclick="useCustomSwap('${exKey}','${(e.n0||e.n).replace(/'/g,"\\'")}')">Uporabi</button>
       </div>
     </div>
     ${sugHtml}
@@ -2460,7 +2506,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
       <span class="set-count-label">${n} serij${extra>0?` (+${extra})`:extra<0?` (${extra})`:''}</span>
       <button class="set-ctrl-btn rem" onclick="removeSet('${exKey}',${di},${ei},${cn})">−</button>
     </div>
-    <div class="tbar" id="tb-${exKey}"><div class="tc" id="tc-${exKey}">—</div><div class="tl2">${fmtRest(restForEx(displayName,e.r))} odmor</div><button class="txb" onclick="stopT('${exKey}')">X</button></div>
+    <div class="tbar" id="tb-${exKey}"><div class="tc" id="tc-${exKey}">—</div><div class="tl2">${fmtRest(restForEx(e.id,displayName,e.r))} odmor</div><button class="txb" onclick="stopT('${exKey}')">X</button></div>
     </div>
   </div>`;
 }
@@ -2471,89 +2517,6 @@ function isFolded(key){return key in foldState?foldState[key]:null;}
 function toggleExMenu(key){
   const p=document.getElementById('exm-'+key);
   if(p)p.classList.toggle('open');
-}
-// === KORENSKI POPRAVEK: pozicijsko-vezani podatki (sets/setCounts/hiddenEx/pain so ključani po
-// sdk(cikel,teden,dan,ei); PR-ji po dan+ei). Ko se vaja ODSTRANI, se vse ZA njo premakne za 1 mesto
-// nazaj — sicer naslednja vaja na tisti poziciji "podeduje" stare podatke prejšnje vaje. ===
-function shiftPositionalDataAfterRemoval(di,removedPos,oldTotal){
-  if(removedPos<0||oldTotal<=0)return;
-  const cyc=getCyc();
-  const allSets=getSets(),sc=getSetCounts(),hidden=getHiddenEx(),pain=getPainData();
-  for(let c=1;c<=cyc.num;c++){
-    for(let w=0;w<4;w++){
-      for(let i=removedPos+1;i<oldTotal;i++){
-        const kFrom=sdk(c,w,di,i),kTo=sdk(c,w,di,i-1);
-        if(allSets[kFrom]!==undefined)allSets[kTo]=allSets[kFrom];else delete allSets[kTo];
-        if(sc[kFrom]!==undefined)sc[kTo]=sc[kFrom];else delete sc[kTo];
-        if(hidden[kFrom]!==undefined)hidden[kTo]=hidden[kFrom];else delete hidden[kTo];
-        if(pain[kFrom]!==undefined)pain[kTo]=pain[kFrom];else delete pain[kTo];
-      }
-      const kLast=sdk(c,w,di,oldTotal-1);
-      delete allSets[kLast];delete sc[kLast];delete hidden[kLast];delete pain[kLast];
-    }
-  }
-  saveSets(allSets);saveSetCounts(sc);saveHiddenEx(hidden);savePainData(pain);
-  // PR-ji so globalni po poziciji (ne po ciklu/tednu)
-  const prs=getPRs();
-  for(let i=removedPos+1;i<oldTotal;i++){
-    const kFrom=`pr${di}${i}`,kTo=`pr${di}${i-1}`;
-    if(prs[kFrom]!==undefined)prs[kTo]=prs[kFrom];else delete prs[kTo];
-  }
-  delete prs[`pr${di}${oldTotal-1}`];
-  savePRs(prs);
-}
-// Ko dodamo NOVO vajo na pozicijo, ki jo je nekoč zasedala druga (že odstranjena) vaja,
-// preventivno počistimo morebitne "duhove" — nova vaja mora vedno začeti prazna.
-function clearPositionalDataAt(di,pos){
-  if(pos<0)return;
-  const cyc=getCyc();
-  const allSets=getSets(),sc=getSetCounts(),hidden=getHiddenEx(),pain=getPainData();
-  let changed=false;
-  for(let c=1;c<=cyc.num;c++){
-    for(let w=0;w<4;w++){
-      const k=sdk(c,w,di,pos);
-      if(allSets[k]!==undefined){delete allSets[k];changed=true;}
-      if(sc[k]!==undefined){delete sc[k];changed=true;}
-      if(hidden[k]!==undefined){delete hidden[k];changed=true;}
-      if(pain[k]!==undefined){delete pain[k];changed=true;}
-    }
-  }
-  if(changed){saveSets(allSets);saveSetCounts(sc);saveHiddenEx(hidden);savePainData(pain);}
-  const prs=getPRs(),pk=`pr${di}${pos}`;
-  if(prs[pk]!==undefined){delete prs[pk];savePRs(prs);}
-}
-// Ob zagonu: podatki na pozicijah ZA trenutnim dejanskim številom vaj za ta dan so matematično
-// nedosegljivi (noben render jih ne more prikazati) — 100% varno za brisanje, brez tveganja izgube
-// vidljivih podatkov. Lovi ostanke iz starejših verzij (pred tem popravkom).
-function cleanupTrailingOrphans(){
-  try{
-    const cyc=getCyc();
-    const allSets=getSets(),sc=getSetCounts(),hidden=getHiddenEx(),pain=getPainData();
-    let changed=false;
-    for(let di=0;di<PROG.days.length;di++){
-      const d=PROG.days[di];if(!d)continue;
-      if(d._origEx===undefined)d._origEx=d.ex.slice();
-      const origs=d._origEx.map(e=>({...e,extra:false}));
-      const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
-      let mixed=[...origs,...extras];
-      const seen=new Set();
-      mixed=mixed.filter(e=>{const k=(e.n||'').toLowerCase();if(seen.has(k))return false;seen.add(k);return true;});
-      const maxCount=mixed.length;
-      for(let c=1;c<=cyc.num;c++){
-        for(let w=0;w<4;w++){
-          // Preveri do razumne zgornje meje (20) da ne iščemo v neskončnost
-          for(let i=maxCount;i<maxCount+20;i++){
-            const k=sdk(c,w,di,i);
-            if(allSets[k]!==undefined){delete allSets[k];changed=true;}
-            if(sc[k]!==undefined){delete sc[k];changed=true;}
-            if(hidden[k]!==undefined){delete hidden[k];changed=true;}
-            if(pain[k]!==undefined){delete pain[k];changed=true;}
-          }
-        }
-      }
-    }
-    if(changed){saveSets(allSets);saveSetCounts(sc);saveHiddenEx(hidden);savePainData(pain);console.log('Počiščeni nedosegljivi ostanki podatkov.');}
-  }catch(e){console.warn('cleanupTrailingOrphans napaka:',e);}
 }
 // === DIAGNOSTIKA (samo za branje — nič ne spremeni) ===
 // Primerja exName, ki je bil zabeležen ob vnosu seta, s trenutnim imenom vaje na tisti poziciji.
@@ -2703,19 +2666,30 @@ function diFromKey(exKey){const m=String(exKey).match(/d(\d+)e\d+$/);return m?+m
 function cwFromKey(exKey){const m=String(exKey).match(/c(\d+)w(\d+)d\d+e\d+/);return m?{c:+m[1],w:+m[2]}:{c:1,w:0};}
 function origNameForKey(exKey){
   const m=String(exKey).match(/d(\d+)e(\d+)$/);if(!m)return null;
-  const d=PROG.days[+m[1]];if(!d)return null;
-  const list=d._origEx||d.ex;const e=list&&list[+m[2]];
-  return e?e.n:null;
+  const di=+m[1],ei=+m[2];
+  const all=getDayLists();const arr=all&&all[di];
+  if(arr&&arr[ei])return arr[ei].n0;
+  const d=PROG.days[di];if(!d)return null;
+  const list=d._origEx||d.ex;const e=list&&list[ei];
+  return e?(e.n0||e.n):null;
 }
 function getSwappedName(exKey,origName,isExtra){
-  if(isExtra)return origName; // extra vaje se NIKOLI ne preimenujejo
+  const di=diFromKey(exKey);
+  const cwk=cwFromKey(exKey);
+  const all=getDayLists();
+  const arr=all&&all[di];
+  if(arr){
+    const it=arr.find(x=>x.n0===origName)||arr.find(x=>dispNameForItem(x,cwk.c,cwk.w)===origName);
+    if(it)return dispNameForItem(it,cwk.c,cwk.w);
+    return origName;
+  }
+  // fallback pred migracijo (stari wt_exswap format)
+  if(isExtra)return origName;
   const s=getExSwaps();
-  const entry=s[`d${diFromKey(exKey)}|${origName}`];
+  const entry=s[`d${di}|${origName}`];
   if(!entry)return origName;
-  if(typeof entry==='string')return entry; // star format: velja povsod
-  // objekt {n,c,w}: velja samo od (cikel,teden) nastanka naprej — pretekli dokončani tedni ostanejo
-  const cur=cwFromKey(exKey);
-  if(cur.c>entry.c||(cur.c===entry.c&&cur.w>=entry.w))return entry.n;
+  if(typeof entry==='string')return entry;
+  if(cwk.c>entry.c||(cwk.c===entry.c&&cwk.w>=entry.w))return entry.n;
   return origName;
 }
 // Enkratna migracija starih pozicijskih/polnih swap ključev → ime-osnovani
@@ -2930,22 +2904,25 @@ function stepReps(exKey,si,di,ei,cn,delta){
   sv(exKey,si,'reps',String(newVal),di,ei,cn,0);
 }
 function useSwap(key,name,origName){
-  if(!origName)origName=origNameForKey(key); // fallback
+  if(!origName)origName=origNameForKey(key);
   if(!origName){toast('Te vaje ni mogoče zamenjati','err');return;}
-  // Blokiraj: novo ime ne sme biti enako prikazanemu imenu KATEREKOLI druge vaje tega dne
   const di=diFromKey(key);
-  const list=buildDayExList(di);
-  const refKey=sdk(getCyc().num,cw,di,0);
-  const clash=list.some(e=>{
-    if(e.n===origName&&!e.extra)return false; // sama sebe preskoči
-    const disp=getSwappedName(refKey,e.n,e.extra);
-    return disp.toLowerCase()===name.toLowerCase();
-  });
+  const all=getDayLists();const arr=all&&all[di];
+  if(!arr){toast('Napaka seznama','err');return;}
+  const c=getCyc().num;
+  const it=arr.find(x=>x.n0===origName)||arr.find(x=>dispNameForItem(x,c,cw)===origName);
+  if(!it){toast('Vaja ni najdena','err');return;}
+  // Blokiraj kolizijo: novo ime ne sme biti enako prikazu KATEREKOLI druge vaje tega dne
+  const clash=arr.some(x=>x.id!==it.id&&dispNameForItem(x,c,cw).toLowerCase()===name.toLowerCase());
   if(clash){toast('Ta vaja že obstaja na tem dnevu — izberi drugo','err');return;}
-  const swaps=getExSwaps();
-  // Shrani od katerega cikla+tedna velja (ne spreminja že dokončanih prejšnjih tednov)
-  swaps[`d${diFromKey(key)}|${origName}`]={n:name,c:getCyc().num,w:cw};
-  saveExSwaps(swaps);
+  mutateDayList(di,list=>{
+    const t=list.find(x=>x.id===it.id);
+    if(!t)return;
+    if(!Array.isArray(t.sw))t.sw=[];
+    const last=t.sw[t.sw.length-1];
+    if(last&&last.c===c&&last.w===cw)last.n=name; // isti teden: prepiši zadnji vnos
+    else t.sw.push({n:name,c:c,w:cw});
+  });
   showDay(cd);
   toast('✓ Zamenjano (ta in naslednji tedni)','ok');
 }
@@ -2982,9 +2959,22 @@ function filterSwapDB(exKey,origName,query){
 function clearSwap(key,origName){
   if(!origName)origName=origNameForKey(key);
   if(!origName)return;
-  const swaps=getExSwaps();
-  const k=`d${diFromKey(key)}|${origName}`;
-  if(swaps[k]){delete swaps[k];saveExSwaps(swaps);showDay(cd);toast('↺ Original','ok');}
+  const di=diFromKey(key);
+  const all=getDayLists();const arr=all&&all[di];
+  if(!arr)return;
+  const c=getCyc().num;
+  const it=arr.find(x=>dispNameForItem(x,c,cw).toLowerCase()!==x.n0.toLowerCase()&&(x.n0===origName||dispNameForItem(x,c,cw)===origName));
+  if(!it)return;
+  mutateDayList(di,list=>{
+    const t=list.find(x=>x.id===it.id);
+    if(!t||!Array.isArray(t.sw))return;
+    const last=t.sw[t.sw.length-1];
+    if(last&&last.c===c&&last.w===cw)t.sw.pop(); // swap iz istega tedna: samo razveljavi
+    else t.sw.push({n:t.n0,c:c,w:cw}); // sicer: revert od zdaj naprej (pretekli tedni ostanejo)
+    if(t.sw.length===0)delete t.sw;
+  });
+  showDay(cd);
+  toast('↺ Original','ok');
 }
 
 function wuHint(e,sets){
@@ -3436,7 +3426,7 @@ function tgSet(key,si,di,ei,cn){
     if(!all[key][si].drop){
       const _e=PROG.days[di].ex[ei];
       const _nm=getSwappedName(key,_e?_e.n:'',_e&&_e.extra);
-      startT(key,restForEx(_nm,_e?_e.r:90));
+      startT(key,restForEx(_e&&_e.id,_nm,_e?_e.r:90));
     }
     const nextSi=si+1;
     if(nextSi<n){
@@ -4525,6 +4515,7 @@ async function exportData(){
     sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}'),
     extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
     hidden_ex:JSON.parse(localStorage.getItem('wt_hidden_ex')||'{}'),
+    daylists:{cut:JSON.parse(localStorage.getItem('wt_daylist_cut')||'null'),bulk:JSON.parse(localStorage.getItem('wt_daylist_bulk')||'null')},
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
     rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
     phases:JSON.parse(localStorage.getItem('wt_phases')||'[]'),
@@ -5028,12 +5019,7 @@ function calcVolumeThisWeek(){
   const groups={};
   const customs=getCustomExercises();
   PROG.days.forEach((d,di)=>{
-    if(d&&d._origEx===undefined)d._origEx=d.ex.slice();
-    // Vaje v pravilnem vrstnem redu (ujema exKey indekse), iz stabilnega vira
-    const origs=(d._origEx||d.ex).map(e=>({...e,extra:false}));
-    const extras=getExtraExercises(di).map(e=>({...e,extra:true}));
-    let allEx=applyExOrderByName(di,[...origs,...extras]);
-    allEx=dedupeByDisplayName(allEx,di,cn,cw);
+    const allEx=buildDayExList(di);
     allEx.forEach((e,ei)=>{
       let map=EX_MAP[e.n];
       // Če ni v EX_MAP, poišči v built-in DB ali custom
@@ -5613,6 +5599,7 @@ async function buildBackupJSON(includePhotos){
     sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}'),
     extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
     hidden_ex:JSON.parse(localStorage.getItem('wt_hidden_ex')||'{}'),
+    daylists:{cut:JSON.parse(localStorage.getItem('wt_daylist_cut')||'null'),bulk:JSON.parse(localStorage.getItem('wt_daylist_bulk')||'null')},
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
     rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
     phases:JSON.parse(localStorage.getItem('wt_phases')||'[]'),
@@ -5810,7 +5797,7 @@ try{
     localStorage.setItem('wt_dl_renamed','1');
   }
 }catch(e){console.warn('DL rename migracija:',e);}
-try{cleanupTrailingOrphans();}catch(e){}
+try{ensureDayLists();}catch(e){console.warn('ensureDayLists:',e);}
 showDay(_initDay);
 try{initP1();}catch(e){console.warn('P1 init failed',e);}
 // Obnovi morebiten aktivni session in rest timer
