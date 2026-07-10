@@ -1,5 +1,5 @@
-/* Workout Tracker service worker v5.0.0 */
-const CACHE_NAME = 'workout-tracker-v5.0.0';
+/* Workout Tracker service worker v6.0.0 */
+const CACHE_NAME = 'workout-tracker-v6.0.0';
 const CORE_FILES = [
   './',
   './index.html',
@@ -18,7 +18,7 @@ self.addEventListener('install', event => {
         const response = await fetch(path, { cache: 'reload' });
         if (response.ok) await cache.put(path, response.clone());
       } catch (_) {
-        // Posamezna manjkajoča datoteka ne sme preprečiti namestitve SW.
+        // Manjkajoča posamezna datoteka ne sme preprečiti namestitve SW.
       }
     }));
     await self.skipWaiting();
@@ -28,7 +28,11 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const names = await caches.keys();
-    await Promise.all(names.filter(name => name !== CACHE_NAME).map(name => caches.delete(name)));
+    await Promise.all(
+      names
+        .filter(name => name.startsWith('workout-tracker-') && name !== CACHE_NAME)
+        .map(name => caches.delete(name))
+    );
     await self.clients.claim();
   })());
 });
@@ -42,9 +46,9 @@ self.addEventListener('fetch', event => {
 
   event.respondWith((async () => {
     try {
-      // Network-first prepreči, da bi GitHub Pages predolgo kazal star index.html.
+      // Network-first prepreči, da bi GitHub Pages predolgo prikazoval star index.html.
       const response = await fetch(request, { cache: 'no-store' });
-      if (response && response.ok) {
+      if (response?.ok) {
         const cache = await caches.open(CACHE_NAME);
         cache.put(request, response.clone()).catch(() => {});
       }
