@@ -41,7 +41,7 @@ body{font-family:system-ui,sans-serif;background:var(--bg);padding:1rem;padding-
 .topbtns{display:flex;gap:6px;flex-wrap:wrap;}
 .icon-btn{font-size:12px;padding:7px 12px;border-radius:20px;border:.5px solid var(--border2);background:var(--bg3);cursor:pointer;color:var(--text2);font-family:system-ui,sans-serif;}
 .icon-btn:hover{background:var(--bg4);}
-.nav{position:fixed;bottom:0;left:0;right:0;z-index:80;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:0;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--bg2);border-top:.5px solid var(--border);box-shadow:0 -4px 14px rgba(0,0,0,.25);}
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:80;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--bg2);border-top:.5px solid var(--border);box-shadow:0 -4px 14px rgba(0,0,0,.25);}
 .nt{padding:6px 2px;text-align:center;border-radius:8px;border:.5px solid transparent;cursor:pointer;background:transparent;font-size:11px;color:var(--text2);font-weight:500;line-height:1.3;}
 .nt-i{font-size:18px;margin-bottom:2px;line-height:1;}
 .nt.active{border:.5px solid var(--green);background:var(--green-bg);color:var(--green-text);}
@@ -414,14 +414,6 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 .cal-months{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:4px;}
 .cal-legend{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);justify-content:flex-end;margin-top:6px;}
 .cal-legend i{width:11px;height:11px;border-radius:2px;display:inline-block;}
-/* AI Coach */
-.ai-key-row{display:flex;gap:6px;margin-bottom:.5rem;}
-.ai-key-row input{flex:1;background:var(--bg3);border:.5px solid var(--border);border-radius:6px;color:var(--text);padding:8px;font-size:12px;}
-.ai-msg{background:var(--bg3);border-radius:8px;padding:12px;font-size:13px;line-height:1.5;margin-top:.5rem;white-space:pre-wrap;}
-.ai-msg.user{background:var(--green-bg);color:var(--green-text);}
-.ai-loading{font-size:12px;color:var(--text3);padding:.5rem;text-align:center;}
-.ai-chat-row{display:flex;gap:6px;margin-top:.5rem;}
-.ai-chat-row input{flex:1;background:var(--bg3);border:.5px solid var(--border);border-radius:6px;color:var(--text);padding:8px;font-size:13px;}
 .pr-item:last-child{border-bottom:none;}
 .pr-item-l{flex:1;min-width:0;}
 .pr-item-name{font-size:13px;font-weight:500;color:var(--text);}
@@ -522,6 +514,43 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 .sbt.gym-on{background:var(--green-bg);color:var(--green-text);border-color:var(--green);}
 .snap-badge{font-size:10px;color:var(--purple-text);background:var(--purple-bg);border:.5px solid var(--purple);border-radius:20px;padding:2px 7px;}
 
+/* === V5: dashboard, simplified progress navigation and true focus mode === */
+.progress-subnav{position:sticky;top:0;z-index:45;display:flex;gap:5px;overflow-x:auto;margin:0 -1rem 1rem;padding:8px 1rem;background:var(--bg);border-bottom:.5px solid var(--border);scrollbar-width:none;}
+.progress-subnav::-webkit-scrollbar{display:none;}
+.progress-subnav button{flex:1;min-width:68px;padding:8px 9px;border-radius:9px;border:.5px solid var(--border);background:var(--bg2);color:var(--text2);font:500 11px system-ui;cursor:pointer;white-space:nowrap;}
+.progress-subnav button.active{border-color:var(--green);background:var(--green-bg);color:var(--green-text);}
+.today-card{background:linear-gradient(135deg,var(--green-bg),var(--bg2));border:1px solid var(--green);border-radius:14px;padding:14px 15px;margin-bottom:.8rem;box-shadow:0 5px 18px rgba(0,0,0,.12);}
+.today-card-grid{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;}
+.today-eyebrow{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--green-text);font-weight:700;margin-bottom:3px;}
+.today-title{font-size:19px;font-weight:700;color:var(--text);line-height:1.2;}
+.today-meta{font-size:11px;color:var(--text2);line-height:1.5;margin-top:5px;}
+.today-action{border:none;border-radius:10px;background:var(--green);color:#fff;font:700 13px system-ui;padding:11px 14px;cursor:pointer;white-space:nowrap;}
+.today-action:active{transform:scale(.97);}
+.today-secondary{margin-top:10px;padding-top:9px;border-top:.5px solid var(--border);display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:11px;color:var(--text2);}
+.gym-focusbar{display:none;position:sticky;top:0;z-index:65;background:var(--bg2);border:1px solid var(--green);border-radius:12px;padding:7px;align-items:center;gap:8px;margin-bottom:.65rem;box-shadow:0 5px 16px rgba(0,0,0,.25);}
+.gym-focus-main{flex:1;min-width:0;text-align:center;}
+.gym-focus-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gym-focus-meta{font-size:10px;color:var(--text3);margin-top:2px;}
+.gym-focus-btn{width:38px;height:38px;border-radius:9px;border:.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:25px;line-height:1;cursor:pointer;}
+.gym-mode .gym-focusbar{display:flex;}
+.gym-mode .today-card{display:none;}
+.gym-mode #day-content .exc:not(.active-ex){display:none!important;}
+.gym-mode #day-content .day-title,.gym-mode #day-content .day-sub,.gym-mode #day-content .tags,.gym-mode #day-content .pg,.gym-mode #day-content>.dbox,.gym-mode #day-content>div:last-child{display:none!important;}
+.gym-mode #day-content .exc.active-ex{display:block!important;opacity:1!important;margin-bottom:.5rem;}
+.gym-mode .stb{top:60px;}
+.import-actions{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:7px;}
+.danger-action{background:var(--red-bg)!important;border-color:var(--red)!important;color:var(--red-text)!important;}
+.onboarding-card{max-width:430px;text-align:center;}
+.onboarding-icon{font-size:42px;margin-bottom:4px;}
+.onboarding-card p{font-size:13px;color:var(--text2);line-height:1.5;margin:.5rem 0 1rem;}
+.onboarding-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.onboarding-option{border:1px solid var(--border2);border-radius:10px;background:var(--bg3);color:var(--text);padding:13px 10px;cursor:pointer;text-align:left;}
+.onboarding-option strong{display:block;font-size:15px;margin-bottom:4px;}
+.onboarding-option span{display:block;font-size:11px;color:var(--text2);line-height:1.35;}
+.onboarding-option:active{border-color:var(--green);background:var(--green-bg);}
+.onboarding-note{font-size:11px;color:var(--text3);line-height:1.45;margin-top:.9rem;}
+@media(max-width:430px){.today-card-grid{grid-template-columns:1fr}.today-action{width:100%}.onboarding-options{grid-template-columns:1fr}.import-actions{grid-template-columns:1fr}.progress-subnav button{min-width:64px;padding-inline:7px;}}
+
 </style>
 </head>
 <body>
@@ -536,12 +565,9 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   </div>
 </div>
 <div class="nav">
-  <div class="nt active" onclick="showPage('workout')"><div class="nt-i">🏋️</div>Workout</div>
-  <div class="nt" onclick="showPage('cycle')"><div class="nt-i">🔄</div>Cikli</div>
-  <div class="nt" onclick="showPage('gymlog')"><div class="nt-i">📅</div>Gym log</div>
-  <div class="nt" onclick="showPage('bodyweight')"><div class="nt-i">⚖️</div>Teža</div>
-  <div class="nt" onclick="showPage('stats')"><div class="nt-i">📊</div>Stats</div>
-  <div class="nt" onclick="showPage('tools')"><div class="nt-i">🛠️</div>Tools</div>
+  <div class="nt active" data-nav="workout" onclick="showPage('workout')"><div class="nt-i">🏋️</div>Trening</div>
+  <div class="nt" data-nav="progress" onclick="showProgressPage('gymlog')"><div class="nt-i">📈</div>Napredek</div>
+  <div class="nt" data-nav="tools" onclick="showPage('tools')"><div class="nt-i">⚙️</div>Nastavitve</div>
 </div>
 
 <!-- BACKUP REMINDER BANNER -->
@@ -554,6 +580,12 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 
 <!-- WORKOUT PAGE -->
 <div class="page active" id="page-workout">
+  <div class="today-card" id="today-card"></div>
+  <div class="gym-focusbar" id="gym-focusbar">
+    <button class="gym-focus-btn" onclick="moveGymFocus(-1)" aria-label="Prejšnja vaja">‹</button>
+    <div class="gym-focus-main"><div class="gym-focus-name" id="gym-focus-name">Aktivna vaja</div><div class="gym-focus-meta" id="gym-focus-meta"></div></div>
+    <button class="gym-focus-btn" onclick="moveGymFocus(1)" aria-label="Naslednja vaja">›</button>
+  </div>
   <div class="stb">
     <div class="sd" id="st-d">00:00:00</div>
     <button class="sbt" id="st-b" onclick="toggleSess()">Start session</button>
@@ -583,6 +615,13 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 
 <!-- CYCLE PAGE -->
 <div class="page" id="page-cycle">
+  <div class="progress-subnav">
+    <button data-progress="gymlog" onclick="showProgressPage('gymlog')">Pregled</button>
+    <button data-progress="cycle" onclick="showProgressPage('cycle')">Cikli</button>
+    <button data-progress="stats" onclick="showProgressPage('stats')">Moč</button>
+    <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
+    <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
+  </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
       <div>
@@ -617,6 +656,13 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 
 <!-- GYM LOG PAGE -->
 <div class="page" id="page-gymlog">
+  <div class="progress-subnav">
+    <button data-progress="gymlog" onclick="showProgressPage('gymlog')">Pregled</button>
+    <button data-progress="cycle" onclick="showProgressPage('cycle')">Cikli</button>
+    <button data-progress="stats" onclick="showProgressPage('stats')">Moč</button>
+    <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
+    <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
+  </div>
   <!-- Weekly Summary -->
   <div class="card" id="summary-card">
     <div class="ct">📊 Tedenski povzetek</div>
@@ -672,6 +718,13 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 
 <!-- BODYWEIGHT PAGE -->
 <div class="page" id="page-bodyweight">
+  <div class="progress-subnav">
+    <button data-progress="gymlog" onclick="showProgressPage('gymlog')">Pregled</button>
+    <button data-progress="cycle" onclick="showProgressPage('cycle')">Cikli</button>
+    <button data-progress="stats" onclick="showProgressPage('stats')">Moč</button>
+    <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
+    <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
+  </div>
   <div class="card">
     <div class="ct">⚖️ Telesna teža</div>
     <div style="display:flex;gap:8px;margin-bottom:.75rem;">
@@ -712,6 +765,13 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 
 <!-- BODY MEASUREMENTS PAGE -->
 <div class="page" id="page-body">
+  <div class="progress-subnav">
+    <button data-progress="gymlog" onclick="showProgressPage('gymlog')">Pregled</button>
+    <button data-progress="cycle" onclick="showProgressPage('cycle')">Cikli</button>
+    <button data-progress="stats" onclick="showProgressPage('stats')">Moč</button>
+    <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
+    <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
+  </div>
   <div class="card">
     <div class="ct">📏 Telesne mere</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;">Enkrat mesečno, zjutraj. Vse v cm.</div>
@@ -724,6 +784,13 @@ tr.is-drop{background:rgba(167,139,250,.04);}
 
 <!-- STATS PAGE -->
 <div class="page" id="page-stats">
+  <div class="progress-subnav">
+    <button data-progress="gymlog" onclick="showProgressPage('gymlog')">Pregled</button>
+    <button data-progress="cycle" onclick="showProgressPage('cycle')">Cikli</button>
+    <button data-progress="stats" onclick="showProgressPage('stats')">Moč</button>
+    <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
+    <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
+  </div>
   <div class="card">
     <div class="ct">📈 e1RM napredek</div>
     <div id="e1rm-lift-chips" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.5rem;"></div>
@@ -737,11 +804,6 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   <div class="card">
     <div class="ct">💪 Razmerja moči (BW)</div>
     <div id="strength-ratios"></div>
-  </div>
-  <div class="card">
-    <div class="ct">🤖 AI Coach</div>
-    <div id="ai-coach-setup"></div>
-    <div id="ai-coach-content"></div>
   </div>
 </div>
 
@@ -840,6 +902,33 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   </div>
 </div>
 
+<!-- IMPORT MODE -->
+<div class="note-pop" id="import-mode-pop">
+  <div class="note-pop-card">
+    <h3>Uvoz podatkov</h3>
+    <div id="import-mode-summary" style="font-size:13px;color:var(--text2);line-height:1.55;white-space:pre-wrap;margin:.25rem 0 .75rem;"></div>
+    <div class="import-actions">
+      <button class="sb" onclick="finishImportChoice(null)" style="background:var(--bg3);">Prekliči</button>
+      <button class="sb" onclick="finishImportChoice('merge')">Združi</button>
+      <button class="sb danger-action" onclick="finishImportChoice('replace')">Zamenjaj vse</button>
+    </div>
+  </div>
+</div>
+
+<!-- FIRST RUN ONBOARDING -->
+<div class="note-pop" id="onboarding-pop">
+  <div class="note-pop-card onboarding-card">
+    <div class="onboarding-icon">🏋️</div>
+    <h3>Workout Tracker 5</h3>
+    <p>Najprej izberi program. Podatki se shranjujejo na tej napravi, zato redno prenesi JSON backup.</p>
+    <div class="onboarding-options">
+      <button class="onboarding-option" onclick="finishOnboarding('cut')"><strong>Cut</strong><span>5-dnevni PPL · ohranjanje moči</span></button>
+      <button class="onboarding-option" onclick="finishOnboarding('bulk')"><strong>Bulk</strong><span>5/3/1 BBB · moč in masa</span></button>
+    </div>
+    <div class="onboarding-note">Na začetnem zaslonu bo vedno prikazan predlagani naslednji trening. Gym mode pokaže samo aktivno vajo.</div>
+  </div>
+</div>
+
 <!-- PHOTO VIEWER -->
 <div class="photo-viewer" id="photo-viewer" onclick="closePhotoViewer()">
   <button class="close" onclick="closePhotoViewer()">×</button>
@@ -896,13 +985,13 @@ tr.is-drop{background:rgba(167,139,250,.04);}
   </div>
   <div class="card">
     <div class="ct">💾 Backup</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.4;">Tedensko app samodejno shrani backup v napravo (preživi PWA reinstall). Občasno prenesi <strong>JSON v Drive/iCloud</strong> za varnost.</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.4;">Po zaključku treninga app samodejno shrani lokalni snapshot. Ta ni zunanji backup: občasno prenesi <strong>JSON v Drive/iCloud</strong>.</div>
     <div style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap;">
       <button class="sb" onclick="doWeeklyBackup()">⬇ Prenesi backup zdaj</button>
       <button class="sb" onclick="manualAutoBackup()" style="background:var(--bg3);">+ Shrani v napravi</button>
       <button class="sb" onclick="importData()" style="background:var(--bg3);">⬆ Obnovi iz datoteke</button>
     </div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:.4rem;font-weight:500;">Lokalni avto-backupi (zadnjih 4):</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.4rem;font-weight:500;">Lokalni snapshoti (zadnjih 12):</div>
     <div id="backup-list"></div>
   </div>
   <div class="card">
@@ -1112,7 +1201,7 @@ function confirmRestEdit(){
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='4.0.0';
+const APP_VERSION='5.0.0';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -1311,10 +1400,11 @@ function getPainData(){return ls(LS.pain);}function savePainData(d){lss(LS.pain,
 
 function toggleTheme(){
   const html=document.documentElement,isDark=html.getAttribute('data-theme')==='dark';
-  html.setAttribute('data-theme',isDark?'light':'dark');
-  document.getElementById('theme-btn').textContent=isDark?'🌙 Dark':'☀ Light';
-  lss(LS.theme,isDark?'light':'dark');
-  applyAllColors(); // ponovno za nov theme variant
+  const next=isDark?'light':'dark';
+  html.setAttribute('data-theme',next);
+  document.getElementById('theme-btn').textContent=next==='dark'?'☀ Light':'🌙 Dark';
+  localStorage.setItem(LS.theme,next);
+  applyAllColors();
   if(bwChart)renderBW();if(strengthChart)renderStrengthChart();
 }
 // === BARVE PER SEGMENT (prosta izbira) ===
@@ -1398,9 +1488,12 @@ function renderColorPresets(){
   }).join('');
 }
 function initTheme(){
-  const t=localStorage.getItem(LS.theme)||'dark';
+  let t=localStorage.getItem(LS.theme)||'dark';
+  // Migracija stare verzije, ki je shranila JSON niz z narekovaji.
+  if(t==='"dark"'||t==='"light"'){try{t=JSON.parse(t);}catch(e){t='dark';}localStorage.setItem(LS.theme,t);}
+  if(t!=='dark'&&t!=='light')t='dark';
   document.documentElement.setAttribute('data-theme',t);
-  document.getElementById('theme-btn').textContent=t==='dark'?'☀ Light':'🌙 Dark';
+  const btn=document.getElementById('theme-btn');if(btn)btn.textContent=t==='dark'?'☀ Light':'🌙 Dark';
 }
 
 function calcPlatesFor(targetKg){
@@ -1431,12 +1524,19 @@ function platesShort(kg){
   return {text:t,cls:'ok'};
 }
 
+function showProgressPage(p){showPage(p||'gymlog');}
+function setProgressNavActive(p){
+  document.querySelectorAll('.progress-subnav button').forEach(b=>b.classList.toggle('active',b.dataset.progress===p));
+}
 function showPage(p){
+  const page=document.getElementById('page-'+p);if(!page)return;
   document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+  page.classList.add('active');
+  const isProgress=['cycle','gymlog','bodyweight','body','stats'].includes(p);
   document.querySelectorAll('.nt').forEach(e=>e.classList.remove('active'));
-  document.getElementById('page-'+p).classList.add('active');
-  const idx={workout:0,cycle:1,gymlog:2,bodyweight:3,stats:4,tools:5}[p];
-  document.querySelectorAll('.nt')[idx].classList.add('active');
+  const nav=document.querySelector(`.nt[data-nav="${isProgress?'progress':p==='tools'?'tools':'workout'}"]`);if(nav)nav.classList.add('active');
+  if(isProgress)setProgressNavActive(p);
+  localStorage.setItem('wt_last_page',p);
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
@@ -1446,8 +1546,8 @@ function showPage(p){
     document.getElementById('vol-grp-view').innerHTML=renderVolumeView();
     document.getElementById('strength-ratios').innerHTML=renderStrengthRatios();
     renderE1RMChart();
-    renderAICoach();
   }
+  window.scrollTo({top:0,behavior:'instant'});
 }
 
 // Get extra sets for an exercise key
@@ -1800,6 +1900,7 @@ function getBBBPrescription(lift,sets,reps){
 
 // === PREKLOP PROFILA ===
 function switchProfile(p){
+  if(stRun||localStorage.getItem(LS_SESS)){toast('Najprej zaključi aktivno sesijo. Profil med treningom je zaklenjen.','err');return;}
   const cur=getActiveProfile();
   if(p===cur){toast('Že aktiven: '+(p==='bulk'?'Bulk':'Cut'),'ok');return;}
   if(p==='bulk'){
@@ -1971,7 +2072,7 @@ const BIG_LIFTS = {
   ohp:"Overhead press — barbell"
 };
 
-function setWeek(w){cw=w;localStorage.setItem('wt_last_week',String(w));document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===w));showDay(cd);}
+function setWeek(w){if(stRun&&activeSessionContext&&w!==activeSessionContext.weekIdx){toast('Teden je med aktivno sesijo zaklenjen.','err');return;}cw=w;localStorage.setItem('wt_last_week',String(w));document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===w));showDay(cd);}
 
 // Pomožna funkcija: aktivni ex array za dan (privzete + extra)
 function getDayExercises(di){
@@ -1981,6 +2082,7 @@ function getDayExercises(di){
 }
 
 function showDay(idx){
+  if(stRun&&activeSessionContext&&idx!==activeSessionContext.dayIdx){toast('Dan je med aktivno sesijo zaklenjen.','err');return;}
   cd=idx;
   localStorage.setItem('wt_last_day',String(idx));
   document.querySelectorAll('.dt').forEach((t,i)=>t.classList.toggle('active',i===idx));
@@ -2015,6 +2117,7 @@ function showDay(idx){
   if(typeof restoreTimer==='function')restoreTimer();
   if(typeof updateTabColors==='function')updateTabColors();
   if(typeof refreshGymTarget==='function')refreshGymTarget();
+  if(typeof renderTodayCard==='function')renderTodayCard();
 }
 
 // Vrstni red shranjen kot SEZNAM IMEN vaj per dan
@@ -2250,40 +2353,68 @@ function renderPainBox(key,name,di,ei,cn){
   return `<div class="pain-box ${cls}" id="pain-${key}"><span>🩹 Bolečina</span><select onchange="setExPain('${key}',this.value,${di},${ei},${cn})">${opts}</select><span class="pain-msg">${safeHtml(painMessage(level,name))}</span></div>`;
 }
 function getGymMode(){return localStorage.getItem('wt_gym_mode')==='1';}
-function setGymMode(on){localStorage.setItem('wt_gym_mode',on?'1':'0');document.documentElement.classList.toggle('gym-mode',!!on);document.body.classList.toggle('gym-mode',!!on);const b=document.getElementById('gym-mode-btn');if(b){b.classList.toggle('gym-on',!!on);b.textContent=on?'Gym ON':'Gym mode';}refreshGymTarget();}
+function setGymMode(on){
+  localStorage.setItem('wt_gym_mode',on?'1':'0');
+  document.documentElement.classList.toggle('gym-mode',!!on);document.body.classList.toggle('gym-mode',!!on);
+  const b=document.getElementById('gym-mode-btn');if(b){b.classList.toggle('gym-on',!!on);b.textContent=on?'Izhod iz fokusa':'Gym mode';}
+  refreshGymTarget();
+}
 function toggleGymMode(){setGymMode(!getGymMode());}
 function isActiveGymEx(key){return localStorage.getItem('wt_active_ex')===key;}
+function isExercisePending(key){
+  const m=String(key).match(/^c(\d+)w(\d+)d(\d+)e(\d+)$/);if(!m)return false;
+  const w=+m[2],di=+m[3],ei=+m[4],all=getSets();
+  if(!PROG.days[di]||!PROG.days[di].ex[ei]||isExHidden(key))return false;
+  const n=nsf(di,ei,PROG.weeks[w],key),sets=all[key]||[];
+  return !sets.slice(0,n).every(s=>s&&s.done);
+}
+function visibleExerciseKeys(){return Array.from(document.querySelectorAll('#day-content .exc')).map(c=>c.id.replace(/^ec-/,''));}
 function findNextPendingExerciseKey(){
-  const cn=getCyc().num,di=cd,w=cw,all=getSets();
-  const exs=(PROG.days[di]&&PROG.days[di].ex)||[];
-  for(let ei=0;ei<exs.length;ei++){
-    const key=sdk(cn,w,di,ei); if(isExHidden(key))continue;
-    const n=nsf(di,ei,PROG.weeks[w],key),sets=all[key]||[];
-    if(!sets.slice(0,n).every(s=>s.done))return key;
-  }
+  const cn=getCyc().num,di=cd,w=cw,all=getSets(),exs=(PROG.days[di]&&PROG.days[di].ex)||[];
+  for(let ei=0;ei<exs.length;ei++){const key=sdk(cn,w,di,ei);if(isExHidden(key))continue;const n=nsf(di,ei,PROG.weeks[w],key),sets=all[key]||[];if(!sets.slice(0,n).every(s=>s&&s.done))return key;}
   return '';
 }
-function refreshGymTarget(){
-  const next=findNextPendingExerciseKey();
-  if(next)localStorage.setItem('wt_active_ex',next);else localStorage.removeItem('wt_active_ex');
+function setGymFocus(key,scroll=true){
+  if(!key)return;localStorage.setItem('wt_active_ex',key);
   document.querySelectorAll('.exc.active-ex').forEach(x=>x.classList.remove('active-ex'));
-  if(next){const c=document.getElementById('ec-'+next);if(c)c.classList.add('active-ex');}
+  const c=document.getElementById('ec-'+key);if(c)c.classList.add('active-ex');
+  updateGymFocusBar(key);
+  if(scroll&&c)setTimeout(()=>c.scrollIntoView({behavior:'smooth',block:'start'}),50);
+}
+function moveGymFocus(dir){
+  const keys=visibleExerciseKeys();if(!keys.length)return;
+  const cur=localStorage.getItem('wt_active_ex');let i=keys.indexOf(cur);if(i<0)i=0;
+  i=Math.max(0,Math.min(keys.length-1,i+dir));setGymFocus(keys[i],true);
+}
+function updateGymFocusBar(key){
+  const nameEl=document.getElementById('gym-focus-name'),metaEl=document.getElementById('gym-focus-meta');if(!nameEl||!metaEl)return;
+  const m=String(key||'').match(/^c(\d+)w(\d+)d(\d+)e(\d+)$/);if(!m){nameEl.textContent='Trening zaključen';metaEl.textContent='Vse serije so opravljene';return;}
+  const di=+m[3],ei=+m[4],name=currentExerciseName(di,ei,key),sets=(getSets()[key]||[]),n=nsf(di,ei,PROG.weeks[+m[2]],key),done=sets.slice(0,n).filter(x=>x&&x.done).length;
+  nameEl.textContent=name;metaEl.textContent=`${done}/${n} serij · podrsaj ali uporabi puščici`;
+}
+function refreshGymTarget(){
+  let next=localStorage.getItem('wt_active_ex');
+  const onCurrentDay=next&&new RegExp(`^c${getCyc().num}w${cw}d${cd}e\\d+$`).test(next);
+  if(!onCurrentDay||!isExercisePending(next))next=findNextPendingExerciseKey();
+  if(next)setGymFocus(next,false);else{localStorage.removeItem('wt_active_ex');document.querySelectorAll('.exc.active-ex').forEach(x=>x.classList.remove('active-ex'));updateGymFocusBar('');}
   const gt=document.getElementById('gym-target');
   if(gt){
-    if(!getGymMode()){gt.textContent='Gym mode: večji gumbi, označen naslednji set, manj distrakcij.';}
-    else if(next){const m=String(next).match(/d(\d+)e(\d+)$/);let nm='Naslednja vaja';if(m)nm=currentExerciseName(+m[1],+m[2],next);gt.innerHTML=`🎯 Naslednje: <strong>${safeHtml(nm)}</strong> · logiraj prvi označen set.`;}
+    if(!getGymMode())gt.textContent='Gym mode pokaže samo aktivno vajo, večje kontrole in naslednji set.';
+    else if(next){const m=String(next).match(/d(\d+)e(\d+)$/),nm=m?currentExerciseName(+m[1],+m[2],next):'Naslednja vaja';gt.innerHTML=`🎯 Aktivno: <strong>${safeHtml(nm)}</strong>`;}
     else gt.textContent='Vse vaje za ta dan so zaključene.';
   }
 }
-function buildImmutableSessionRecord(start,end,durMin){
-  const cn=getCyc().num, w=cw, di=cd;
+function buildImmutableSessionRecord(start,end,durMin,ctx){
+  const c=ctx||{};
+  const cn=Number(c.cycle)||getCyc().num, w=Number.isInteger(c.weekIdx)?c.weekIdx:cw, di=Number.isInteger(c.dayIdx)?c.dayIdx:cd;
+  const profile=c.profile||getActiveProfile();
   const snap=buildSessionSnapshot(cn,w,di);
   return {
-    schemaVersion:3,
+    schemaVersion:4,
     id:'sess_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),
     date:start.toISOString().split('T')[0],
     startISO:start.toISOString(),endISO:end.toISOString(),
-    dayName:DAY_NAMES[di],dayIdx:di,weekNum:w+1,weekIdx:w,cycle:cn,profile:getActiveProfile(),
+    dayName:DAY_NAMES[di],dayIdx:di,weekNum:w+1,weekIdx:w,cycle:cn,profile,
     startTime:start.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'}),
     endTime:end.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'}),
     durationMin:durMin,
@@ -2310,85 +2441,92 @@ function buildSessionSnapshot(cn,w,di){
   });
   return {exercises,totals:{sets:totalSets,doneSets:totalDone,tonnage:Math.round(totalTonnage),maxPain}};
 }
-function initP1(){setGymMode(getGymMode());migrateSetExerciseIds();}
+function getSuggestedDayIndex(){
+  const sessions=getSessions();if(!sessions.length)return 0;
+  const last=sessions[0],i=DAY_NAMES.indexOf(last.dayName);return i<0?0:(i+1)%DAY_NAMES.length;
+}
+function getLastSessionForDay(di){return getSessions().find(x=>x.dayIdx===di||x.dayName===DAY_NAMES[di])||null;}
+function getMainSuggestionForDay(di){
+  const d=PROG.days[di];if(!d)return null;const ei=d.ex.findIndex(e=>e.m);if(ei<0)return null;
+  const cn=getCyc().num,key=sdk(cn,cw,di,ei),name=currentExerciseName(di,ei,key);
+  const sets=getSets()[key]||[];let kg=Math.max(0,...sets.map(x=>parseFloat(x.kg)||0));
+  if(!kg){const last=getLastSession(di,ei,cn,cw);kg=last?parseFloat(last.kg)||0:0;}
+  return {name,kg};
+}
+function renderTodayCard(){
+  const el=document.getElementById('today-card');if(!el||!PROG.days[cd])return;
+  const suggested=getSuggestedDayIndex(),last=getLastSessionForDay(cd),main=getMainSuggestionForDay(cd),isSuggested=suggested===cd;
+  const lastTxt=last?`Zadnjič ${last.date}: ${last.durationMin||'?'} min`:'Ta trening še nima session zgodovine';
+  const mainTxt=main&&main.kg?`${main.name}: izhodišče ${main.kg} kg`:main?main.name:'';
+  el.innerHTML=`<div class="today-card-grid"><div><div class="today-eyebrow">${isSuggested?'Predlagan naslednji trening':'Izbran trening'}</div><div class="today-title">${safeHtml(PROG.days[cd].title)} · Teden ${cw+1}</div><div class="today-meta">${safeHtml(lastTxt)}${mainTxt?'<br>'+safeHtml(mainTxt):''}</div></div><button class="today-action" onclick="startTodayWorkout()">${stRun?'Nadaljuj':'Začni trening'}</button></div><div class="today-secondary"><span>Cikel ${getCyc().num} · ${getActiveProfile()==='bulk'?'Bulk 5/3/1':'Cut PPL'}</span>${!isSuggested?`<button class="sb" onclick="openSuggestedWorkout(${suggested})" style="padding:4px 9px;">Predlog: ${safeHtml(DAY_NAMES[suggested])}</button>`:''}</div>`;
+}
+function openSuggestedWorkout(di){showDay(di);renderTodayCard();}
+function startTodayWorkout(){
+  if(!stRun)toggleSess();setGymMode(true);refreshGymTarget();scrollToActiveEx();
+}
+function maybeShowOnboarding(){if(!localStorage.getItem('wt_onboarding_done'))document.getElementById('onboarding-pop')?.classList.add('on');}
+function finishOnboarding(profile){
+  localStorage.setItem('wt_onboarding_done','1');document.getElementById('onboarding-pop')?.classList.remove('on');
+  if(profile&&profile!==getActiveProfile()){setActiveProfile(profile);PROG=profile==='bulk'?PROG_BULK:PROG_CUT;cw=0;cd=0;ensureDayLists();showDay(0);}
+  if(profile==='bulk')toast('Bulk izbran — v Nastavitvah vnesi svoje 1RM-je.','ok');else toast('Program pripravljen. Začni prvi trening.','ok');
+}
+function initP1(){setGymMode(getGymMode());migrateSetExerciseIds();renderTodayCard();}
 function migrateSetExerciseIds(){
   const all=getSets();let changed=false;
   Object.keys(all).forEach(k=>{const m=k.match(/^c(\d+)w(\d+)d(\d+)e(\d+)$/);if(!m)return;const di=+m[3],ei=+m[4];const e=PROG.days[di]&&PROG.days[di].ex[ei];const nm=e?e.n:'Vaja';(all[k]||[]).forEach(s=>{if(s&&!s.exerciseId){s.exerciseId=exStableId(s.exName||nm);changed=true;}});});
   if(changed)saveSets(all);
 }
+function plainImportedText(v,max=5000){return String(v??'').replace(/[<>\u0000]/g,'').slice(0,max);}
+function sanitizeImported(value,depth=0){
+  if(depth>12)return null;if(typeof value==='string')return plainImportedText(value);
+  if(Array.isArray(value))return value.slice(0,50000).map(v=>sanitizeImported(v,depth+1));
+  if(value&&typeof value==='object'){const out={};Object.entries(value).slice(0,50000).forEach(([k,v])=>{out[plainImportedText(k,180)]=sanitizeImported(v,depth+1);});return out;}
+  return value;
+}
 function validateBackupP1(backup){
-  if(!backup||typeof backup!=='object')return {ok:false,msg:'Datoteka ni veljaven JSON objekt.'};
-  if(!backup.sets||typeof backup.sets!=='object')return {ok:false,msg:'Backup ne vsebuje sets podatkov.'};
+  if(!backup||typeof backup!=='object'||Array.isArray(backup))return {ok:false,msg:'Datoteka ni veljaven JSON objekt.'};
+  if(!backup.sets||typeof backup.sets!=='object'||Array.isArray(backup.sets))return {ok:false,msg:'Backup ne vsebuje sets podatkov.'};
   if(backup.sessions!==undefined&&!Array.isArray(backup.sessions))return {ok:false,msg:'sessions mora biti seznam.'};
-  if(backup.version&&Number(backup.version)>3)return {ok:false,msg:'Backup je iz novejše verzije aplikacije. Ne uvažam na slepo.'};
-  let bad=0;
-  Object.entries(backup.sets).forEach(([k,v])=>{if(!/^c\d+w\d+d\d+e\d+$/.test(k)||!Array.isArray(v))bad++;});
-  if(bad>0)return {ok:false,msg:`Backup ima ${bad} pokvarjenih set ključev.`};
+  if(Number(backup.schemaVersion||backup.version||1)>5)return {ok:false,msg:'Backup je iz novejše verzije aplikacije.'};
+  let rows=0;
+  for(const [k,v] of Object.entries(backup.sets)){
+    if(!/^c\d+w\d+d\d+e\d+$/.test(k)||!Array.isArray(v))return {ok:false,msg:'Pokvarjen ključ setov: '+k};
+    rows+=v.length;if(rows>250000)return {ok:false,msg:'Backup vsebuje nenormalno veliko setov.'};
+    for(const set of v){if(!set||typeof set!=='object'||Array.isArray(set))return {ok:false,msg:'Neveljaven zapis seta.'};const kg=parseFloat(set.kg||0),reps=parseInt(set.reps||0);if(kg<0||kg>1500||reps<0||reps>1000)return {ok:false,msg:'Backup vsebuje nerealne kg ali ponovitve.'};}
+  }
+  if(Array.isArray(backup.sessions)&&backup.sessions.length>100000)return {ok:false,msg:'Preveč session zapisov.'};
   return {ok:true,msg:'OK'};
 }
 function backupSummaryP1(backup){
-  const setKeys=backup.sets?Object.keys(backup.sets).length:0;
-  const setRows=backup.sets?Object.values(backup.sets).reduce((a,v)=>a+(Array.isArray(v)?v.length:0),0):0;
-  const sess=Array.isArray(backup.sessions)?backup.sessions.length:0;
-  const bw=backup.bw?Object.keys(backup.bw).length:0;
-  const pain=backup.pain?Object.keys(backup.pain).length:0;
-  const bd=backup.date?String(backup.date).split('T')[0]:'neznan datum';
-  const bv=backup.version||'?';
-  return `Uvozi backup iz ${bd} (v${bv})?\n\nVse bo prepisano.\n- ${sess} sessionov\n- ${setKeys} vaj / ${setRows} setov\n- ${bw} zapisov teže\n- ${pain} zapisov bolečine\n\nNadaljujem?`;
+  const setKeys=backup.sets?Object.keys(backup.sets).length:0,setRows=backup.sets?Object.values(backup.sets).reduce((a,v)=>a+(Array.isArray(v)?v.length:0),0):0,sess=Array.isArray(backup.sessions)?backup.sessions.length:0,bw=backup.bw?Object.keys(backup.bw).length:0,pain=backup.pain?Object.keys(backup.pain).length:0,bd=backup.date?String(backup.date).split('T')[0]:'neznan datum',bv=backup.schemaVersion||backup.version||'?';
+  return `Backup ${bd} · shema ${bv}\n${sess} sessionov · ${setKeys} vaj / ${setRows} setov · ${bw} meritev teže · ${pain} zapisov bolečine\n\nZamenjaj vse = popolna obnova. Združi = uvoženi zapisi dopolnijo trenutno bazo.`;
 }
-async function restoreBackupObjectP1(backup,opts={}){
-  const v=validateBackupP1(backup);if(!v.ok)throw new Error(v.msg);
-  if(backup.sets) lss(LS.sets,backup.sets);
-  if(backup.pr) lss(LS.pr,backup.pr);
-  if(backup.notes) lss(LS.notes,backup.notes);
-  if(backup.bw) lss(LS.bw,backup.bw);
-  if(backup.cycle) lss(LS.cycle,backup.cycle);
-  if(backup.meas) lss(LS.meas,backup.meas);
-  if(backup.gym) lss(LS.gym,backup.gym);
-  lss(LS.sessions,Array.isArray(backup.sessions)?backup.sessions:[]);
-  lss(LS.pain,backup.pain||{});
-  if(backup.cynotes) lss(LS.cynotes,backup.cynotes);
-  if(backup.restplan) lss(LS.restplan,backup.restplan);
-  if(backup.setcounts) lss(LS.setcounts,backup.setcounts);
-  if(backup.bwgoal) localStorage.setItem('wt_bwgoal',backup.bwgoal);
-  if(backup.theme) lss(LS.theme,backup.theme);
-  if(backup.alarm) saveAlarmSettings(backup.alarm);
-  if(backup.collars!==undefined) setCollars(backup.collars);
-  if(backup.swaps) localStorage.setItem('wt_exswap',JSON.stringify(backup.swaps));
-  if(backup.extra_ex) localStorage.setItem('wt_extra_ex',JSON.stringify(backup.extra_ex));
-  if(backup.hidden_ex) localStorage.setItem('wt_hidden_ex',JSON.stringify(backup.hidden_ex));
-  // V4 kanonični seznami: iz backupa če obstajajo, sicer rebuild iz legacy plasti
-  if(backup.daylists&&(backup.daylists.cut||backup.daylists.bulk)){
-    if(backup.daylists.cut)localStorage.setItem('wt_daylist_cut',JSON.stringify(backup.daylists.cut));else localStorage.removeItem('wt_daylist_cut');
-    if(backup.daylists.bulk)localStorage.setItem('wt_daylist_bulk',JSON.stringify(backup.daylists.bulk));else localStorage.removeItem('wt_daylist_bulk');
-  }else{
-    localStorage.removeItem('wt_daylist_cut');localStorage.removeItem('wt_daylist_bulk');
-    try{ensureDayLists();}catch(e){}
+function mergeObj(current,incoming){return {...(current&&typeof current==='object'?current:{}),...(incoming&&typeof incoming==='object'?incoming:{})};}
+function mergeSessions(current,incoming){
+  const map=new Map();[...(current||[]),...(incoming||[])].forEach(x=>{if(!x||typeof x!=='object')return;const k=x.id||[x.date,x.dayName,x.startISO||x.startTime,x.durationMin].join('|');map.set(k,x);});
+  return [...map.values()].sort((a,b)=>String(b.startISO||b.date||'').localeCompare(String(a.startISO||a.date||'')));
+}
+const MANAGED_LOCAL_KEYS=[...Object.values(LS),'wt_sugs6','wt_bwgoal','wt_alarm6','wt_collars_kg','wt_exswap','wt_extra_ex','wt_hidden_ex','wt_daylist_cut','wt_daylist_bulk','wt_ex_ordernames','wt_rep_prs','wt_phases','wt_profile','wt_531tm','wt_531offset','wt_goals','wt_daylog','wt_custom_ex','wt_kg_step','wt_reps_step','wt_colors','wt_custom_rest','wt_compact','wt_gym_mode','wt_active_ex','wt_active_timer'];
+function clearManagedData(){MANAGED_LOCAL_KEYS.forEach(k=>localStorage.removeItem(k));}
+async function restoreBackupObjectP1(rawBackup,opts={}){
+  const checked=validateBackupP1(rawBackup);if(!checked.ok)throw new Error(checked.msg);
+  const backup=sanitizeImported(rawBackup),mode=opts.mode||'replace';
+  if(mode==='replace')clearManagedData();
+  const putObj=(key,val,getter)=>{if(val===undefined)return;const next=mode==='merge'?mergeObj(getter(),val):val;lss(key,next);};
+  putObj(LS.sets,backup.sets,getSets);putObj(LS.pr,backup.pr||{},getPRs);putObj(LS.notes,backup.notes||{},getNotes);putObj(LS.bw,backup.bw||{},getBW);putObj(LS.meas,backup.meas||{},getMeas);putObj(LS.gym,backup.gym||{},getGym);putObj(LS.pain,backup.pain||{},getPainData);putObj(LS.cynotes,backup.cynotes||{},getCyNotes);putObj(LS.restplan,backup.restplan||{},getRestPlan);putObj(LS.setcounts,backup.setcounts||{},getSetCounts);
+  if(backup.cycle){const cur=getCyc(),inc=backup.cycle;saveCyc(mode==='merge'?{num:Math.max(cur.num||1,inc.num||1),startDates:mergeObj(cur.startDates,inc.startDates)}:inc);}
+  if(mode==='merge')saveSessions(mergeSessions(getSessions(),backup.sessions||[]));else saveSessions(Array.isArray(backup.sessions)?backup.sessions:[]);
+  const setRaw=(k,v,merge=false)=>{if(v===undefined)return;if(merge){let cur={};try{cur=JSON.parse(localStorage.getItem(k)||'{}');}catch(e){}localStorage.setItem(k,JSON.stringify(mergeObj(cur,v)));}else localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));};
+  if(backup.bwgoal!==undefined)localStorage.setItem('wt_bwgoal',String(backup.bwgoal));
+  let importedTheme=backup.theme;if(importedTheme==='"dark"'||importedTheme==='"light"'){try{importedTheme=JSON.parse(importedTheme);}catch(e){}}if(importedTheme==='dark'||importedTheme==='light')localStorage.setItem(LS.theme,importedTheme);
+  if(backup.alarm)saveAlarmSettings(backup.alarm);if(backup.collars!==undefined)setCollars(backup.collars);
+  setRaw('wt_exswap',backup.swaps,mode==='merge');setRaw('wt_extra_ex',backup.extra_ex,mode==='merge');setRaw('wt_hidden_ex',backup.hidden_ex,mode==='merge');setRaw('wt_ex_ordernames',backup.ex_ordernames,mode==='merge');setRaw('wt_rep_prs',backup.rep_prs,mode==='merge');
+  if(backup.daylists){if(backup.daylists.cut)setRaw('wt_daylist_cut',backup.daylists.cut);if(backup.daylists.bulk)setRaw('wt_daylist_bulk',backup.daylists.bulk);}
+  if(backup.phases)setRaw('wt_phases',backup.phases);if(backup.profile)setRaw('wt_profile',backup.profile);if(backup.tm531)setRaw('wt_531tm',backup.tm531);if(backup.offset531!==undefined)setRaw('wt_531offset',String(backup.offset531));if(backup.goals)setRaw('wt_goals',backup.goals);if(backup.daylog)setRaw('wt_daylog',backup.daylog,mode==='merge');if(backup.custom_ex)setRaw(CUST_KEY,backup.custom_ex);if(backup.kg_step)setRaw('wt_kg_step',String(backup.kg_step));if(backup.reps_step)setRaw('wt_reps_step',String(backup.reps_step));if(backup.sugs)setRaw('wt_sugs6',backup.sugs);if(backup.colors)setRaw('wt_colors',backup.colors);if(backup.custom_rest)setRaw('wt_custom_rest',backup.custom_rest);if(backup.compact!==undefined)setRaw('wt_compact',backup.compact?'1':'0');if(backup.gym_mode!==undefined)setRaw('wt_gym_mode',backup.gym_mode?'1':'0');
+  if(opts.photos&&Array.isArray(backup.photos)&&backup.photos.length>0&&await uiConfirm(`Backup vsebuje ${backup.photos.length} fotografij. ${mode==='replace'?'Zamenjam':'Dodam'} tudi fotografije?`)){
+    const db=await openPhotoDB();if(mode==='replace')await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).clear();tx.oncomplete=res;});for(const p of backup.photos){if(p&&p.blob)await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).add({date:p.date||new Date().toISOString(),blob:p.blob});tx.oncomplete=res;});}
   }
-  if(backup.ex_ordernames) localStorage.setItem('wt_ex_ordernames',JSON.stringify(backup.ex_ordernames));
-  if(backup.rep_prs) localStorage.setItem('wt_rep_prs',JSON.stringify(backup.rep_prs));
-  if(backup.phases) localStorage.setItem('wt_phases',JSON.stringify(backup.phases));
-  if(backup.profile) localStorage.setItem('wt_profile',backup.profile);
-  if(backup.tm531) localStorage.setItem('wt_531tm',JSON.stringify(backup.tm531));
-  if(backup.offset531!==undefined) localStorage.setItem('wt_531offset',String(backup.offset531));
-  if(backup.goals) localStorage.setItem('wt_goals',JSON.stringify(backup.goals));
-  if(backup.daylog) localStorage.setItem('wt_daylog',JSON.stringify(backup.daylog));
-  if(backup.custom_ex) localStorage.setItem(CUST_KEY,JSON.stringify(backup.custom_ex));
-  if(backup.kg_step) localStorage.setItem('wt_kg_step',backup.kg_step);
-  if(backup.reps_step) localStorage.setItem('wt_reps_step',backup.reps_step);
-  if(backup.sugs) localStorage.setItem('wt_sugs6',JSON.stringify(backup.sugs));
-  if(opts.photos&&backup.photos&&Array.isArray(backup.photos)&&backup.photos.length>0){
-    if(await uiConfirm(`Backup vsebuje ${backup.photos.length} fotografij. Naloži tudi fotografije?\n(Trenutne fotografije bodo zamenjane)`)){
-      const db=await openPhotoDB();
-      await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).clear();tx.oncomplete=res;});
-      for(const p of backup.photos){await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).add({date:p.date,blob:p.blob});tx.oncomplete=res;});}
-    }
-  }
-  PROG=getActiveProfile()==='bulk'?PROG_BULK:PROG_CUT;
-  try{ensureDayLists();}catch(e){}
-  initTheme();applyAllColors();initBWGoal();cw=0;cd=0;
-  document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));
-  showPage('workout');showDay(0);initP1();
+  PROG=getActiveProfile()==='bulk'?PROG_BULK:PROG_CUT;try{ensureDayLists();}catch(e){}initTheme();applyAllColors();initBWGoal();cw=0;cd=0;localStorage.setItem('wt_last_week','0');localStorage.setItem('wt_last_day','0');localStorage.removeItem('wt_active_ex');localStorage.removeItem('wt_active_timer');document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));showPage('workout');showDay(0);initP1();
 }
 
 function renderEx(e,ei,di,wk,cn,isExtra){
@@ -2849,11 +2987,11 @@ const CUST_KEY='wt_custom_ex';
 function getCustomExercises(){try{return JSON.parse(localStorage.getItem(CUST_KEY)||'[]');}catch{return [];}}
 function saveCustomExercises(arr){localStorage.setItem(CUST_KEY,JSON.stringify(arr));}
 function addCustomExercise(){
-  const name=document.getElementById('cust-name').value.trim();
+  const name=plainImportedText(document.getElementById('cust-name').value.trim(),100);
   if(!name){toast('Vnesi ime','err');return;}
   const muscle=document.getElementById('cust-muscle').value;
   const cat=document.getElementById('cust-cat').value;
-  const desc=document.getElementById('cust-desc').value.trim();
+  const desc=plainImportedText(document.getElementById('cust-desc').value.trim(),1000);
   const list=getCustomExercises();
   if(list.find(e=>e.n.toLowerCase()===name.toLowerCase())){toast('Vaja že obstaja','err');return;}
   list.push({n:name,muscle,cat,desc,created:new Date().toISOString()});
@@ -2876,11 +3014,11 @@ function renderCustomExList(){
   if(list.length===0){el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:.4rem;">Nobene shranjene vaje.</div>';return;}
   el.innerHTML=list.map(e=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;padding:6px;border-bottom:.5px solid var(--border);font-size:12px;">
     <div style="flex:1;min-width:0;">
-      <div style="color:var(--text);font-weight:500;">${e.n}</div>
-      <div style="color:var(--text3);font-size:10px;margin-top:2px;">${e.muscle} · ${e.cat==='compound'?'compound':'izolacija'}</div>
-      ${e.desc?`<div style="color:var(--text2);font-size:11px;margin-top:3px;line-height:1.3;">${e.desc}</div>`:''}
+      <div style="color:var(--text);font-weight:500;">${safeHtml(e.n)}</div>
+      <div style="color:var(--text3);font-size:10px;margin-top:2px;">${safeHtml(e.muscle)} · ${e.cat==='compound'?'compound':'izolacija'}</div>
+      ${e.desc?`<div style="color:var(--text2);font-size:11px;margin-top:3px;line-height:1.3;">${safeHtml(e.desc)}</div>`:''}
     </div>
-    <button class="bk-item-btn del" onclick="deleteCustomExercise('${e.n.replace(/'/g,"\\'")}')">×</button>
+    <button class="bk-item-btn del" onclick="deleteCustomExercise(decodeURIComponent('${encodeURIComponent(e.n)}'))">×</button>
   </div>`).join('');
 }
 function initStepUI(){
@@ -3689,151 +3827,56 @@ function swMessage(msg){
 // === SESSION PERSISTENCE ===
 const LS_SESS='wt_active_sess';
 
-function toggleSess(){
+let activeSessionContext=null;
+function tickSessionClock(){const el=document.getElementById('st-d');if(!el||!stStart)return;const d=Math.max(0,Math.floor((Date.now()-stStart)/1000));el.textContent=pad(Math.floor(d/3600))+':'+pad(Math.floor((d%3600)/60))+':'+pad(d%60);}
+async function toggleSess(){
   const dot=document.getElementById('sess-dot');
   if(!stRun){
-    if('Notification' in window && Notification.permission==='default'){
-      try{Notification.requestPermission();}catch(e){}
-    }
-    sessStart=new Date();stStart=Date.now();stRun=true;
-    // Shrani v localStorage da preživi reload/zaprtje
-    localStorage.setItem(LS_SESS,JSON.stringify({startMs:stStart,startISO:sessStart.toISOString(),dayIdx:cd,weekIdx:cw}));
-
-    if(dot)dot.classList.add('on');
-    document.getElementById('st-b').textContent='Zaključi';
-    document.getElementById('st-b').classList.add('active');
-    const ts=sessStart.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('st-s').textContent=`${ts} · ${DAY_NAMES[cd]}`;
-    stInt=setInterval(()=>{const el=document.getElementById('st-d');if(!el)return;const d=Math.floor((Date.now()-stStart)/1000);el.textContent=pad(Math.floor(d/3600))+':'+pad(Math.floor((d%3600)/60))+':'+pad(d%60);},1000);
-  } else {
-    clearInterval(stInt);stRun=false;
-    localStorage.removeItem(LS_SESS);
-
-    if(dot)dot.classList.remove('on');
-    const end=new Date(),dur=Math.floor((end-sessStart)/1000),durMin=Math.floor(dur/60);
-    const sessions=getSessions();
-    sessions.unshift(buildImmutableSessionRecord(sessStart,end,durMin));
-    saveSessions(sessions);
-    document.getElementById('st-b').textContent='Start session';
-    document.getElementById('st-b').classList.remove('active');
-    document.getElementById('st-d').textContent='00:00:00';
-    document.getElementById('st-s').textContent=`Zadnji: ${durMin}min · ${DAY_NAMES[cd]}`;
-    sessStart=null;
+    if('Notification' in window&&Notification.permission==='default'){try{Notification.requestPermission();}catch(e){}}
+    sessStart=new Date();stStart=Date.now();stRun=true;activeSessionContext={startMs:stStart,startISO:sessStart.toISOString(),dayIdx:cd,weekIdx:cw,cycle:getCyc().num,profile:getActiveProfile()};
+    localStorage.setItem(LS_SESS,JSON.stringify(activeSessionContext));
+    if(dot)dot.classList.add('on');document.getElementById('st-b').textContent='Zaključi';document.getElementById('st-b').classList.add('active');document.getElementById('st-s').textContent=`${sessStart.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'})} · ${DAY_NAMES[activeSessionContext.dayIdx]}`;
+    clearInterval(stInt);stInt=setInterval(tickSessionClock,1000);tickSessionClock();renderTodayCard();return;
   }
+  const ctx=activeSessionContext||JSON.parse(localStorage.getItem(LS_SESS)||'{}');
+  if(!await uiConfirm(`Zaključi ${DAY_NAMES[ctx.dayIdx??cd]} session?`,'Zaključi'))return;
+  clearInterval(stInt);stRun=false;localStorage.removeItem(LS_SESS);if(dot)dot.classList.remove('on');
+  const end=new Date(),dur=Math.floor((end-sessStart)/1000),durMin=Math.max(0,Math.floor(dur/60)),record=buildImmutableSessionRecord(sessStart,end,durMin,ctx),sessions=getSessions();sessions.unshift(record);saveSessions(sessions);
+  document.getElementById('st-b').textContent='Start session';document.getElementById('st-b').classList.remove('active');document.getElementById('st-d').textContent='00:00:00';document.getElementById('st-s').textContent=`Zadnji: ${durMin}min · ${record.dayName}`;
+  sessStart=null;activeSessionContext=null;await autoBackupToIDB();setGymMode(false);renderTodayCard();toast('✓ Session shranjen + lokalni snapshot','ok');
 }
-
-// Obnovi sesijo če je bil tab/app zaprt
 function restoreSession(){
   const raw=localStorage.getItem(LS_SESS);if(!raw)return;
-  try{
-    const s=JSON.parse(raw);
-    sessStart=new Date(s.startISO);stStart=s.startMs;stRun=true;
-    if(typeof s.dayIdx==='number')cd=s.dayIdx;
-    if(typeof s.weekIdx==='number')cw=s.weekIdx;
-
-    const dot=document.getElementById('sess-dot');if(dot)dot.classList.add('on');
-    const btn=document.getElementById('st-b');if(btn){btn.textContent='Zaključi';btn.classList.add('active');}
-    const ts=sessStart.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
-    const ss=document.getElementById('st-s');if(ss)ss.textContent=`${ts} · ${DAY_NAMES[cd]} (obnovljeno)`;
-    stInt=setInterval(()=>{const el=document.getElementById('st-d');if(!el)return;const d=Math.floor((Date.now()-stStart)/1000);el.textContent=pad(Math.floor(d/3600))+':'+pad(Math.floor((d%3600)/60))+':'+pad(d%60);},1000);
-    toast('↺ Sesija obnovljena','ok');
-  }catch(e){localStorage.removeItem(LS_SESS);}
+  try{const s=JSON.parse(raw);if(!s.startISO||!Number.isFinite(Number(s.startMs)))throw new Error('bad session');activeSessionContext={...s,cycle:Number(s.cycle)||getCyc().num,profile:s.profile||getActiveProfile()};sessStart=new Date(s.startISO);stStart=Number(s.startMs);stRun=true;if(typeof s.dayIdx==='number')cd=s.dayIdx;if(typeof s.weekIdx==='number')cw=s.weekIdx;
+    const dot=document.getElementById('sess-dot');if(dot)dot.classList.add('on');const btn=document.getElementById('st-b');if(btn){btn.textContent='Zaključi';btn.classList.add('active');}const ss=document.getElementById('st-s');if(ss)ss.textContent=`${sessStart.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'})} · ${DAY_NAMES[cd]} (obnovljeno)`;clearInterval(stInt);stInt=setInterval(tickSessionClock,1000);tickSessionClock();showDay(cd);toast('↺ Sesija obnovljena','ok');
+  }catch(e){localStorage.removeItem(LS_SESS);activeSessionContext=null;}
 }
-
-async function syncSessionSetsToSheets(session){
-  const url=getGSUrl();if(!url)return;
-  const all=getSets();
-  const cn=session.cycle,dayIdx=DAY_NAMES.indexOf(session.dayName);
-  if(dayIdx<0)return;
-  const setsToSync=[];
-  for(let w=0;w<4;w++){
-    PROG.days[dayIdx].ex.forEach((e,ei)=>{
-      const key=sdk(cn,w,dayIdx,ei);
-      if(all[key]){
-        all[key].filter(s=>s.kg&&s.reps&&s.done).forEach((s,si)=>{
-          const kg=parseFloat(s.kg)||0;
-          const reps=parseInt(s.reps)||0;
-          const e1rm=Math.round(kg*(1+reps/30));
-          setsToSync.push({
-            date:session.date,
-            cycle:cn,
-            week:w+1,
-            day:session.dayName,
-            exercise:e.n,
-            setNum:si+1,
-            kg:kg,
-            kgR:parseFloat(s.kgR)||0,  // bilateral desna stran
-            reps:reps,
-            e1rm:e1rm,
-            rpe:s.rpe||'',
-            isDrop:s.drop?'Y':'',
-            note:s.note||''
-          });
-        });
-      }
-    });
-  }
-  if(setsToSync.length>0){
-    await sendToSheets('sets_batch',setsToSync);
-  }
+function cycleExerciseMetrics(cn,di,ei){
+  const all=getSets();let done=0,total=0,maxRpe=0,maxPain=0,bestE1rm=0,peak=0;
+  for(let w=0;w<4;w++){const key=sdk(cn,w,di,ei),sets=all[key]||[];maxPain=Math.max(maxPain,getPain(key));const n=Math.min(sets.length,nsf(di,ei,PROG.weeks[w],key));sets.slice(0,n).forEach(s=>{total++;if(s.done)done++;const kg=parseFloat(s.kg)||0,reps=parseInt(s.reps)||0,rpe=parseFloat(s.rpe)||0;if(s.done&&kg>0&&reps>0){peak=Math.max(peak,kg);bestE1rm=Math.max(bestE1rm,kg*(1+reps/30));}maxRpe=Math.max(maxRpe,rpe);});}
+  return {done,total,completion:total?done/total:0,maxRpe,maxPain,bestE1rm,peak};
 }
-
-
+function smartCycleSuggestion(cn,di,ei,name){
+  const cur=cycleExerciseMetrics(cn,di,ei),prev=cn>1?cycleExerciseMetrics(cn-1,di,ei):null,prev2=cn>2?cycleExerciseMetrics(cn-2,di,ei):null,lower=/squat|deadlift|rdl|leg press/i.test(name),inc=lower?5:2.5,base=cur.peak||getWeek1Weight(cn,di,ei)||0;
+  if(!base)return {skg:0,sc:'ss',sl:'Brez podatkov',reason:'Ni opravljenih delovnih setov',...cur};
+  const trend=prev&&prev.bestE1rm?((cur.bestE1rm-prev.bestE1rm)/prev.bestE1rm)*100:0;
+  const twoDrops=prev&&prev2&&prev.bestE1rm<prev2.bestE1rm*.98&&cur.bestE1rm<prev.bestE1rm*.98;
+  if(cur.maxPain>=4)return {skg:Math.max(0,roundToPlate(base*.9)),sc:'sd2',sl:'-10%',reason:`Bolečina ${cur.maxPain}/10`,...cur,trend};
+  if(twoDrops)return {skg:Math.max(0,base-inc),sc:'sd2',sl:`-${inc}kg`,reason:'Dva zaporedna padca e1RM',...cur,trend};
+  if(cur.completion<.7||cur.maxRpe>=10||trend<-4)return {skg:Math.max(0,base-inc),sc:'sd2',sl:`-${inc}kg`,reason:cur.completion<.7?'Preveč zgrešenih setov':cur.maxRpe>=10?'Več grinderjev / RPE 10':'e1RM je opazno padel',...cur,trend};
+  if(cur.completion>=.9&&(cur.maxRpe===0||cur.maxRpe<=8.5)&&trend>=-1)return {skg:base+inc,sc:'su',sl:`+${inc}kg`,reason:'Visoka izvedba, nadzorovan RPE in stabilen e1RM',...cur,trend};
+  return {skg:base,sc:'ss',sl:'Ohrani',reason:cur.maxRpe>8.5?'RPE je že visok':'Najprej potrdi stabilen napredek',...cur,trend};
+}
 function renderCycle(){
-  const cyc=getCyc(),cn=cyc.num;
-  document.getElementById('cy-title').textContent='Cikel '+cn;
-  document.getElementById('cy-badge').textContent='Cikel '+cn;
-  document.getElementById('next-num').textContent=cn+1;
-  const sd=cyc.startDates||{};
-  document.getElementById('cy-date-label').textContent=sd[cn]?`Začetek: ${sd[cn]}`:'';
-  const all=getSets();
+  const cyc=getCyc(),cn=cyc.num;document.getElementById('cy-title').textContent='Cikel '+cn;document.getElementById('cy-badge').textContent='Cikel '+cn;document.getElementById('next-num').textContent=cn+1;const sd=cyc.startDates||{};document.getElementById('cy-date-label').textContent=sd[cn]?`Začetek: ${sd[cn]}`:'';
   const mainEx=[];PROG.days.forEach((d,di)=>d.ex.forEach((e,ei)=>{if(e.m)mainEx.push({n:e.n,di,ei});}));
-  let html=`<div class="cyrow"><div class="cyl" style="color:var(--text3);">Vaja</div><div class="cyh">Peak</div><div class="cyh">Predlog</div><div class="cyh">Akcija</div></div>`;
-  const sugs=[];
-  mainEx.forEach(({n,di,ei})=>{
-    const peak=getPeakForExercise(cn,di,ei);
-    const w1=getWeek1Weight(cn,di,ei);
-    const wk=PROG.weeks[0],tgt=parseInt(wk.reps.split('–')[1]),nsv=wk.sM;
-    const w1sets=(all[sdk(cn,0,di,ei)]||[]).filter(s=>s.kg&&s.reps);
-    let hitAll=false;
-    if(w1sets.length>0){const hit=w1sets.filter(s=>parseInt(s.reps||0)>=tgt-1).length;hitAll=hit>=nsv-1;}
-    const low=n.toLowerCase().includes('squat')||n.toLowerCase().includes('deadlift');
-    let skg=peak,sc='ss',sl='Ohrani';
-    if(peak>0){if(hitAll){skg=peak+(low?5:2.5);sc='su';sl=`+${low?5:2.5}kg`;}else if(w1sets.length<nsv-1){skg=Math.max(0,peak-2.5);sc='sd2';sl='-2.5kg';}}
-    sugs.push({n,di,ei,peak,skg,sc,sl});
-    html+=`<div class="cyrow"><div class="cyl">${n.split(' ').slice(0,3).join(' ')}</div><div class="cyv">${peak>0?peak+'kg':'—'}</div><div class="cyv ${sc}">${peak>0?skg+'kg':'—'}</div><div class="cyv ${sc}" style="font-size:11px;">${peak>0?sl:'—'}</div></div>`;
-  });
-  document.getElementById('cy-content').innerHTML=html;
-  const hasData=sugs.some(s=>s.peak>0);
-  const nc=document.getElementById('cy-next-card');
-  if(hasData){
-    nc.style.display='block';
-    let nh='';sugs.filter(s=>s.peak>0).forEach(s=>{nh+=`<div class="mr"><span class="mk">${s.n.split(' ').slice(0,3).join(' ')}</span><span class="mv ${s.sc}">${s.skg}kg <span style="font-size:11px;">(${s.sl})</span></span></div>`;});
-    document.getElementById('cy-next-content').innerHTML=nh;
-    // Store suggestions reliably
-    try{localStorage.setItem('wt_sugs6',JSON.stringify(sugs));}catch(e){}
-  } else nc.style.display='none';
-  if(cn>1){
-    document.getElementById('cy-hist-card').style.display='block';
-    const sel=document.getElementById('lift-selector');
-    sel.innerHTML=MAIN_LIFTS.map((l,i)=>`<div class="lift-chip${i===activeLift?' on':''}" onclick="selectLift(${i})">${l.split(' ').slice(0,2).join(' ')}</div>`).join('');
-    renderStrengthChart();
-    let hhtml=`<div class="ch-row">${[''].concat(Array.from({length:Math.min(cn,5)},(_,i)=>`C${cn-Math.min(cn,5)+1+i}`)).map((h,i)=>`<div class="${i===0?'ch-hd':'ch-cy'}">${h}</div>`).join('')}</div>`;
-    mainEx.forEach(({n,di,ei})=>{
-      hhtml+=`<div class="ch-row"><div style="font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.split(' ').slice(0,2).join(' ')}</div>`;
-      for(let c=Math.max(1,cn-4);c<=cn;c++){const v=getPeakForExercise(c,di,ei);const prev=c>1?getPeakForExercise(c-1,di,ei):0;hhtml+=`<div class="ch-val ${v>prev&&v>0?'ch-up':''}">${v>0?v+'kg':'—'}</div>`;}
-      hhtml+='</div>';
-    });
-    document.getElementById('cy-hist-content').innerHTML=hhtml;
-  } else document.getElementById('cy-hist-card').style.display='none';
-  const cynotes=getCyNotes();
-  const noteEntries=Object.entries(cynotes).filter(([,v])=>v);
-  if(noteEntries.length>0){
-    document.getElementById('cy-notes-hist-card').style.display='block';
-    document.getElementById('cy-notes-hist').innerHTML=noteEntries.map(([k,v])=>`<div style="padding:8px 0;border-bottom:.5px solid var(--border);"><div style="font-size:11px;color:var(--purple-text);margin-bottom:3px;">Cikel ${k}</div><div style="font-size:12px;color:var(--text2);">${v}</div></div>`).join('');
-  } else document.getElementById('cy-notes-hist-card').style.display='none';
+  let html=`<div class="cyrow"><div class="cyl" style="color:var(--text3);">Vaja</div><div class="cyh">Peak</div><div class="cyh">Predlog</div><div class="cyh">Akcija</div></div>`;const sugs=[];
+  mainEx.forEach(({n,di,ei})=>{const s=smartCycleSuggestion(cn,di,ei,n);sugs.push({n,di,ei,peak:s.peak,skg:s.skg,sc:s.sc,sl:s.sl,reason:s.reason,completion:s.completion,maxRpe:s.maxRpe,maxPain:s.maxPain,trend:s.trend});html+=`<div class="cyrow" title="${safeHtml(s.reason)}"><div class="cyl">${safeHtml(n.split(' ').slice(0,3).join(' '))}</div><div class="cyv">${s.peak>0?s.peak+'kg':'—'}</div><div class="cyv ${s.sc}">${s.skg>0?s.skg+'kg':'—'}</div><div class="cyv ${s.sc}" style="font-size:11px;">${s.skg>0?s.sl:'—'}</div></div>${s.skg>0?`<div style="font-size:10px;color:var(--text3);padding:0 0 6px 4px;">${safeHtml(s.reason)} · ${Math.round(s.completion*100)}% setov${s.maxRpe?' · max RPE '+s.maxRpe:''}${s.maxPain?' · bolečina '+s.maxPain+'/10':''}</div>`:''}`;});
+  document.getElementById('cy-content').innerHTML=html;const hasData=sugs.some(s=>s.skg>0),nc=document.getElementById('cy-next-card');
+  if(hasData){nc.style.display='block';document.getElementById('cy-next-content').innerHTML=sugs.filter(s=>s.skg>0).map(s=>`<div class="mr"><span class="mk">${safeHtml(s.n.split(' ').slice(0,3).join(' '))}<br><small style="color:var(--text3)">${safeHtml(s.reason)}</small></span><span class="mv ${s.sc}">${s.skg}kg <span style="font-size:11px;">(${s.sl})</span></span></div>`).join('');localStorage.setItem('wt_sugs6',JSON.stringify(sugs));}else nc.style.display='none';
+  if(cn>1){document.getElementById('cy-hist-card').style.display='block';const sel=document.getElementById('lift-selector');sel.innerHTML=MAIN_LIFTS.map((l,i)=>`<div class="lift-chip${i===activeLift?' on':''}" onclick="selectLift(${i})">${safeHtml(l.split(' ').slice(0,2).join(' '))}</div>`).join('');renderStrengthChart();let hhtml=`<div class="ch-row">${[''].concat(Array.from({length:Math.min(cn,5)},(_,i)=>`C${cn-Math.min(cn,5)+1+i}`)).map((h,i)=>`<div class="${i===0?'ch-hd':'ch-cy'}">${h}</div>`).join('')}</div>`;mainEx.forEach(({n,di,ei})=>{hhtml+=`<div class="ch-row"><div style="font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${safeHtml(n.split(' ').slice(0,2).join(' '))}</div>`;for(let c=Math.max(1,cn-4);c<=cn;c++){const v=getPeakForExercise(c,di,ei),prev=c>1?getPeakForExercise(c-1,di,ei):0;hhtml+=`<div class="ch-val ${v>prev&&v>0?'ch-up':''}">${v>0?v+'kg':'—'}</div>`;}hhtml+='</div>';});document.getElementById('cy-hist-content').innerHTML=hhtml;}else document.getElementById('cy-hist-card').style.display='none';
+  const cynotes=getCyNotes(),noteEntries=Object.entries(cynotes).filter(([,v])=>v);if(noteEntries.length>0){document.getElementById('cy-notes-hist-card').style.display='block';document.getElementById('cy-notes-hist').innerHTML=noteEntries.map(([k,v])=>`<div style="padding:8px 0;border-bottom:.5px solid var(--border);"><div style="font-size:11px;color:var(--purple-text);margin-bottom:3px;">Cikel ${safeHtml(k)}</div><div style="font-size:12px;color:var(--text2);">${safeHtml(v)}</div></div>`).join('');}else document.getElementById('cy-notes-hist-card').style.display='none';
 }
-
 function selectLift(idx){activeLift=idx;document.querySelectorAll('.lift-chip').forEach((c,i)=>c.classList.toggle('on',i===idx));renderStrengthChart();}
 
 function renderStrengthChart(){
@@ -3851,7 +3894,8 @@ function renderStrengthChart(){
   strengthChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:vals,borderColor:'#7f77dd',backgroundColor:'rgba(127,119,221,0.1)',tension:0.3,pointRadius:5,pointBackgroundColor:'#7f77dd',borderWidth:2,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:11}},grid:{display:false},border:{color:gc}}}}});
 }
 
-function confirmNext(){
+async function confirmNext(){
+  await autoBackupToIDB();
   const cyc=getCyc(),newN=cyc.num+1;
   const noteVal=document.getElementById('cy-note-input')?.value||'';
   if(noteVal.trim()){const cn=getCyNotes();cn[cyc.num]=noteVal.trim();saveCyNotes(cn);}
@@ -4489,8 +4533,8 @@ async function exportData(){
   try{photos=await getAllPhotos();}catch(e){console.warn('Ni fotografij:',e);}
   // Export kot JSON — ohrani vse podatke popolnoma
   const backup={
-    version:3,
-    schemaVersion:3,
+    version:5,
+    schemaVersion:5,
     date:new Date().toISOString(),
     sets:getSets(),
     pr:getPRs(),
@@ -4526,7 +4570,11 @@ async function exportData(){
     daylog:JSON.parse(localStorage.getItem('wt_daylog')||'{}'),
     custom_ex:JSON.parse(localStorage.getItem(CUST_KEY)||'[]'),
     kg_step:localStorage.getItem('wt_kg_step'),
-    reps_step:localStorage.getItem('wt_reps_step')
+    reps_step:localStorage.getItem('wt_reps_step'),
+    colors:getStoredColors(),
+    custom_rest:getCustomRest(),
+    compact:isCompact(),
+    gym_mode:getGymMode()
   };
   const json=JSON.stringify(backup,null,2);
   const blob=new Blob([json],{type:'application/json'});
@@ -4559,121 +4607,25 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download=`workout_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(url);
 }
 
+let _pendingImport=null,_importChoiceResolve=null;
+function chooseImportMode(summary){return new Promise(res=>{_importChoiceResolve=res;document.getElementById('import-mode-summary').textContent=summary;document.getElementById('import-mode-pop').classList.add('on');});}
+function finishImportChoice(choice){document.getElementById('import-mode-pop').classList.remove('on');if(_importChoiceResolve){_importChoiceResolve(choice);_importChoiceResolve=null;}}
 function importData(){
-  const input=document.createElement('input');
-  input.type='file';input.accept='.json';
-  input.onchange=e=>{
-    const file=e.target.files[0];if(!file)return;
-    const reader=new FileReader();
-    reader.onload=async ev=>{
-      try{
-        const backup=JSON.parse(ev.target.result);
-        const v=validateBackupP1(backup);
-        if(!v.ok){toast('Napačna backup datoteka: '+v.msg,'err');return;}
-        if(!await uiConfirm(backupSummaryP1(backup)))return;
-        await restoreBackupObjectP1(backup,{photos:true});
-        toast('Podatki uspešno uvoženi! 💪','ok');
-      }catch(err){toast('Napaka pri uvozu: '+err.message,'err');}
-    };
-    reader.readAsText(file);
-  };
-  input.click();
+  if(stRun){toast('Najprej zaključi aktivno sesijo.','err');return;}
+  const input=document.createElement('input');input.type='file';input.accept='.json,application/json';
+  input.onchange=e=>{const file=e.target.files[0];if(!file)return;if(file.size>80*1024*1024){toast('Datoteka je večja od 80 MB.','err');return;}const reader=new FileReader();reader.onload=async ev=>{try{const backup=JSON.parse(ev.target.result),v=validateBackupP1(backup);if(!v.ok){toast('Napačna backup datoteka: '+v.msg,'err');return;}const mode=await chooseImportMode(backupSummaryP1(backup));if(!mode)return;const rollback=await buildBackupJSON(false);await saveBackupToIDB(rollback,'rollback-before-import');await restoreBackupObjectP1(backup,{photos:true,mode});await autoBackupToIDB();toast(mode==='replace'?'✓ Podatki popolnoma obnovljeni':'✓ Podatki združeni','ok');}catch(err){toast('Napaka pri uvozu: '+err.message,'err');}};reader.onerror=()=>toast('Datoteke ni mogoče prebrati.','err');reader.readAsText(file);};input.click();
 }
-
-
 async function clearAll(){
-  if(await uiConfirm('Ponastavi vse? Tega ni mogoče razveljaviti.')){
-    [...Object.values(LS),'wt_sugs6','wt_bwgoal'].forEach(k=>localStorage.removeItem(k));
-    showDay(cd);
-  }
+  if(stRun){toast('Najprej zaključi aktivno sesijo.','err');return;}
+  if(await uiConfirm('Ponastavi vse podatke? Pred brisanjem bom naredil lokalni rollback snapshot.','Ponastavi')){await autoBackupToIDB();clearManagedData();localStorage.removeItem(LS_SESS);showDay(cd);toast('Podatki ponastavljeni. Rollback je v lokalnih snapshotih.','ok');}
 }
 
-// Google Sheets sync
-function getGSUrl(){return localStorage.getItem('wt_gsurl')||'';}
-function saveGSUrl(v){localStorage.setItem('wt_gsurl',v.trim());updateGSStatus();}
-function saveGSUrlBtn(){
-  const el=document.getElementById('gs-url');
-  if(!el||!el.value.trim()){toast('Vpiši URL najprej','err');return;}
-  saveGSUrl(el.value.trim());
-  toast('URL shranjen ✓','ok');
-}
-function updateGSStatus(){
-  const url=getGSUrl();
-  const el=document.getElementById('gs-status');if(!el)return;
-  if(url){el.textContent='● URL shranjen ✓';el.style.color='var(--green-text)';}
-  else{el.textContent='● Ni povezano';el.style.color='var(--text3)';}
-}
-function initGSUrl(){
-  const el=document.getElementById('gs-url');
-  if(el)el.value=getGSUrl();
-  updateGSStatus();
-}
-
-async function sendToSheets(type,data){
-  const url=getGSUrl();if(!url)return;
-  try{
-    // POST namesto GET — odpravi 8000-znakovni URL limit
-    await fetch(url,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({type,data,timestamp:new Date().toISOString()})
-    });
-    return true;
-  }catch(e){console.log('Sheets sync error:',e);return false;}
-}
-
-async function testGSConnection(){
-  const url=getGSUrl();
-  const el=document.getElementById('gs-status');
-  if(!url){toast('Najprej shrani Apps Script URL','err');return;}
-  el.textContent='● Pošiljam...';el.style.color='var(--blue-text)';
-  try{
-    await fetch(url,{
-      method:'POST',mode:'no-cors',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({type:'test',data:'ping',timestamp:new Date().toISOString()})
-    });
-    el.textContent='● Poslano — preveri Sheet';el.style.color='var(--green-text)';
-  }catch(e){
-    el.textContent='● Napaka: '+e.message;el.style.color='var(--red-text)';
-  }
-}
-
-async function syncAllToSheets(){
-  const url=getGSUrl();
-  if(!url){toast('Najprej shrani Apps Script URL','err');return;}
-  const el=document.getElementById('gs-status');
-  el.textContent='● Pošiljam...';el.style.color='var(--blue-text)';
-  try{
-    // Full backup z VSEMI podatki (brez photos — preveliko)
-    const data={
-      bw:getBW(),sessions:getSessions(),prs:getPRs(),meas:getMeas(),
-      cycle:getCyc(),sets:getSets(),notes:getNotes(),restplan:getRestPlan()
-    };
-    await fetch(url,{
-      method:'POST',mode:'no-cors',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({type:'full_backup',data,timestamp:new Date().toISOString()})
-    });
-    el.textContent='● Poslano ✓ '+new Date().toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
-    el.style.color='var(--green-text)';
-    localStorage.setItem('wt_last_sheets_sync',new Date().toISOString());
-  }catch(e){
-    el.textContent='● Napaka: '+e.message;el.style.color='var(--red-text)';
-  }
-}
-
-
-// ============== TOAST + ALARM SETTINGS + LAST-SESSION + LONG-PRESS ==============
 
 // Toast notifikacija
 function toast(msg,type){
   const t=document.getElementById('toast-el');if(!t)return;
-  t.textContent=msg;
-  t.className='show'+(type?' '+type:'');
-  clearTimeout(t._tm);
-  t._tm=setTimeout(()=>t.className='',2200);
+  t.textContent=String(msg??'');t.className='show'+(type?' '+type:'');
+  clearTimeout(t._tm);t._tm=setTimeout(()=>t.className='',2200);
 }
 
 // Alarm settings v localStorage
@@ -4923,7 +4875,7 @@ function closeNote(){
 function saveNotePop(){
   if(!noteCtx)return;
   const {key,si}=noteCtx;
-  const val=document.getElementById('note-input').value.trim();
+  const val=plainImportedText(document.getElementById('note-input').value.trim(),2000);
   const all=getSets();
   if(!all[key])all[key]=[];
   while(all[key].length<=si)all[key].push({kg:'',reps:'',done:false});
@@ -5230,107 +5182,6 @@ function renderE1RMChart(){
 }
 function selectE1RMLift(i){e1rmActiveLift=i;renderE1RMChart();}
 
-// === AI COACH ===
-function getAIKey(){return localStorage.getItem('wt_ai_key')||'';}
-function saveAIKey(){
-  const v=document.getElementById('ai-key-input').value.trim();
-  if(!v){toast('Vnesi API ključ','err');return;}
-  localStorage.setItem('wt_ai_key',v);
-  toast('✓ Ključ shranjen','ok');
-  renderAICoach();
-}
-function clearAIKey(){localStorage.removeItem('wt_ai_key');renderAICoach();}
-function renderAICoach(){
-  const setup=document.getElementById('ai-coach-setup');
-  const content=document.getElementById('ai-coach-content');
-  if(!setup)return;
-  const key=getAIKey();
-  if(!key){
-    setup.innerHTML=`
-      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem;line-height:1.4;">Vnesi Anthropic API ključ za AI analizo treninga. Ključ ostane samo na tvoji napravi.<br><a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--green-text);">→ Pridobi ključ</a></div>
-      <div class="ai-key-row">
-        <input type="password" id="ai-key-input" placeholder="sk-ant-...">
-        <button class="sb" onclick="saveAIKey()">Shrani</button>
-      </div>`;
-    content.innerHTML='';
-    return;
-  }
-  setup.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.5rem;">
-    <button class="sb" onclick="aiAnalyzeWeek()">📊 Analiziraj moj teden</button>
-    <button class="sb" onclick="aiAnalyzeProgress()" style="background:var(--bg3);">📈 Napredek</button>
-    <button class="sb" onclick="clearAIKey()" style="background:var(--bg3);color:var(--text3);">Odstrani ključ</button>
-  </div>
-  <div class="ai-chat-row">
-    <input type="text" id="ai-question" placeholder="Vprašaj karkoli o treningu..." onkeydown="if(event.key==='Enter')aiAsk()">
-    <button class="sb" onclick="aiAsk()">Vprašaj</button>
-  </div>`;
-}
-
-// Zberi povzetek podatkov za AI
-function buildAIContext(){
-  const sessions=getSessions().slice(0,15);
-  const prs=getPRs();
-  const groups=calcVolumeThisWeek();
-  const bw=(function(){try{const d=getBW();const e=Object.entries(d).sort((a,b)=>a[0].localeCompare(b[0]));return e.length?e[e.length-1][1]:null;}catch{return null;}})();
-  // PR summary
-  const prList=[];
-  Object.entries(prs).forEach(([k,v])=>{if(typeof v==='object'&&v.exName&&v.kg)prList.push(`${v.exName}: ${v.kg}kg×${v.reps||1}`);});
-  // e1RM trends
-  const hist=getE1RMHistory();
-  const trends=[];
-  Object.entries(hist).forEach(([n,d])=>{if(d.length>=2){const first=d[0].e1rm,last=d[d.length-1].e1rm;const ch=last-first;trends.push(`${n}: ${first}→${last}kg e1RM (${ch>=0?'+':''}${ch})`);}});
-  return `Podatki uporabnika (powerbuilding program, 5 dni: Push A, Pull A, Noge, Push B, Pull B; 4-tedenski cikli T1 Heavy/T2 Moderate/T3 Volume/T4 Deload):
-Telesna teža: ${bw||'?'}kg
-Zadnjih ${sessions.length} sesij: ${sessions.map(s=>`${s.date} ${s.dayName} ${s.durationMin}min`).join('; ')}
-Volumen ta teden (seti/mišica): ${Object.entries(groups).map(([m,c])=>`${m}:${c%1===0?c:c.toFixed(1)}`).join(', ')||'ni podatkov'}
-PR-ji: ${prList.join(', ')||'ni'}
-e1RM trendi: ${trends.join('; ')||'premalo podatkov'}`;
-}
-
-async function callClaude(userPrompt,systemPrompt){
-  const key=getAIKey();
-  if(!key)return null;
-  const content=document.getElementById('ai-coach-content');
-  content.innerHTML='<div class="ai-loading">🤖 Claude razmišlja...</div>';
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key':key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:1024,
-        system:systemPrompt||'Si izkušen fitnes trener in strokovnjak za hipertrofijo in moč. Odgovarjaj v slovenščini, jedrnato in praktično. Uporabljaj konkretne številke iz podatkov.',
-        messages:[{role:'user',content:userPrompt}]
-      })
-    });
-    const data=await resp.json();
-    if(data.error){content.innerHTML=`<div class="ai-msg" style="color:var(--red-text);">Napaka: ${data.error.message||'preveri API ključ'}</div>`;return null;}
-    const text=data.content.map(b=>b.text||'').join('\n');
-    content.innerHTML=`<div class="ai-msg">${text.replace(/</g,'&lt;')}</div>`;
-    return text;
-  }catch(e){
-    content.innerHTML=`<div class="ai-msg" style="color:var(--red-text);">Napaka pri povezavi: ${e.message}</div>`;
-    return null;
-  }
-}
-function aiAnalyzeWeek(){
-  callClaude(buildAIContext()+'\n\nAnaliziraj moj zadnji teden treninga. Kaj gre dobro, kaj bi izboljšal? Bodi konkreten.');
-}
-function aiAnalyzeProgress(){
-  callClaude(buildAIContext()+'\n\nAnaliziraj moj dolgoročni napredek glede na e1RM trende in PR-je. Kje napredujem, kje stagniram? Predlogi?');
-}
-function aiAsk(){
-  const inp=document.getElementById('ai-question');
-  const q=inp.value.trim();if(!q)return;
-  inp.value='';
-  callClaude(buildAIContext()+'\n\nUporabnikovo vprašanje: '+q);
-}
-
 // --- PR feed timeline ---
 function renderPRFeed(){
   const prs=getPRs();
@@ -5523,7 +5374,7 @@ function getDaysSinceLastBackup(){
   return Math.floor((Date.now()-new Date(last).getTime())/86400000);
 }
 
-// === IDB BACKUP STORAGE — preživi reinstall PWA, hrani zadnjih 4 backupov ===
+// === IDB BACKUP STORAGE — preživi reinstall PWA, hrani zadnjih 12 backupov ===
 async function saveBackupToIDB(blob,label){
   const db=await openPhotoDB();
   return new Promise((res,rej)=>{
@@ -5532,7 +5383,7 @@ async function saveBackupToIDB(blob,label){
     tx.objectStore(BK_STORE).add(obj);
     tx.oncomplete=async()=>{
       // Cleanup — drži samo zadnjih 4
-      await pruneOldBackups(4);
+      await pruneOldBackups(12);
       res();
     };
     tx.onerror=()=>rej(tx.error);
@@ -5574,8 +5425,8 @@ async function buildBackupJSON(includePhotos){
     try{photos=await getAllPhotos();}catch(e){}
   }
   return JSON.stringify({
-    version:3,
-    schemaVersion:3,
+    version:5,
+    schemaVersion:5,
     date:new Date().toISOString(),
     sets:getSets(),
     pr:getPRs(),
@@ -5610,7 +5461,11 @@ async function buildBackupJSON(includePhotos){
     daylog:JSON.parse(localStorage.getItem('wt_daylog')||'{}'),
     custom_ex:JSON.parse(localStorage.getItem(CUST_KEY)||'[]'),
     kg_step:localStorage.getItem('wt_kg_step'),
-    reps_step:localStorage.getItem('wt_reps_step')
+    reps_step:localStorage.getItem('wt_reps_step'),
+    colors:getStoredColors(),
+    custom_rest:getCustomRest(),
+    compact:isCompact(),
+    gym_mode:getGymMode()
   });
 }
 
@@ -5625,43 +5480,10 @@ async function autoBackupToIDB(){
 }
 
 function checkBackupReminder(){
-  const banner=document.getElementById('bk-banner');
-  const txt=document.getElementById('bk-banner-text');
-  if(!banner||!txt)return;
-  const days=getDaysSinceLastBackup();
-  const sess=getSessions();
-  // Še nikoli ni delal backupa — opozori po 3 sesijah
-  if(days===null){
-    if(sess.length>=3){
-      txt.innerHTML=`<strong>Naredi prvi backup zdaj</strong>${sess.length} sesij brez backupa.`;
-      banner.classList.add('show','urgent');
-    }
-    return;
-  }
-  // 7+ dni — AVTO-PRENESI v Downloads + opozori
-  if(days>=7){
-    // Avto-trigger download (ne čaka tap-a)
-    if(!localStorage.getItem('wt_autodl_'+new Date().toISOString().split('T')[0])){
-      // Markiraj, da smo danes že naredili avto-download (ne spam)
-      localStorage.setItem('wt_autodl_'+new Date().toISOString().split('T')[0],'1');
-      // Počisti stare markerje (drži samo zadnjega)
-      Object.keys(localStorage).forEach(k=>{
-        if(k.startsWith('wt_autodl_')&&k!=='wt_autodl_'+new Date().toISOString().split('T')[0]){
-          localStorage.removeItem(k);
-        }
-      });
-      // Sproži prenos
-      exportData();
-      txt.innerHTML=`<strong>📥 Backup prenesen</strong>${days} dni od zadnjega — preveri Downloads mapo.`;
-      banner.classList.add('show');
-    } else if(days>=14){
-      txt.innerHTML=`<strong>Backup star ${days} dni!</strong>Tapni za nov.`;
-      banner.classList.add('show','urgent');
-    } else {
-      txt.innerHTML=`<strong>Tedenski backup</strong>${days} dni od zadnjega.`;
-      banner.classList.add('show');
-    }
-  }
+  const banner=document.getElementById('bk-banner'),txt=document.getElementById('bk-banner-text');if(!banner||!txt)return;
+  const days=getDaysSinceLastBackup(),sess=getSessions();banner.classList.remove('show','urgent');
+  if(days===null&&sess.length>=3){txt.innerHTML=`<strong>Prenesi prvi zunanji backup</strong>${sess.length} sessionov je varovanih le lokalno.`;banner.classList.add('show','urgent');return;}
+  if(days!==null&&days>=7){txt.innerHTML=`<strong>${days>=14?'Zunanji backup je prestar':'Tedenski zunanji backup'}</strong>${days} dni od zadnjega prenosa JSON.`;banner.classList.add('show');if(days>=14)banner.classList.add('urgent');}
 }
 
 async function doWeeklyBackup(){
@@ -5681,7 +5503,7 @@ async function renderBackupList(){
   if(!el)return;
   const list=await getAllBackups();
   if(list.length===0){
-    el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:.5rem;">Ni shranjenih avto-backupov.</div>';
+    el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:.5rem;">Ni shranjenih lokalnih snapshotov.</div>';
     return;
   }
   el.innerHTML=list.map(b=>{
@@ -5723,7 +5545,7 @@ async function restoreBackupFromIDB(id){
     const v=validateBackupP1(backup);
     if(!v.ok){toast('Backup je pokvarjen: '+v.msg,'err');return;}
     if(!await uiConfirm(backupSummaryP1(backup)))return;
-    await restoreBackupObjectP1(backup,{photos:false});
+    await restoreBackupObjectP1(backup,{photos:false,mode:'replace'});
     toast('✓ Obnovljeno iz backupa','ok');
   }catch(e){toast('Napaka pri obnovi: '+e.message,'err');}
 }
@@ -5769,7 +5591,7 @@ async function manualAutoBackup(){
     const idx=cards.indexOf(card);
     if(idx<0)return;
     const next=dx<0?cards[idx+1]:cards[idx-1]; // levo=naslednja, desno=prejšnja
-    if(next)next.scrollIntoView({behavior:'smooth',block:'center'});
+    if(next)setGymFocus(next.id.replace(/^ec-/,''),true);
   },{passive:true});
 })();
 
@@ -5802,6 +5624,8 @@ showDay(_initDay);
 try{initP1();}catch(e){console.warn('P1 init failed',e);}
 // Obnovi morebiten aktivni session in rest timer
 restoreSession();restoreTimer();
+localStorage.removeItem('wt_ai_key');
+setTimeout(maybeShowOnboarding,250);
 
 // Tedenski backup reminder ob startu
 setTimeout(checkBackupReminder,2000);

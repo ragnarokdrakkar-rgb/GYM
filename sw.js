@@ -1,155 +1,121 @@
-// Workout Tracker — Service Worker
-// Verzija — povečaj ko spremeniš katerokoli datoteko, da se cache osveži
-const VERSION = 'v4.0.0';
-const CACHE_NAME = `workout-tracker-${VERSION}`;
-
-// Datoteke ki naj se cachirajo za offline delovanje
-const CACHE_FILES = [
+/* Workout Tracker service worker v5.0.0 */
+const CACHE_NAME = 'workout-tracker-v5.0.0';
+const CORE_FILES = [
   './',
   './index.html',
   './manifest.json',
-  // Chart.js iz CDN — cachiran ob prvi uporabi (glej fetch handler)
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-// === INSTALL: precachiramo ===
+const restTimers = new Map();
+
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(async cache => {
-      // HTML sveže (brez HTTP predpomnilnika), da je offline kopija najnovejša
-      try{
-        const idx=await fetch('./index.html',{cache:'no-store'});
-        if(idx&&idx.ok){await cache.put('./index.html',idx.clone());await cache.put('./',idx.clone());}
-      }catch(e){}
-      // Ostale datoteke normalno
-      try{await cache.addAll(CACHE_FILES.filter(f=>f!=='./'&&f!=='./index.html'));}catch(e){}
-    }).then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.allSettled(CORE_FILES.map(async path => {
+      try {
+        const response = await fetch(path, { cache: 'reload' });
+        if (response.ok) await cache.put(path, response.clone());
+      } catch (_) {
+        // Posamezna manjkajoča datoteka ne sme preprečiti namestitve SW.
+      }
+    }));
+    await self.skipWaiting();
+  })());
 });
 
-// === ACTIVATE: počistimo stare cache ===
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      )
-    ).then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    await Promise.all(names.filter(name => name !== CACHE_NAME).map(name => caches.delete(name)));
+    await self.clients.claim();
+  })());
 });
 
-// === FETCH: cache-first strategy za offline ===
 self.addEventListener('fetch', event => {
-  // Ne cachiramo non-GET
-  if (event.request.method !== 'GET') return;
-  const url = event.request.url;
-  // Ne cachiramo Google Sheets API klicev (sync)
-  if (url.includes('script.google.com') || url.includes('googleusercontent.com')) return;
+  const request = event.request;
+  if (request.method !== 'GET') return;
 
-  // NETWORK-FIRST za HTML/navigacijo in sw.js → vedno najnovejša koda ko si online
-  const isHTML = event.request.mode === 'navigate' || url.endsWith('/') || url.endsWith('/index.html') || url.endsWith('index.html');
-  if (isHTML) {
-    event.respondWith(
-      fetch(event.request, { cache: 'no-store' }).then(resp => {
-        const clone = resp.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(()=>{});
-        return resp;
-      }).catch(() =>
-        caches.match(event.request).then(c => c || caches.match('./index.html'))
-      )
-    );
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  event.respondWith((async () => {
+    try {
+      // Network-first prepreči, da bi GitHub Pages predolgo kazal star index.html.
+      const response = await fetch(request, { cache: 'no-store' });
+      if (response && response.ok) {
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(request, response.clone()).catch(() => {});
+      }
+      return response;
+    } catch (_) {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+
+      if (request.mode === 'navigate') {
+        const fallback = await caches.match('./index.html');
+        if (fallback) return fallback;
+      }
+
+      return new Response('Aplikacija trenutno ni dosegljiva brez povezave.', {
+        status: 503,
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      });
+    }
+  })());
+});
+
+self.addEventListener('message', event => {
+  const msg = event.data || {};
+
+  if (msg.type === 'SKIP_WAITING') {
+    self.skipWaiting();
     return;
   }
 
-  // CACHE-FIRST za ostalo (ikone, CDN datoteke)
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(resp => {
-        if (!resp || resp.status !== 200 || resp.type === 'error') return resp;
-        const respClone = resp.clone();
-        caches.open(CACHE_NAME).then(cache => {
-          if (url.startsWith('https://cdn') || url.startsWith('https://cdnjs')) {
-            cache.put(event.request, respClone);
-          }
-        });
-        return resp;
-      }).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
-    })
-  );
-});
+  if (msg.type === 'CANCEL_REST_END' && msg.id) {
+    const timer = restTimers.get(msg.id);
+    if (timer) clearTimeout(timer);
+    restTimers.delete(msg.id);
+    return;
+  }
 
-// === SCHEDULED NOTIFICATIONS — glavno za rest timer ===
-// Map active timerov, da jih lahko prekličemo
-const activeTimers = new Map();
+  if (msg.type === 'SCHEDULE_REST_END' && msg.id) {
+    const previous = restTimers.get(msg.id);
+    if (previous) clearTimeout(previous);
 
-self.addEventListener('message', event => {
-  const data = event.data || {};
-
-  if (data.type === 'SCHEDULE_REST_END') {
-    const { id, delayMs, label } = data;
-    // Prekliči obstoječ timer s tem id-jem
-    if (activeTimers.has(id)) {
-      clearTimeout(activeTimers.get(id));
-    }
-    // Drži SW živ z waitUntil + setTimeout (deluje za odmore do ~5min)
-    const promise = new Promise(resolve => {
-      const tid = setTimeout(() => {
-        self.registration.showNotification('⏰ Konec odmora!', {
-          body: label || 'Naslednja serija — gremo!',
-          tag: 'workout-rest-' + id,
+    const delayMs = Math.max(0, Math.min(Number(msg.delayMs) || 0, 60 * 60 * 1000));
+    const timer = setTimeout(async () => {
+      restTimers.delete(msg.id);
+      try {
+        await self.registration.showNotification('⏰ Konec odmora!', {
+          body: String(msg.label || 'Naslednja serija — gremo!'),
+          tag: 'workout-rest',
           renotify: true,
+          vibrate: [400, 150, 400, 150, 600],
           requireInteraction: true,
-          vibrate: [600, 200, 600, 200, 800, 200, 600],
-          silent: false,
           icon: './icon-192.png',
           badge: './icon-192.png',
-          actions: [
-            { action: 'open', title: '💪 Naprej' }
-          ],
           data: { url: './' }
-        }).then(() => {
-          activeTimers.delete(id);
-          resolve();
-        }).catch(resolve);
-      }, delayMs);
-      activeTimers.set(id, tid);
-    });
-    event.waitUntil(promise);
-  }
+        });
+      } catch (_) {}
+    }, delayMs);
 
-  if (data.type === 'CANCEL_REST_END') {
-    const { id } = data;
-    if (activeTimers.has(id)) {
-      clearTimeout(activeTimers.get(id));
-      activeTimers.delete(id);
-    }
-  }
-
-  if (data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+    restTimers.set(msg.id, timer);
   }
 });
 
-// === KLIK NA NOTIFIKACIJO ===
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || './';
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      // Če je app že odprt, focus
-      for (const client of clientList) {
-        if (client.url.includes('workout') && 'focus' in client) {
-          return client.focus();
-        }
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windows) {
+      if ('focus' in client) {
+        await client.focus();
+        return;
       }
-      // Sicer odpri
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(url);
-      }
-    })
-  );
+    }
+    if (self.clients.openWindow) await self.clients.openWindow('./');
+  })());
 });
