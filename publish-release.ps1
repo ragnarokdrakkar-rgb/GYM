@@ -1,15 +1,43 @@
-param(
-    [switch]$SkipBuild
-)
-
 $ErrorActionPreference = 'Stop'
 
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -LiteralPath $ProjectRoot
 
 $Repository = 'ragnarokdrakkar-rgb/GYM'
+$Branch = 'main'
 $BuildFile = Join-Path $ProjectRoot 'build-release.bat'
 $ReleaseDirectory = Join-Path $ProjectRoot 'release'
+
+
+# Poisci GitHub CLI tudi takrat, ko nova PATH nastavitev ni vidna PowerShellu.
+$GhExe = $null
+$GhCommand = Get-Command gh.exe -ErrorAction SilentlyContinue
+
+if ($GhCommand) {
+    $GhExe = $GhCommand.Source
+}
+
+if (-not $GhExe) {
+    $GhCandidates = @(
+        'C:\Program Files\GitHub CLI\gh.exe',
+        (Join-Path $env:LOCALAPPDATA 'Programs\GitHub CLI\gh.exe'),
+        (Join-Path $env:ProgramFiles 'GitHub CLI\gh.exe')
+    )
+
+    foreach ($Candidate in $GhCandidates) {
+        if ($Candidate -and (Test-Path -LiteralPath $Candidate)) {
+            $GhExe = $Candidate
+            break
+        }
+    }
+}
+
+if (-not $GhExe) {
+    Write-Host ''
+    Write-Host 'NAPAKA: GitHub CLI gh.exe ni bil najden.' -ForegroundColor Red
+    Write-Host 'Preveri z ukazom: where gh'
+    exit 1
+}
 
 function Stop-WithMessage {
     param([string]$Message)
@@ -19,64 +47,179 @@ function Stop-WithMessage {
     exit 1
 }
 
-try {
-    & gh --version | Out-Null
-} catch {
-    Stop-WithMessage 'GitHub CLI (gh) ni namescen ali ni v PATH.'
+function Invoke-Native {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$File,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments,
+
+        [Parameter(Mandatory = $true)]
+        [string]$FailureMessage
+    )
+
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+
+    & $File @Arguments
+    $ExitCode = $LASTEXITCODE
+
+    $ErrorActionPreference = $PreviousPreference
+
+    if ($ExitCode -ne 0) {
+        Stop-WithMessage "$FailureMessage Exit code: $ExitCode"
+    }
 }
 
-if ($LASTEXITCODE -ne 0) {
-    Stop-WithMessage 'GitHub CLI (gh) ni namescen ali ni v PATH.'
+function Invoke-Cmd {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Command,
+
+        [Parameter(Mandatory = $true)]
+        [string]$FailureMessage
+    )
+
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+
+    & cmd.exe /d /c $Command
+    $ExitCode = $LASTEXITCODE
+
+    $ErrorActionPreference = $PreviousPreference
+
+    if ($ExitCode -ne 0) {
+        Stop-WithMessage "$FailureMessage Exit code: $ExitCode"
+    }
+}
+
+function Test-ReleaseExists {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Tag
+    )
+
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+
+    & $script:GhExe release view $Tag --repo $Repository *> $null
+    $ExitCode = $LASTEXITCODE
+
+    $ErrorActionPreference = $PreviousPreference
+
+    return ($ExitCode -eq 0)
+}
+
+function Get-GitLines {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Command
+    )
+
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+
+    $Output = @(& cmd.exe /d /c $Command)
+    $ExitCode = $LASTEXITCODE
+
+    $ErrorActionPreference = $PreviousPreference
+
+    if ($ExitCode -ne 0) {
+        Stop-WithMessage "Git ukaz ni uspel: $Command"
+    }
+
+    return @(
+        $Output |
+        ForEach-Object { [string]$_ } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+}
+
+if (-not (Test-Path -LiteralPath $BuildFile)) {
+    Stop-WithMessage "build-release.bat ni najden: $BuildFile"
 }
 
 Write-Host ''
-Write-Host 'Preverjam GitHub prijavo ...' -ForegroundColor Cyan
+Write-Host ("GitHub CLI: " + $GhExe) -ForegroundColor DarkGray
 
-& cmd.exe /d /c "gh auth status >nul 2>&1"
+$PreviousPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+
+& $GhExe auth status *> $null
 $AuthExitCode = $LASTEXITCODE
+
+$ErrorActionPreference = $PreviousPreference
 
 if ($AuthExitCode -ne 0) {
     Stop-WithMessage 'GitHub prijava ni veljavna. Zazeni: gh auth login'
 }
 
-$BuildStarted = $null
+Invoke-Cmd `
+    -Command 'git rev-parse --is-inside-work-tree >nul 2>&1' `
+    -FailureMessage 'Ta mapa ni Git repozitorij.'
 
-if (-not $SkipBuild) {
-    if (-not (Test-Path -LiteralPath $BuildFile)) {
-        Stop-WithMessage "build-release.bat ni najden: $BuildFile"
+$CurrentBranchLines = Get-GitLines -Command 'git branch --show-current'
+$CurrentBranch = $CurrentBranchLines | Select-Object -First 1
+
+if ($CurrentBranch -ne $Branch) {
+    Stop-WithMessage "Aktivna veja je '$CurrentBranch'. Pricakovana veja je '$Branch'."
+}
+
+Write-Host ''
+Write-Host '=== VAREN BUILD + COMMIT + PUSH + RELEASE ===' -ForegroundColor Cyan
+Write-Host "Repozitorij: $Repository"
+Write-Host "Veja: $Branch"
+
+$InitialChanges = Get-GitLines -Command 'git status --short'
+
+if ($InitialChanges.Count -gt 0) {
+    Write-Host ''
+    Write-Host 'Trenutne lokalne spremembe:' -ForegroundColor Yellow
+    $InitialChanges | ForEach-Object { Write-Host $_ }
+
+    $ContinueWithChanges = Read-Host 'Vkljucim te spremembe v novo izdajo? (D/N)'
+
+    if ($ContinueWithChanges -notmatch '^(d|da|y|yes)$') {
+        Stop-WithMessage 'Postopek je bil preklican. Nobena sprememba ni bila commitana.'
     }
+}
 
-    Write-Host ''
-    Write-Host '=== BUILD + GITHUB RELEASE ===' -ForegroundColor Cyan
-    Write-Host 'Build skripta bo zdaj vprasala za novo verzijo.'
-    Write-Host ''
+Write-Host ''
+Write-Host 'Osvezujem vejo main ...' -ForegroundColor Cyan
 
-    $BuildStarted = Get-Date
+Invoke-Native `
+    -File 'git' `
+    -Arguments @('pull', '--ff-only', 'origin', $Branch) `
+    -FailureMessage 'Git pull ni uspel. Preveri lokalne spremembe ali oddaljeno vejo.'
 
-    & $BuildFile
-    $BuildExitCode = $LASTEXITCODE
+Write-Host ''
+Write-Host 'Zaganjam release build ...' -ForegroundColor Cyan
+Write-Host 'Vnesi novo verzijo, na primer 1.0.12.'
+Write-Host ''
 
-    if ($BuildExitCode -ne 0) {
-        Stop-WithMessage "Build ni uspel. Exit code: $BuildExitCode"
-    }
-} else {
-    Write-Host ''
-    Write-Host '=== OBJAVA OBSTOJECEGA BUILDA ===' -ForegroundColor Cyan
-    Write-Host 'Build je preskocen. Uporabljen bo najnovejsi APK iz release mape.'
+$BuildStarted = Get-Date
+
+$PreviousPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+
+& $BuildFile
+$BuildExitCode = $LASTEXITCODE
+
+$ErrorActionPreference = $PreviousPreference
+
+if ($BuildExitCode -ne 0) {
+    Stop-WithMessage "Build ni uspel. Exit code: $BuildExitCode"
 }
 
 if (-not (Test-Path -LiteralPath $ReleaseDirectory)) {
-    Stop-WithMessage "Release mapa ni bila najdena: $ReleaseDirectory"
+    Stop-WithMessage "Release mapa ni bila ustvarjena: $ReleaseDirectory"
 }
 
-$Apk = $null
-
-if ($BuildStarted) {
-    $Apk = Get-ChildItem -LiteralPath $ReleaseDirectory -File -Filter 'Workout-Tracker-v*.apk' |
-        Where-Object { $_.LastWriteTime -ge $BuildStarted.AddSeconds(-5) } |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -First 1
-}
+$Apk = Get-ChildItem -LiteralPath $ReleaseDirectory -File -Filter 'Workout-Tracker-v*.apk' |
+    Where-Object { $_.LastWriteTime -ge $BuildStarted.AddSeconds(-5) } |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1
 
 if (-not $Apk) {
     $Apk = Get-ChildItem -LiteralPath $ReleaseDirectory -File -Filter 'Workout-Tracker-v*.apk' |
@@ -85,20 +228,20 @@ if (-not $Apk) {
 }
 
 if (-not $Apk) {
-    Stop-WithMessage 'V release mapi ni bil najden Workout-Tracker APK.'
+    Stop-WithMessage 'Po buildu ni bil najden Workout-Tracker APK.'
 }
 
-$Match = [regex]::Match(
+$VersionMatch = [regex]::Match(
     $Apk.Name,
     '^Workout-Tracker-v(\d+\.\d+\.\d+)\.apk$',
     [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
 )
 
-if (-not $Match.Success) {
+if (-not $VersionMatch.Success) {
     Stop-WithMessage "Iz imena APK ni mogoce prebrati verzije: $($Apk.Name)"
 }
 
-$Version = $Match.Groups[1].Value
+$Version = $VersionMatch.Groups[1].Value
 $Tag = 'v' + $Version
 $ShaFile = Join-Path $ReleaseDirectory ("Workout-Tracker-v{0}-SHA256.txt" -f $Version)
 
@@ -106,25 +249,80 @@ if (-not (Test-Path -LiteralPath $ShaFile)) {
     Stop-WithMessage "SHA256 datoteka ni najdena: $ShaFile"
 }
 
-Write-Host ''
-Write-Host ("Zaznana verzija: {0}" -f $Version) -ForegroundColor Green
-Write-Host ("APK: {0}" -f $Apk.FullName)
-Write-Host ("SHA: {0}" -f $ShaFile)
-
-# Pri neobstojecem releasu gh vrne exit code 1 in tekst "release not found".
-# Preverjanje izvedemo skozi cmd.exe, da PowerShell tega ne spremeni v terminating error.
-$CheckCommand = 'gh release view "{0}" --repo "{1}" >nul 2>&1' -f $Tag, $Repository
-& cmd.exe /d /c $CheckCommand
-$ReleaseViewExitCode = $LASTEXITCODE
-
-if ($ReleaseViewExitCode -eq 0) {
+if (Test-ReleaseExists -Tag $Tag) {
     Stop-WithMessage "GitHub Release $Tag ze obstaja. Uporabi visjo verzijo."
 }
 
-$Confirm = Read-Host "Objavim $Tag kot najnovejsi GitHub Release? (D/N)"
+Write-Host ''
+Write-Host "Zaznana verzija: $Version" -ForegroundColor Green
+Write-Host "APK: $($Apk.FullName)"
+Write-Host "SHA: $ShaFile"
 
-if ($Confirm -notmatch '^(d|da|y|yes)$') {
-    Stop-WithMessage 'Objava je bila preklicana. APK je ostal v release mapi.'
+Write-Host ''
+Write-Host 'Pripravljam Git spremembe ...' -ForegroundColor Cyan
+
+Invoke-Native `
+    -File 'git' `
+    -Arguments @('add', '-A') `
+    -FailureMessage 'git add ni uspel.'
+
+$StagedFiles = Get-GitLines -Command 'git diff --cached --name-only'
+
+$ForbiddenPatterns = @(
+    '(^|/)node_modules/',
+    '(^|/)www/',
+    '(^|/)release/',
+    '(^|/)STABLE/',
+    '(^|/)\.idea/',
+    '(^|/)local\.properties$',
+    '(^|/)keystore\.properties$',
+    '\.jks$',
+    '\.keystore$',
+    '\.bak$'
+)
+
+$ForbiddenFiles = @()
+
+foreach ($File in $StagedFiles) {
+    foreach ($Pattern in $ForbiddenPatterns) {
+        if ($File -match $Pattern) {
+            $ForbiddenFiles += $File
+            break
+        }
+    }
+}
+
+if ($ForbiddenFiles.Count -gt 0) {
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    & git reset
+    $ErrorActionPreference = $PreviousPreference
+
+    Write-Host ''
+    Write-Host 'Prepovedane datoteke:' -ForegroundColor Red
+    $ForbiddenFiles | Sort-Object -Unique | ForEach-Object { Write-Host $_ }
+
+    Stop-WithMessage 'Commit je bil blokiran. Datoteke so bile odstranjene iz staginga.'
+}
+
+Write-Host ''
+Write-Host 'Datoteke za commit:' -ForegroundColor Yellow
+
+if ($StagedFiles.Count -eq 0) {
+    Write-Host '(ni sprememb za commit)'
+} else {
+    $StagedFiles | ForEach-Object { Write-Host $_ }
+}
+
+$PublishConfirm = Read-Host "Commitam, potisnem in objavim $Tag? (D/N)"
+
+if ($PublishConfirm -notmatch '^(d|da|y|yes)$') {
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    & git reset
+    $ErrorActionPreference = $PreviousPreference
+
+    Stop-WithMessage 'Objava je bila preklicana. Build je ostal v release mapi.'
 }
 
 $ChangeNote = Read-Host 'Kaj je novega? (Enter za splosni opis)'
@@ -132,6 +330,21 @@ $ChangeNote = Read-Host 'Kaj je novega? (Enter za splosni opis)'
 if ([string]::IsNullOrWhiteSpace($ChangeNote)) {
     $ChangeNote = 'Stabilna Android posodobitev aplikacije Workout Tracker.'
 }
+
+if ($StagedFiles.Count -gt 0) {
+    Invoke-Native `
+        -File 'git' `
+        -Arguments @('commit', '-m', "Release $Tag") `
+        -FailureMessage 'Git commit ni uspel.'
+} else {
+    Write-Host ''
+    Write-Host 'Ni novih Git sprememb. Commit je preskocen.' -ForegroundColor Yellow
+}
+
+Invoke-Native `
+    -File 'git' `
+    -Arguments @('push', 'origin', $Branch) `
+    -FailureMessage 'Git push ni uspel. Release ni bil ustvarjen.'
 
 $NotesFile = Join-Path $ReleaseDirectory ("release-notes-v{0}.md" -f $Version)
 
@@ -156,24 +369,25 @@ $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 Write-Host ''
 Write-Host "Objavljam $Tag ..." -ForegroundColor Cyan
 
-$PreviousErrorActionPreference = $ErrorActionPreference
-$ErrorActionPreference = 'Continue'
-
-& gh release create $Tag `
-    $Apk.FullName `
-    $ShaFile `
-    --repo $Repository `
-    --target main `
-    --title "Workout Tracker $Tag" `
-    --notes-file $NotesFile `
-    --latest
-
-$CreateExitCode = $LASTEXITCODE
-$ErrorActionPreference = $PreviousErrorActionPreference
-
-if ($CreateExitCode -ne 0) {
-    Stop-WithMessage "GitHub Release ni bil uspesno objavljen. Exit code: $CreateExitCode"
-}
+Invoke-Native `
+    -File $GhExe `
+    -Arguments @(
+        'release',
+        'create',
+        $Tag,
+        $Apk.FullName,
+        $ShaFile,
+        '--repo',
+        $Repository,
+        '--target',
+        $Branch,
+        '--title',
+        "Workout Tracker $Tag",
+        '--notes-file',
+        $NotesFile,
+        '--latest'
+    ) `
+    -FailureMessage 'GitHub Release ni bil uspesno objavljen.'
 
 $StableDirectory = Join-Path $ProjectRoot ("STABLE\{0}" -f $Version)
 New-Item -ItemType Directory -Path $StableDirectory -Force | Out-Null
@@ -187,8 +401,8 @@ $BackupFiles = @(
     (Join-Path $ProjectRoot 'build-release.bat'),
     (Join-Path $ProjectRoot 'prepare-android.ps1'),
     (Join-Path $ProjectRoot 'update-version.ps1'),
-    $MyInvocation.MyCommand.Path,
-    (Join-Path $ProjectRoot 'publish-release.bat')
+    (Join-Path $ProjectRoot 'publish-release.bat'),
+    $MyInvocation.MyCommand.Path
 )
 
 foreach ($File in $BackupFiles) {
@@ -197,19 +411,12 @@ foreach ($File in $BackupFiles) {
     }
 }
 
-$PreviousErrorActionPreference = $ErrorActionPreference
-$ErrorActionPreference = 'Continue'
-$ReleaseUrl = & gh release view $Tag --repo $Repository --json url --jq '.url'
-$ViewCreatedExitCode = $LASTEXITCODE
-$ErrorActionPreference = $PreviousErrorActionPreference
-
-if ($ViewCreatedExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($ReleaseUrl)) {
-    $ReleaseUrl = "https://github.com/$Repository/releases/tag/$Tag"
-}
+$ReleaseUrl = "https://github.com/$Repository/releases/tag/$Tag"
 
 Write-Host ''
 Write-Host '========================================' -ForegroundColor Green
 Write-Host "USPESNO OBJAVLJENO: $Tag" -ForegroundColor Green
+Write-Host "Git veja: origin/$Branch"
 Write-Host "Release: $ReleaseUrl"
 Write-Host "Backup: $StableDirectory"
 Write-Host '========================================' -ForegroundColor Green
