@@ -8,7 +8,6 @@ $Branch = 'main'
 $BuildFile = Join-Path $ProjectRoot 'build-release.bat'
 $ReleaseDirectory = Join-Path $ProjectRoot 'release'
 
-
 # Poisci GitHub CLI tudi takrat, ko nova PATH nastavitev ni vidna PowerShellu.
 $GhExe = $null
 $GhCommand = Get-Command gh.exe -ErrorAction SilentlyContinue
@@ -72,10 +71,13 @@ function Invoke-Native {
     }
 }
 
-function Invoke-Cmd {
+function Get-NativeLines {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Command,
+        [string]$File,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments,
 
         [Parameter(Mandatory = $true)]
         [string]$FailureMessage
@@ -84,49 +86,13 @@ function Invoke-Cmd {
     $PreviousPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
 
-    & cmd.exe /d /c $Command
+    $Output = @(& $File @Arguments 2>&1)
     $ExitCode = $LASTEXITCODE
 
     $ErrorActionPreference = $PreviousPreference
 
     if ($ExitCode -ne 0) {
         Stop-WithMessage "$FailureMessage Exit code: $ExitCode"
-    }
-}
-
-function Test-ReleaseExists {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Tag
-    )
-
-    $PreviousPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-
-    & $script:GhExe release view $Tag --repo $Repository *> $null
-    $ExitCode = $LASTEXITCODE
-
-    $ErrorActionPreference = $PreviousPreference
-
-    return ($ExitCode -eq 0)
-}
-
-function Get-GitLines {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Command
-    )
-
-    $PreviousPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-
-    $Output = @(& cmd.exe /d /c $Command)
-    $ExitCode = $LASTEXITCODE
-
-    $ErrorActionPreference = $PreviousPreference
-
-    if ($ExitCode -ne 0) {
-        Stop-WithMessage "Git ukaz ni uspel: $Command"
     }
 
     return @(
@@ -136,6 +102,247 @@ function Get-GitLines {
     )
 }
 
+function Test-NativeSuccess {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$File,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+
+    & $File @Arguments *> $null
+    $ExitCode = $LASTEXITCODE
+
+    $ErrorActionPreference = $PreviousPreference
+
+    return ($ExitCode -eq 0)
+}
+
+function Test-ReleaseExists {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Tag
+    )
+
+    return Test-NativeSuccess `
+        -File $script:GhExe `
+        -Arguments @('release', 'view', $Tag, '--repo', $Repository)
+}
+
+function Get-ChangedFiles {
+    $Files = @()
+
+    $Files += Get-NativeLines `
+        -File 'git' `
+        -Arguments @('diff', '--name-only', '--no-renames') `
+        -FailureMessage 'Branje nestaged Git sprememb ni uspelo.'
+
+    $Files += Get-NativeLines `
+        -File 'git' `
+        -Arguments @('diff', '--cached', '--name-only', '--no-renames') `
+        -FailureMessage 'Branje staged Git sprememb ni uspelo.'
+
+    $Files += Get-NativeLines `
+        -File 'git' `
+        -Arguments @('ls-files', '--others', '--exclude-standard') `
+        -FailureMessage 'Branje novih Git datotek ni uspelo.'
+
+    return @(
+        $Files |
+        ForEach-Object { ([string]$_).Trim() } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Sort-Object -Unique
+    )
+}
+
+function Get-UntrackedFiles {
+    return @(
+        Get-NativeLines `
+            -File 'git' `
+            -Arguments @('ls-files', '--others', '--exclude-standard') `
+            -FailureMessage 'Branje novih Git datotek ni uspelo.' |
+        ForEach-Object { ([string]$_).Trim() } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Sort-Object -Unique
+    )
+}
+
+function Get-StagedFiles {
+    return @(
+        Get-NativeLines `
+            -File 'git' `
+            -Arguments @('diff', '--cached', '--name-only', '--no-renames') `
+            -FailureMessage 'Branje staged Git datotek ni uspelo.' |
+        ForEach-Object { ([string]$_).Trim() } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Sort-Object -Unique
+    )
+}
+
+function Get-UnsafeFiles {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]]$Files,
+
+        [string[]]$UntrackedFiles = @()
+    )
+
+    $ForbiddenPatterns = @(
+        '(^|/)node_modules(/|$)',
+        '(^|/)www(/|$)',
+        '(^|/)release(/|$)',
+        '(^|/)STABLE(/|$)',
+        '(^|/)\.idea(/|$)',
+        '(^|/)\.git(/|$)',
+        '(^|/)android/\.gradle(/|$)',
+        '(^|/)android/app/build(/|$)',
+        '(^|/)local\.properties$',
+        '(^|/)keystore\.properties$',
+        '(^|/)\.env($|\.)',
+        '\.jks$',
+        '\.keystore$',
+        '\.p12$',
+        '\.pfx$',
+        '\.pem$',
+        '\.key$',
+        '\.apk$',
+        '\.aab$',
+        '\.bak$',
+        '\.tmp$',
+        '\.log$',
+        '^(git|del|cd)$'
+    )
+
+    $AllowedRootFilesWithoutExtension = @(
+        'LICENSE',
+        'README',
+        'Dockerfile',
+        '.gitignore',
+        '.gitattributes'
+    )
+
+    $UntrackedLookup = @{}
+
+    foreach ($UntrackedFile in $UntrackedFiles) {
+        $UntrackedLookup[$UntrackedFile.Replace('\', '/')] = $true
+    }
+
+    $Unsafe = @()
+
+    foreach ($File in $Files) {
+        $Normalized = $File.Replace('\', '/')
+        $Blocked = $false
+
+        foreach ($Pattern in $ForbiddenPatterns) {
+            if ($Normalized -match $Pattern) {
+                $Unsafe += $File
+                $Blocked = $true
+                break
+            }
+        }
+
+        if ($Blocked) {
+            continue
+        }
+
+        if ($UntrackedLookup.ContainsKey($Normalized)) {
+            $IsRootFile = ($Normalized -notmatch '/')
+            $Extension = [System.IO.Path]::GetExtension($Normalized)
+
+            if (
+                $IsRootFile -and
+                [string]::IsNullOrWhiteSpace($Extension) -and
+                $AllowedRootFilesWithoutExtension -notcontains $Normalized
+            ) {
+                $Unsafe += $File
+            }
+        }
+    }
+
+    return @($Unsafe | Sort-Object -Unique)
+}
+
+function Show-FileList {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Title,
+
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]]$Files,
+
+        [string[]]$UntrackedFiles = @()
+    )
+
+    Write-Host ''
+    Write-Host $Title -ForegroundColor Yellow
+
+    if ($Files.Count -eq 0) {
+        Write-Host '(ni sprememb)'
+        return
+    }
+
+    $UntrackedLookup = @{}
+
+    foreach ($UntrackedFile in $UntrackedFiles) {
+        $UntrackedLookup[$UntrackedFile.Replace('\', '/')] = $true
+    }
+
+    foreach ($File in $Files) {
+        $Normalized = $File.Replace('\', '/')
+
+        if ($UntrackedLookup.ContainsKey($Normalized)) {
+            Write-Host ("[NOVA] " + $File) -ForegroundColor Magenta
+        } else {
+            Write-Host ("       " + $File)
+        }
+    }
+}
+
+function Reset-Staging {
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+
+    & git reset --quiet
+    $ExitCode = $LASTEXITCODE
+
+    $ErrorActionPreference = $PreviousPreference
+
+    if ($ExitCode -ne 0) {
+        Stop-WithMessage 'Git staginga ni bilo mogoce ponastaviti.'
+    }
+}
+
+function Confirm-UntrackedFiles {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]]$UntrackedFiles
+    )
+
+    if ($UntrackedFiles.Count -eq 0) {
+        return
+    }
+
+    Write-Host ''
+    Write-Host 'NOVE DATOTEKE ZAHTEVAJO DODATNO POTRDITEV.' -ForegroundColor Magenta
+    Write-Host 'Za vsako novo datoteko vpisi njeno TOCNO pot.' -ForegroundColor Magenta
+
+    foreach ($File in $UntrackedFiles) {
+        Write-Host ''
+        $TypedPath = Read-Host "Potrdi novo datoteko: $File"
+
+        if ($TypedPath -cne $File) {
+            Stop-WithMessage "Nova datoteka '$File' ni bila potrjena. Nic ni bilo commitano."
+        }
+    }
+}
+
 if (-not (Test-Path -LiteralPath $BuildFile)) {
     Stop-WithMessage "build-release.bat ni najden: $BuildFile"
 }
@@ -143,42 +350,66 @@ if (-not (Test-Path -LiteralPath $BuildFile)) {
 Write-Host ''
 Write-Host ("GitHub CLI: " + $GhExe) -ForegroundColor DarkGray
 
-$PreviousPreference = $ErrorActionPreference
-$ErrorActionPreference = 'Continue'
-
-& $GhExe auth status *> $null
-$AuthExitCode = $LASTEXITCODE
-
-$ErrorActionPreference = $PreviousPreference
-
-if ($AuthExitCode -ne 0) {
+if (-not (Test-NativeSuccess -File $GhExe -Arguments @('auth', 'status'))) {
     Stop-WithMessage 'GitHub prijava ni veljavna. Zazeni: gh auth login'
 }
 
-Invoke-Cmd `
-    -Command 'git rev-parse --is-inside-work-tree >nul 2>&1' `
-    -FailureMessage 'Ta mapa ni Git repozitorij.'
+if (-not (Test-NativeSuccess -File 'git' -Arguments @('rev-parse', '--is-inside-work-tree'))) {
+    Stop-WithMessage 'Ta mapa ni Git repozitorij.'
+}
 
-$CurrentBranchLines = Get-GitLines -Command 'git branch --show-current'
-$CurrentBranch = $CurrentBranchLines | Select-Object -First 1
+$CurrentBranch = (
+    Get-NativeLines `
+        -File 'git' `
+        -Arguments @('branch', '--show-current') `
+        -FailureMessage 'Aktivne Git veje ni bilo mogoce prebrati.' |
+    Select-Object -First 1
+)
 
 if ($CurrentBranch -ne $Branch) {
     Stop-WithMessage "Aktivna veja je '$CurrentBranch'. Pricakovana veja je '$Branch'."
 }
 
+$OriginUrl = (
+    Get-NativeLines `
+        -File 'git' `
+        -Arguments @('remote', 'get-url', 'origin') `
+        -FailureMessage 'Git remote origin ni bil najden.' |
+    Select-Object -First 1
+)
+
+if ($OriginUrl -notmatch 'ragnarokdrakkar-rgb[/:]GYM(?:\.git)?$') {
+    Stop-WithMessage "Napačen Git remote origin: $OriginUrl"
+}
+
 Write-Host ''
-Write-Host '=== VAREN BUILD + COMMIT + PUSH + RELEASE ===' -ForegroundColor Cyan
+Write-Host '=== VAREN BUILD + IZRECEN STAGING + PUSH + RELEASE ===' -ForegroundColor Cyan
 Write-Host "Repozitorij: $Repository"
 Write-Host "Veja: $Branch"
 
-$InitialChanges = Get-GitLines -Command 'git status --short'
+$InitialFiles = Get-ChangedFiles
+$InitialUntrackedFiles = Get-UntrackedFiles
+$InitialUnsafeFiles = Get-UnsafeFiles `
+    -Files $InitialFiles `
+    -UntrackedFiles $InitialUntrackedFiles
 
-if ($InitialChanges.Count -gt 0) {
+if ($InitialUnsafeFiles.Count -gt 0) {
+    Show-FileList `
+        -Title 'BLOKIRANE ALI SUMNJIVE datoteke:' `
+        -Files $InitialUnsafeFiles `
+        -UntrackedFiles $InitialUntrackedFiles
+
+    Stop-WithMessage 'Odstrani ali premakni blokirane datoteke. Release se ni zagnal.'
+}
+
+Show-FileList `
+    -Title 'Trenutne lokalne spremembe:' `
+    -Files $InitialFiles `
+    -UntrackedFiles $InitialUntrackedFiles
+
+if ($InitialFiles.Count -gt 0) {
     Write-Host ''
-    Write-Host 'Trenutne lokalne spremembe:' -ForegroundColor Yellow
-    $InitialChanges | ForEach-Object { Write-Host $_ }
-
-    $ContinueWithChanges = Read-Host 'Vkljucim te spremembe v novo izdajo? (D/N)'
+    $ContinueWithChanges = Read-Host 'Nadaljujem z buildom teh sprememb? (D/N)'
 
     if ($ContinueWithChanges -notmatch '^(d|da|y|yes)$') {
         Stop-WithMessage 'Postopek je bil preklican. Nobena sprememba ni bila commitana.'
@@ -195,7 +426,7 @@ Invoke-Native `
 
 Write-Host ''
 Write-Host 'Zaganjam release build ...' -ForegroundColor Cyan
-Write-Host 'Vnesi novo verzijo, na primer 1.0.12.'
+Write-Host 'Vnesi novo verzijo, na primer 1.0.17.'
 Write-Host ''
 
 $BuildStarted = Get-Date
@@ -258,70 +489,73 @@ Write-Host "Zaznana verzija: $Version" -ForegroundColor Green
 Write-Host "APK: $($Apk.FullName)"
 Write-Host "SHA: $ShaFile"
 
+$FinalFiles = Get-ChangedFiles
+$FinalUntrackedFiles = Get-UntrackedFiles
+$FinalUnsafeFiles = Get-UnsafeFiles `
+    -Files $FinalFiles `
+    -UntrackedFiles $FinalUntrackedFiles
+
+if ($FinalUnsafeFiles.Count -gt 0) {
+    Show-FileList `
+        -Title 'BLOKIRANE ALI SUMNJIVE datoteke:' `
+        -Files $FinalUnsafeFiles `
+        -UntrackedFiles $FinalUntrackedFiles
+
+    Stop-WithMessage 'Commit je blokiran. Nobena datoteka ni bila staged.'
+}
+
+Show-FileList `
+    -Title 'KONCNI seznam datotek za release commit:' `
+    -Files $FinalFiles `
+    -UntrackedFiles $FinalUntrackedFiles
+
+if ($FinalFiles.Count -eq 0) {
+    Stop-WithMessage 'Po buildu ni Git sprememb za commit.'
+}
+
+Confirm-UntrackedFiles -UntrackedFiles $FinalUntrackedFiles
+
 Write-Host ''
-Write-Host 'Pripravljam Git spremembe ...' -ForegroundColor Cyan
+Write-Host 'Ponastavljam staging in dodajam samo potrjene datoteke ...' -ForegroundColor Cyan
 
-Invoke-Native `
-    -File 'git' `
-    -Arguments @('add', '-A') `
-    -FailureMessage 'git add ni uspel.'
+Reset-Staging
 
-$StagedFiles = Get-GitLines -Command 'git diff --cached --name-only'
+foreach ($File in $FinalFiles) {
+    Invoke-Native `
+        -File 'git' `
+        -Arguments @('add', '-A', '--', $File) `
+        -FailureMessage "Datoteke ni bilo mogoce dodati v staging: $File"
+}
 
-$ForbiddenPatterns = @(
-    '(^|/)node_modules/',
-    '(^|/)www/',
-    '(^|/)release/',
-    '(^|/)STABLE/',
-    '(^|/)\.idea/',
-    '(^|/)local\.properties$',
-    '(^|/)keystore\.properties$',
-    '\.jks$',
-    '\.keystore$',
-    '\.bak$'
+$StagedFiles = Get-StagedFiles
+$StageDifference = @(
+    Compare-Object `
+        -ReferenceObject @($FinalFiles) `
+        -DifferenceObject @($StagedFiles)
 )
 
-$ForbiddenFiles = @()
-
-foreach ($File in $StagedFiles) {
-    foreach ($Pattern in $ForbiddenPatterns) {
-        if ($File -match $Pattern) {
-            $ForbiddenFiles += $File
-            break
-        }
-    }
-}
-
-if ($ForbiddenFiles.Count -gt 0) {
-    $PreviousPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    & git reset
-    $ErrorActionPreference = $PreviousPreference
+if ($StageDifference.Count -gt 0) {
+    Reset-Staging
 
     Write-Host ''
-    Write-Host 'Prepovedane datoteke:' -ForegroundColor Red
-    $ForbiddenFiles | Sort-Object -Unique | ForEach-Object { Write-Host $_ }
+    Write-Host 'Razlika med potrjenimi in staged datotekami:' -ForegroundColor Red
+    $StageDifference | ForEach-Object {
+        Write-Host ("$($_.SideIndicator) $($_.InputObject)")
+    }
 
-    Stop-WithMessage 'Commit je bil blokiran. Datoteke so bile odstranjene iz staginga.'
+    Stop-WithMessage 'Staging se ne ujema s potrjenim seznamom. Nic ni bilo commitano.'
 }
 
 Write-Host ''
-Write-Host 'Datoteke za commit:' -ForegroundColor Yellow
+Write-Host 'STAGED DATOTEKE:' -ForegroundColor Yellow
+$StagedFiles | ForEach-Object { Write-Host $_ }
 
-if ($StagedFiles.Count -eq 0) {
-    Write-Host '(ni sprememb za commit)'
-} else {
-    $StagedFiles | ForEach-Object { Write-Host $_ }
-}
+Write-Host ''
+Write-Host 'Za objavo vpisi TOCNO besedo: OBJAVI' -ForegroundColor Cyan
+$PublishConfirm = Read-Host "Objavim $Tag"
 
-$PublishConfirm = Read-Host "Commitam, potisnem in objavim $Tag? (D/N)"
-
-if ($PublishConfirm -notmatch '^(d|da|y|yes)$') {
-    $PreviousPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    & git reset
-    $ErrorActionPreference = $PreviousPreference
-
+if ($PublishConfirm -cne 'OBJAVI') {
+    Reset-Staging
     Stop-WithMessage 'Objava je bila preklicana. Build je ostal v release mapi.'
 }
 
@@ -331,15 +565,10 @@ if ([string]::IsNullOrWhiteSpace($ChangeNote)) {
     $ChangeNote = 'Stabilna Android posodobitev aplikacije Workout Tracker.'
 }
 
-if ($StagedFiles.Count -gt 0) {
-    Invoke-Native `
-        -File 'git' `
-        -Arguments @('commit', '-m', "Release $Tag") `
-        -FailureMessage 'Git commit ni uspel.'
-} else {
-    Write-Host ''
-    Write-Host 'Ni novih Git sprememb. Commit je preskocen.' -ForegroundColor Yellow
-}
+Invoke-Native `
+    -File 'git' `
+    -Arguments @('commit', '-m', "Release $Tag") `
+    -FailureMessage 'Git commit ni uspel.'
 
 Invoke-Native `
     -File 'git' `
@@ -397,12 +626,19 @@ $BackupFiles = @(
     $ShaFile,
     $NotesFile,
     (Join-Path $ProjectRoot 'index.html'),
+    (Join-Path $ProjectRoot 'manifest.json'),
+    (Join-Path $ProjectRoot 'package.json'),
+    (Join-Path $ProjectRoot 'package-lock.json'),
     (Join-Path $ProjectRoot 'js\app-update.js'),
+    (Join-Path $ProjectRoot 'js\rest-native-notifications.js'),
+    (Join-Path $ProjectRoot 'js\ui-safe-v1.js'),
     (Join-Path $ProjectRoot 'build-release.bat'),
     (Join-Path $ProjectRoot 'prepare-android.ps1'),
     (Join-Path $ProjectRoot 'update-version.ps1'),
     (Join-Path $ProjectRoot 'publish-release.bat'),
-    $MyInvocation.MyCommand.Path
+    $MyInvocation.MyCommand.Path,
+    (Join-Path $ProjectRoot 'android\app\build.gradle'),
+    (Join-Path $ProjectRoot 'android\app\src\main\AndroidManifest.xml')
 )
 
 foreach ($File in $BackupFiles) {
