@@ -1339,7 +1339,7 @@ function confirmRestEdit(){
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='6.0.1';
+const APP_VERSION='6.0.2';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];
@@ -2408,13 +2408,56 @@ function confirmAddExercise(name,muscle,isMain){
   const di=parseInt(popup.dataset.di);
   if(isNaN(di))return;
   ensureDayLists();
-  const arr=(getDayLists()||{})[di]||[];
+
+  const all=getDayLists()||{};
+  const arr=all[di]||[];
   const cN=getCyc().num;
-  if(arr.some(x=>dispNameForItem(x,cN,cw).toLowerCase()===name.toLowerCase()||x.n0.toLowerCase()===name.toLowerCase())){
-    toast('Ta vaja že obstaja na tem dnevu','err');return;
+  const wanted=String(name||'').trim().toLowerCase();
+  const existingIdx=arr.findIndex(x=>{
+    const shown=String(dispNameForItem(x,cN,cw)||'').trim().toLowerCase();
+    const original=String(x.n0||'').trim().toLowerCase();
+    return shown===wanted||original===wanted;
+  });
+
+  if(existingIdx>=0){
+    const existing=arr[existingIdx];
+    const exKey=sdk(cN,cw,di,existingIdx);
+    const hidden=getHiddenEx();
+
+    // Vaja je že v programu, vendar je bila odstranjena samo za ta teden.
+    // Namesto napačnega opozorila jo ob izbiri preprosto povrni.
+    if(hidden[exKey]){
+      delete hidden[exKey];
+      saveHiddenEx(hidden);
+      closeAddExercise();
+      showDay(di);
+      toast('↩ Vaja povrnjena za ta teden','ok');
+      return;
+    }
+
+    // Vaja je arhivirana v program builderju: ponovno jo aktiviraj.
+    if(existing.programDisabled){
+      existing.programDisabled=false;
+      all[di]=arr;
+      saveDayLists(all);
+      closeAddExercise();
+      showDay(di);
+      toast('↩ Vaja ponovno aktivirana','ok');
+      return;
+    }
+
+    toast('Ta vaja je že vidna na tem dnevu','err');
+    return;
   }
+
+  const db=EXERCISE_DB.find(x=>String(x.n).toLowerCase()===wanted);
+  const custom=getCustomExercises().find(x=>String(x.n).toLowerCase()===wanted);
+  const isCompound=(db&&db.c==='compound')||(custom&&custom.cat==='compound')||!!isMain;
+  const desc=(db&&db.d)||(custom&&custom.desc)||`${muscle} — moja dodatna vaja`;
+  const rest=isCompound?120:75;
+
   mutateDayList(di,list=>{
-    list.push({id:_newExId(name),n0:name,m:!!isMain,r:90,rl:'90s',d:`${muscle} — moja dodatna vaja`,tip:'',extra:true});
+    list.push({id:_newExId(name),n0:name,m:!!isMain,r:rest,rl:rest+'s',d:desc,tip:'',extra:true,progMode:'auto'});
   });
   closeAddExercise();
   showDay(di);
