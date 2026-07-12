@@ -681,6 +681,8 @@ $BackupFiles = @(
     $ShaFile,
     $NotesFile,
     (Join-Path $ProjectRoot 'index.html'),
+    (Join-Path $ProjectRoot 'css\app.css'),
+    (Join-Path $ProjectRoot 'sw.js'),
     (Join-Path $ProjectRoot 'manifest.json'),
     (Join-Path $ProjectRoot 'package.json'),
     (Join-Path $ProjectRoot 'package-lock.json'),
