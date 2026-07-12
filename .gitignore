@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Generated app output
+www/
+release/
+STABLE/
+STABLE-*.html
+*.bak
+index.html.before-*.bak
+
+# Obsolete local patch script
+patch-native-notifications.ps1
+
+# Android generated files
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+android/captures/
+android/.cxx/
+android/app/.cxx/
+android/local.properties
+android/**/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+
+# Signing and secrets
+*.jks
+*.keystore
+keystore.properties
+**/keystore.properties
+
+# Editor and OS files
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.log
