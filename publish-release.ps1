@@ -85,21 +85,48 @@ function Get-NativeLines {
 
     $PreviousPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
+    $StandardErrorFile = [System.IO.Path]::GetTempFileName()
 
-    $Output = @(& $File @Arguments 2>&1)
-    $ExitCode = $LASTEXITCODE
+    try {
+        # Zajemi SAMO stdout. Git opozorila iz stderr ne smejo postati
+        # imena datotek za staging.
+        $Output = @(& $File @Arguments 2> $StandardErrorFile)
+        $ExitCode = $LASTEXITCODE
 
-    $ErrorActionPreference = $PreviousPreference
+        $StandardError = @()
 
-    if ($ExitCode -ne 0) {
-        Stop-WithMessage "$FailureMessage Exit code: $ExitCode"
+        if (Test-Path -LiteralPath $StandardErrorFile) {
+            $StandardError = @(
+                Get-Content -LiteralPath $StandardErrorFile -ErrorAction SilentlyContinue |
+                ForEach-Object { [string]$_ } |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            )
+        }
+
+        if ($ExitCode -ne 0) {
+            if ($StandardError.Count -gt 0) {
+                Write-Host ''
+                $StandardError | ForEach-Object {
+                    Write-Host $_ -ForegroundColor DarkYellow
+                }
+            }
+
+            Stop-WithMessage "$FailureMessage Exit code: $ExitCode"
+        }
+
+        return @(
+            $Output |
+            ForEach-Object { [string]$_ } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        )
     }
+    finally {
+        $ErrorActionPreference = $PreviousPreference
 
-    return @(
-        $Output |
-        ForEach-Object { [string]$_ } |
-        Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-    )
+        if (Test-Path -LiteralPath $StandardErrorFile) {
+            Remove-Item -LiteralPath $StandardErrorFile -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 function Test-NativeSuccess {
@@ -521,10 +548,38 @@ Write-Host 'Ponastavljam staging in dodajam samo potrjene datoteke ...' -Foregro
 Reset-Staging
 
 foreach ($File in $FinalFiles) {
-    Invoke-Native `
-        -File 'git' `
-        -Arguments @('add', '-A', '--', $File) `
-        -FailureMessage "Datoteke ni bilo mogoce dodati v staging: $File"
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $StageErrorFile = [System.IO.Path]::GetTempFileName()
+
+    try {
+        & git add -A -- $File 2> $StageErrorFile
+        $StageExitCode = $LASTEXITCODE
+
+        if ($StageExitCode -ne 0) {
+            $StageError = @(
+                Get-Content -LiteralPath $StageErrorFile -ErrorAction SilentlyContinue
+            )
+
+            Reset-Staging
+
+            if ($StageError.Count -gt 0) {
+                Write-Host ''
+                $StageError | ForEach-Object {
+                    Write-Host $_ -ForegroundColor DarkYellow
+                }
+            }
+
+            Stop-WithMessage "Datoteke ni bilo mogoce dodati v staging: $File Exit code: $StageExitCode"
+        }
+    }
+    finally {
+        $ErrorActionPreference = $PreviousPreference
+
+        if (Test-Path -LiteralPath $StageErrorFile) {
+            Remove-Item -LiteralPath $StageErrorFile -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 $StagedFiles = Get-StagedFiles
@@ -632,6 +687,7 @@ $BackupFiles = @(
     (Join-Path $ProjectRoot 'js\app-update.js'),
     (Join-Path $ProjectRoot 'js\rest-native-notifications.js'),
     (Join-Path $ProjectRoot 'js\ui-safe-v1.js'),
+    (Join-Path $ProjectRoot 'js\workout\set-log.js'),
     (Join-Path $ProjectRoot 'build-release.bat'),
     (Join-Path $ProjectRoot 'prepare-android.ps1'),
     (Join-Path $ProjectRoot 'update-version.ps1'),

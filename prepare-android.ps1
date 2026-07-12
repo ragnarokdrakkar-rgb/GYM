@@ -13,6 +13,7 @@ $wwwDirectory = Split-Path -Parent $IndexFile
 $updateScriptFile = Join-Path $wwwDirectory 'js\app-update.js'
 $restNotificationFile = Join-Path $wwwDirectory 'js\rest-native-notifications.js'
 $uiSafeFile = Join-Path $wwwDirectory 'js\ui-safe-v1.js'
+$setLogFile = Join-Path $wwwDirectory 'js\workout\set-log.js'
 
 if (-not (Test-Path -LiteralPath $updateScriptFile)) {
     throw "Update skripta ni najdena: $updateScriptFile"
@@ -24,6 +25,10 @@ if (-not (Test-Path -LiteralPath $restNotificationFile)) {
 
 if (-not (Test-Path -LiteralPath $uiSafeFile)) {
     throw "Varna UI skripta ni najdena: $uiSafeFile"
+}
+
+if (-not (Test-Path -LiteralPath $setLogFile)) {
+    throw "RPE set log skripta ni najdena: $setLogFile"
 }
 
 $content = [System.IO.File]::ReadAllText($IndexFile)
@@ -77,7 +82,8 @@ $content = [regex]::Replace(
 $scriptTags = @(
     '<script src="js/app-update.js"></script>',
     '<script src="js/rest-native-notifications.js"></script>',
-    '<script src="js/ui-safe-v1.js"></script>'
+    '<script src="js/ui-safe-v1.js"></script>',
+    '<script src="js/workout/set-log.js"></script>'
 )
 
 foreach ($scriptTag in $scriptTags) {
