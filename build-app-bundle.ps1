@@ -11,6 +11,7 @@ $SourceFiles = @(
     (Join-Path $ProjectRoot 'src\app\ui-shell.js'),
     (Join-Path $ProjectRoot 'src\app\workout-model.js'),
     (Join-Path $ProjectRoot 'src\app\profile-strength.js'),
+    (Join-Path $ProjectRoot 'src\app\workout-ui.js'),
     (Join-Path $ProjectRoot 'src\app\main.js')
 )
 
@@ -89,7 +90,7 @@ finally {
 if (-not $Quiet) {
     Write-Host ''
     Write-Host 'APP BUNDLE: OK' -ForegroundColor Green
-    Write-Host 'Source vrstni red: ui-shell.js -> workout-model.js -> profile-strength.js -> main.js'
+    Write-Host 'Source vrstni red: ui-shell.js -> workout-model.js -> profile-strength.js -> workout-ui.js -> main.js'
     Write-Host 'Runtime datoteka: js/app.js'
     Write-Host ''
 }
