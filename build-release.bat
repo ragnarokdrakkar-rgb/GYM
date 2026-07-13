@@ -6,6 +6,7 @@ set "ANDROID_DIR=%ROOT%android"
 set "GRADLE_FILE=%ANDROID_DIR%\app\build.gradle"
 set "GRADLE_BACKUP=%ANDROID_DIR%\app\build.gradle.release-backup"
 set "VERSION_SCRIPT=%ROOT%update-version.ps1"
+set "BUNDLE_SCRIPT=%ROOT%build-app-bundle.ps1"
 
 set "KEYSTORE=C:\WorkoutTrackerKeys\workout-tracker-release.jks"
 set "KEY_PROPERTIES=C:\WorkoutTrackerKeys\keystore.properties"
@@ -48,6 +49,21 @@ if not exist "%GRADLE_FILE%" (
 if not exist "%VERSION_SCRIPT%" (
     echo NAPAKA: update-version.ps1 ni najden:
     echo %VERSION_SCRIPT%
+    goto :error
+)
+if not exist "%BUNDLE_SCRIPT%" (
+    echo NAPAKA: build-app-bundle.ps1 ni najden:
+    echo %BUNDLE_SCRIPT%
+    goto :error
+)
+
+echo.
+echo Sestavljam stabilni js\app.js iz source datotek ...
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%BUNDLE_SCRIPT%" -Quiet
+
+if errorlevel 1 (
+    echo NAPAKA: app bundle ni bil pravilno sestavljen.
     goto :error
 )
 
