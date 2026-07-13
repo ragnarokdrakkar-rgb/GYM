@@ -414,8 +414,8 @@ Write-Host '=== VAREN BUILD + IZRECEN STAGING + PUSH + RELEASE ===' -ForegroundC
 Write-Host "Repozitorij: $Repository"
 Write-Host "Veja: $Branch"
 
-$InitialFiles = Get-ChangedFiles
-$InitialUntrackedFiles = Get-UntrackedFiles
+$InitialFiles = @(Get-ChangedFiles)
+$InitialUntrackedFiles = @(Get-UntrackedFiles)
 $InitialUnsafeFiles = Get-UnsafeFiles `
     -Files $InitialFiles `
     -UntrackedFiles $InitialUntrackedFiles
@@ -516,8 +516,8 @@ Write-Host "Zaznana verzija: $Version" -ForegroundColor Green
 Write-Host "APK: $($Apk.FullName)"
 Write-Host "SHA: $ShaFile"
 
-$FinalFiles = Get-ChangedFiles
-$FinalUntrackedFiles = Get-UntrackedFiles
+$FinalFiles = @(Get-ChangedFiles)
+$FinalUntrackedFiles = @(Get-UntrackedFiles)
 $FinalUnsafeFiles = Get-UnsafeFiles `
     -Files $FinalFiles `
     -UntrackedFiles $FinalUntrackedFiles
@@ -686,8 +686,6 @@ $BackupFiles = @(
     (Join-Path $ProjectRoot 'js\data\exercise-swaps.js'),
     (Join-Path $ProjectRoot 'js\data\programs.js'),
     (Join-Path $ProjectRoot 'js\app.js'),
-    (Join-Path $ProjectRoot 'js\workout\engine.js'),
-    (Join-Path $ProjectRoot 'js\app-tail.js'),
     (Join-Path $ProjectRoot 'css\app.css'),
     (Join-Path $ProjectRoot 'sw.js'),
     (Join-Path $ProjectRoot 'manifest.json'),

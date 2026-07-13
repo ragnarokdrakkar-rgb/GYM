@@ -1,5 +1,5 @@
 /* Workout Tracker service worker v6.0.2 */
-const CACHE_NAME = 'workout-tracker-v6.0.2-css1-js1-core1-data1-state1-programs1-engine1';
+const CACHE_NAME = 'workout-tracker-v6.0.2-css1-js1-core1-data1-state1-programs1';
 const CORE_FILES = [
   './',
   './index.html',
@@ -8,8 +8,6 @@ const CORE_FILES = [
   './js/data/exercise-swaps.js',
   './js/data/programs.js',
   './js/app.js',
-  './js/workout/engine.js',
-  './js/app-tail.js',
   './css/app.css',
   './manifest.json',
   './icon-192.png',
