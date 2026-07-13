@@ -686,6 +686,8 @@ $BackupFiles = @(
     (Join-Path $ProjectRoot 'js\data\exercise-swaps.js'),
     (Join-Path $ProjectRoot 'js\data\programs.js'),
     (Join-Path $ProjectRoot 'js\app.js'),
+    (Join-Path $ProjectRoot 'js\workout\engine.js'),
+    (Join-Path $ProjectRoot 'js\app-tail.js'),
     (Join-Path $ProjectRoot 'css\app.css'),
     (Join-Path $ProjectRoot 'sw.js'),
     (Join-Path $ProjectRoot 'manifest.json'),
