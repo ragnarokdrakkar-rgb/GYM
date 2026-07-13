@@ -27,8 +27,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
 
         // Pri vsaki novi APK-verziji povečaj versionCode.
-        versionCode 38
-        versionName "1.0.33"
+        versionCode 39
+        versionName "1.0.34"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

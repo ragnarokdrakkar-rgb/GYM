@@ -706,6 +706,7 @@ $BackupFiles = @(
     (Join-Path $ProjectRoot 'js\workout\set-log.js'),
     (Join-Path $ProjectRoot 'build-app-bundle.ps1'),
     (Join-Path $ProjectRoot 'release-guard.ps1'),
+    (Join-Path $ProjectRoot 'audit-app-code.js'),
     (Join-Path $ProjectRoot 'build-release.bat'),
     (Join-Path $ProjectRoot 'prepare-android.ps1'),
     (Join-Path $ProjectRoot 'update-version.ps1'),

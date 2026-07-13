@@ -220,6 +220,7 @@ function Invoke-SourceGuard {
     $PrepareFile = Join-Path $ProjectRoot 'prepare-android.ps1'
     $BuildFile = Join-Path $ProjectRoot 'build-release.bat'
     $PublishFile = Join-Path $ProjectRoot 'publish-release.ps1'
+    $AuditFile = Join-Path $ProjectRoot 'audit-app-code.js'
     $PackageFile = Join-Path $ProjectRoot 'package.json'
     $GradleFile = Join-Path $ProjectRoot 'android\app\build.gradle'
     $ManifestFile = Join-Path $ProjectRoot 'android\app\src\main\AndroidManifest.xml'
@@ -246,6 +247,7 @@ function Invoke-SourceGuard {
         $PrepareFile,
         $BuildFile,
         $PublishFile,
+        $AuditFile,
         $PackageFile,
         $GradleFile,
         $ManifestFile,
@@ -462,7 +464,8 @@ function Invoke-SourceGuard {
         'Confirm-UntrackedFiles',
         'Reset-Staging',
         'STABLE\{0}',
-        "release-guard.ps1"
+        "release-guard.ps1",
+        "audit-app-code.js"
     )) {
         Assert-Contains `
             -Content $PublishContent `
@@ -470,6 +473,14 @@ function Invoke-SourceGuard {
             -Label 'publish-release.ps1 varnost'
     }
 
+    Write-Host ''
+    Write-Host 'Zaganjam staticni Code Audit ...' -ForegroundColor Cyan
+
+    & node.exe $AuditFile --ci
+
+    if ($LASTEXITCODE -ne 0) {
+        Fail-Guard "Staticni Code Audit ni uspel. Exit code: $LASTEXITCODE"
+    }
     Write-Host ''
     Write-Host 'RELEASE GUARD - SOURCE: OK' -ForegroundColor Green
     Write-Host "Bundle SHA-256: $RuntimeHash"
