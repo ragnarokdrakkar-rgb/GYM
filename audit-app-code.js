@@ -6,10 +6,16 @@ const path = require('path');
 const crypto = require('crypto');
 const childProcess = require('child_process');
 
-const AUDIT_VERSION = '2.1';
+const AUDIT_VERSION = '3.0';
 const projectRoot = __dirname;
 const strictMode = process.argv.includes('--strict');
 const ciMode = process.argv.includes('--ci');
+const reportMode = process.argv.includes('--report');
+const reportOutputPath = path.join(
+  projectRoot,
+  'release',
+  'code-audit-report.json'
+);
 
 const sourcePaths = [
   'src/app/ui-shell.js',
@@ -242,6 +248,59 @@ function formatLocations(locations) {
     .join(', ');
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function countIdentifierOccurrences(text, name) {
+  const pattern = new RegExp(`\\b${escapeRegExp(name)}\\b`, 'g');
+  return (text.match(pattern) || []).length;
+}
+
+function buildDeadCodeCandidates(declarations, corpus) {
+  const seen = new Set();
+  const candidates = [];
+
+  for (const declaration of declarations) {
+    const key =
+      `${declaration.name}@${declaration.file}:${declaration.line}`;
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+
+    const occurrences =
+      countIdentifierOccurrences(corpus, declaration.name);
+
+    if (occurrences <= 1) {
+      candidates.push({
+        name: declaration.name,
+        file: declaration.file,
+        line: declaration.line,
+        occurrences
+      });
+    }
+  }
+
+  return candidates.sort((left, right) =>
+    left.file.localeCompare(right.file) ||
+    left.line - right.line ||
+    left.name.localeCompare(right.name)
+  );
+}
+
+function writeAuditReport(report) {
+  const reportDirectory = path.dirname(reportOutputPath);
+  fs.mkdirSync(reportDirectory, { recursive: true });
+  fs.writeFileSync(
+    reportOutputPath,
+    `${JSON.stringify(report, null, 2)}\n`,
+    'utf8'
+  );
+}
+
 function runParserSelfTest() {
   const fixture = `
 function alpha() {}
@@ -395,6 +454,42 @@ const duplicateVariables = groupDuplicates(allDeclarations.variables);
 const duplicateClasses = groupDuplicates(allDeclarations.classes);
 const duplicateIds = groupDuplicates(collectHtmlIds(indexText));
 
+const supportDeclarations = {
+  functions: [],
+  variables: [],
+  classes: []
+};
+
+for (const relativePath of runtimeSupportPaths) {
+  const declarations = collectTopLevelDeclarations(
+    runtimeSupportTexts.get(relativePath) || '',
+    relativePath
+  );
+
+  supportDeclarations.functions.push(...declarations.functions);
+  supportDeclarations.variables.push(...declarations.variables);
+  supportDeclarations.classes.push(...declarations.classes);
+}
+
+const runtimeReferenceCorpus = [
+  indexText,
+  ...runtimeSupportPaths.map(
+    (relativePath) => runtimeSupportTexts.get(relativePath) || ''
+  ),
+  runtimeText,
+  ...injectionPaths.map(
+    (relativePath) => injectionTexts.get(relativePath) || ''
+  )
+].join('\n');
+
+const deadCodeCandidates = buildDeadCodeCandidates(
+  [
+    ...supportDeclarations.functions,
+    ...allDeclarations.functions
+  ],
+  runtimeReferenceCorpus
+);
+
 for (const duplicate of duplicateFunctions) {
   warnings.push(
     `Podvojena top-level funkcija ${duplicate.name}: ` +
@@ -515,6 +610,9 @@ console.log(`Podvojeni classes: ${duplicateClasses.length}`);
 console.log(`Podvojeni HTML id-ji: ${duplicateIds.length}`);
 console.log(`Najdene callable funkcije: ${knownInlineCallables.size}`);
 console.log(`Manjkajoci inline handlerji: ${missingInlineHandlers.length}`);
+console.log(
+  `Mozni neuporabljeni funkcijski kandidati: ${deadCodeCandidates.length}`
+);
 console.log(`Bundle SHA-256: ${runtimeHash}`);
 
 if (warnings.length > 0) {
@@ -524,6 +622,62 @@ if (warnings.length > 0) {
   for (const warning of warnings) {
     console.log(`- ${warning}`);
   }
+}
+
+if (deadCodeCandidates.length > 0 && !ciMode) {
+  console.log('');
+  console.log('KANDIDATI ZA ROCNI PREGLED:');
+
+  for (const candidate of deadCodeCandidates.slice(0, 40)) {
+    console.log(
+      `- ${candidate.name}: ${candidate.file}:${candidate.line}`
+    );
+  }
+
+  if (deadCodeCandidates.length > 40) {
+    console.log(
+      `- ... se ${deadCodeCandidates.length - 40} kandidatov`
+    );
+  }
+
+  console.log(
+    'Ti kandidati se ne brisejo samodejno in ne blokirajo releasea.'
+  );
+}
+
+if (reportMode) {
+  writeAuditReport({
+    auditVersion: AUDIT_VERSION,
+    generatedAt: new Date().toISOString(),
+    bundleSha256: runtimeHash,
+    sourceFiles: sourcePaths,
+    runtimeSupportFiles: runtimeSupportPaths,
+    injectionFiles: injectionPaths,
+    counts: {
+      sourceLines: totalSourceLines,
+      sourceFunctions: allDeclarations.functions.length,
+      sourceVariables: allDeclarations.variables.length,
+      duplicateFunctions: duplicateFunctions.length,
+      duplicateVariables: duplicateVariables.length,
+      duplicateClasses: duplicateClasses.length,
+      duplicateHtmlIds: duplicateIds.length,
+      missingInlineHandlers: missingInlineHandlers.length,
+      deadCodeCandidates: deadCodeCandidates.length
+    },
+    deadCodeCandidates,
+    missingInlineHandlers,
+    duplicateFunctions,
+    duplicateVariables,
+    duplicateClasses,
+    duplicateHtmlIds: duplicateIds,
+    fatalErrors,
+    warnings
+  });
+
+  console.log('');
+  console.log(
+    `Audit report: ${path.relative(projectRoot, reportOutputPath)}`
+  );
 }
 
 if (fatalErrors.length > 0) {
@@ -555,5 +709,8 @@ console.log(
 if (ciMode) {
   console.log(
     'CI nacin: manjkajoci inline handlerji in fatalne napake blokirajo release.'
+  );
+  console.log(
+    'Dead-code kandidati so samo porocilo in nikoli niso samodejno izbrisani.'
   );
 }
