@@ -682,6 +682,7 @@ $BackupFiles = @(
     $NotesFile,
     (Join-Path $ProjectRoot 'index.html'),
     (Join-Path $ProjectRoot 'js\core\bootstrap.js'),
+    (Join-Path $ProjectRoot 'js\data\exercise-swaps.js'),
     (Join-Path $ProjectRoot 'js\app.js'),
     (Join-Path $ProjectRoot 'css\app.css'),
     (Join-Path $ProjectRoot 'sw.js'),
