@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const childProcess = require('child_process');
 
+const AUDIT_VERSION = '2.1';
 const projectRoot = __dirname;
 const strictMode = process.argv.includes('--strict');
 const ciMode = process.argv.includes('--ci');
@@ -22,6 +23,13 @@ const sourcePaths = [
   'src/app/main.js'
 ];
 
+const runtimeSupportPaths = [
+  'js/core/bootstrap.js',
+  'js/core/state-storage.js',
+  'js/data/exercise-swaps.js',
+  'js/data/programs.js'
+];
+
 const injectionPaths = [
   'js/app-update.js',
   'js/rest-native-notifications.js',
@@ -34,10 +42,6 @@ const indexPath = 'index.html';
 
 const fatalErrors = [];
 const warnings = [];
-
-function normalizeRelative(filePath) {
-  return filePath.split(path.sep).join('/');
-}
 
 function absolute(relativePath) {
   return path.join(projectRoot, relativePath);
@@ -137,6 +141,27 @@ function collectTopLevelDeclarations(text, relativePath) {
   return { functions, variables, classes };
 }
 
+function collectCallableNames(text) {
+  const names = new Set();
+
+  const patterns = [
+    /(?:^|\n)\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g,
+    /(?:^|\n)\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/g,
+    /\b(?:window|globalThis)\.([A-Za-z_$][\w$]*)\s*=/g,
+    /\b(?:window|globalThis)\[['"]([A-Za-z_$][\w$]*)['"]\]\s*=/g
+  ];
+
+  for (const pattern of patterns) {
+    let match;
+
+    while ((match = pattern.exec(text)) !== null) {
+      names.add(match[1]);
+    }
+  }
+
+  return names;
+}
+
 function groupDuplicates(items) {
   const grouped = new Map();
 
@@ -174,6 +199,15 @@ function collectInlineHandlerCalls(html) {
   const calls = [];
   const attributePattern =
     /\bon[a-z]+\s*=\s*(["'])([\s\S]*?)\1/gi;
+  const controlWords = new Set([
+    'if',
+    'for',
+    'while',
+    'switch',
+    'catch',
+    'function'
+  ]);
+
   let attributeMatch;
 
   while ((attributeMatch = attributePattern.exec(html)) !== null) {
@@ -185,13 +219,14 @@ function collectInlineHandlerCalls(html) {
     while ((callMatch = callPattern.exec(code)) !== null) {
       const previousCharacter =
         callMatch.index > 0 ? code[callMatch.index - 1] : '';
+      const name = callMatch[1];
 
-      if (previousCharacter === '.') {
+      if (previousCharacter === '.' || controlWords.has(name)) {
         continue;
       }
 
       calls.push({
-        name: callMatch[1],
+        name,
         file: indexPath,
         line: lineNumberAt(html, codeStart)
       });
@@ -207,7 +242,53 @@ function formatLocations(locations) {
     .join(', ');
 }
 
+function runParserSelfTest() {
+  const fixture = `
+function alpha() {}
+  async function beta() {}
+const gamma = () => {};
+let delta = async (value) => value;
+window.epsilon = function () {};
+globalThis['zeta'] = () => {};
+`;
+
+  const found = collectCallableNames(fixture);
+
+  for (const expected of [
+    'alpha',
+    'beta',
+    'gamma',
+    'delta',
+    'epsilon',
+    'zeta'
+  ]) {
+    if (!found.has(expected)) {
+      fatalErrors.push(
+        `Code Audit parser self-test ni nasel callable: ${expected}`
+      );
+    }
+  }
+
+  const handlerFixture =
+    `<button onclick="if(ok) alpha(); window.epsilon();"></button>`;
+  const handlerCalls = collectInlineHandlerCalls(handlerFixture)
+    .map((item) => item.name);
+
+  if (
+    handlerCalls.includes('if') ||
+    !handlerCalls.includes('alpha')
+  ) {
+    fatalErrors.push(
+      'Code Audit parser self-test za inline handlerje ni uspel.'
+    );
+  }
+}
+
+runParserSelfTest();
+
 const sourceTexts = new Map();
+const runtimeSupportTexts = new Map();
+const injectionTexts = new Map();
 const sourceStats = [];
 
 for (const relativePath of sourcePaths) {
@@ -225,8 +306,18 @@ for (const relativePath of sourcePaths) {
   }
 }
 
+for (const relativePath of runtimeSupportPaths) {
+  const text = readText(relativePath);
+  runtimeSupportTexts.set(relativePath, text);
+
+  if (text) {
+    runNodeCheck(relativePath);
+  }
+}
+
 for (const relativePath of injectionPaths) {
   const text = readText(relativePath);
+  injectionTexts.set(relativePath, text);
 
   if (text) {
     runNodeCheck(relativePath);
@@ -238,6 +329,34 @@ const indexText = readText(indexPath);
 
 if (runtimeText) {
   runNodeCheck(runtimePath);
+}
+
+const requiredRuntimeScripts = [
+  ...runtimeSupportPaths,
+  runtimePath
+];
+
+let previousScriptPosition = -1;
+
+for (const scriptPath of requiredRuntimeScripts) {
+  const scriptTag = `<script src="${scriptPath.replace(/\\/g, '/')}"></script>`;
+  const escapedTag = scriptTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const count = (indexText.match(new RegExp(escapedTag, 'g')) || []).length;
+  const position = indexText.indexOf(scriptTag);
+
+  if (count !== 1) {
+    fatalErrors.push(
+      `index.html mora vsebovati tocno en runtime script ${scriptPath}. Najdeno: ${count}`
+    );
+  }
+
+  if (position < 0 || position <= previousScriptPosition) {
+    fatalErrors.push(
+      `Runtime script vrstni red ni pravilen pri: ${scriptPath}`
+    );
+  }
+
+  previousScriptPosition = position;
 }
 
 const combinedText = sourcePaths
@@ -304,22 +423,19 @@ for (const duplicate of duplicateIds) {
   );
 }
 
-const knownGlobals = new Set([
-  ...allDeclarations.functions.map((item) => item.name),
-  ...allDeclarations.variables.map((item) => item.name),
-  ...allDeclarations.classes.map((item) => item.name)
-]);
+const knownInlineCallables = new Set();
 
-for (const relativePath of injectionPaths) {
-  const text = readText(relativePath);
-  const declarations = collectTopLevelDeclarations(text, relativePath);
-
-  for (const item of [
-    ...declarations.functions,
-    ...declarations.variables,
-    ...declarations.classes
-  ]) {
-    knownGlobals.add(item.name);
+for (const text of [
+  ...runtimeSupportPaths.map(
+    (relativePath) => runtimeSupportTexts.get(relativePath) || ''
+  ),
+  runtimeText,
+  ...injectionPaths.map(
+    (relativePath) => injectionTexts.get(relativePath) || ''
+  )
+]) {
+  for (const name of collectCallableNames(text)) {
+    knownInlineCallables.add(name);
   }
 }
 
@@ -349,7 +465,7 @@ const seenMissingHandlers = new Set();
 
 for (const call of collectInlineHandlerCalls(indexText)) {
   if (
-    knownGlobals.has(call.name) ||
+    knownInlineCallables.has(call.name) ||
     ignoredInlineCalls.has(call.name)
   ) {
     continue;
@@ -366,10 +482,15 @@ for (const call of collectInlineHandlerCalls(indexText)) {
 }
 
 for (const missing of missingInlineHandlers) {
-  warnings.push(
-    `Inline handler morda nima globalne funkcije ${missing.name}: ` +
-    `${missing.file}:${missing.line}`
-  );
+  const message =
+    `Inline handler nima najdene callable funkcije ${missing.name}: ` +
+    `${missing.file}:${missing.line}`;
+
+  if (ciMode) {
+    fatalErrors.push(message);
+  } else {
+    warnings.push(message);
+  }
 }
 
 const totalSourceLines = sourceStats.reduce(
@@ -379,10 +500,11 @@ const totalSourceLines = sourceStats.reduce(
 
 console.log('');
 console.log('========================================');
-console.log(' CODE AUDIT');
+console.log(` CODE AUDIT v${AUDIT_VERSION}`);
 console.log('========================================');
 console.log('');
 console.log(`Source datoteke: ${sourcePaths.length}`);
+console.log(`Klasicni runtime support skripti: ${runtimeSupportPaths.length}`);
 console.log(`Source vrstice: ${totalSourceLines}`);
 console.log(`Top-level funkcije: ${allDeclarations.functions.length}`);
 console.log(`Top-level spremenljivke: ${allDeclarations.variables.length}`);
@@ -391,7 +513,8 @@ console.log(`Podvojene funkcije: ${duplicateFunctions.length}`);
 console.log(`Podvojene spremenljivke: ${duplicateVariables.length}`);
 console.log(`Podvojeni classes: ${duplicateClasses.length}`);
 console.log(`Podvojeni HTML id-ji: ${duplicateIds.length}`);
-console.log(`Mozni manjkajoci inline handlerji: ${missingInlineHandlers.length}`);
+console.log(`Najdene callable funkcije: ${knownInlineCallables.size}`);
+console.log(`Manjkajoci inline handlerji: ${missingInlineHandlers.length}`);
 console.log(`Bundle SHA-256: ${runtimeHash}`);
 
 if (warnings.length > 0) {
@@ -430,5 +553,7 @@ console.log(
 );
 
 if (ciMode) {
-  console.log('CI nacin: fatalne napake blokirajo release; opozorila so porocilo.');
+  console.log(
+    'CI nacin: manjkajoci inline handlerji in fatalne napake blokirajo release.'
+  );
 }
