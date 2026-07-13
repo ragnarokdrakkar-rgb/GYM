@@ -7,6 +7,7 @@ set "GRADLE_FILE=%ANDROID_DIR%\app\build.gradle"
 set "GRADLE_BACKUP=%ANDROID_DIR%\app\build.gradle.release-backup"
 set "VERSION_SCRIPT=%ROOT%update-version.ps1"
 set "BUNDLE_SCRIPT=%ROOT%build-app-bundle.ps1"
+set "GUARD_SCRIPT=%ROOT%release-guard.ps1"
 
 set "KEYSTORE=C:\WorkoutTrackerKeys\workout-tracker-release.jks"
 set "KEY_PROPERTIES=C:\WorkoutTrackerKeys\keystore.properties"
@@ -56,6 +57,11 @@ if not exist "%BUNDLE_SCRIPT%" (
     echo %BUNDLE_SCRIPT%
     goto :error
 )
+if not exist "%GUARD_SCRIPT%" (
+    echo NAPAKA: release-guard.ps1 ni najden:
+    echo %GUARD_SCRIPT%
+    goto :error
+)
 
 echo.
 echo Sestavljam stabilni js\app.js iz source datotek ...
@@ -64,6 +70,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%BUNDLE_SCRIPT%" -Quiet
 
 if errorlevel 1 (
     echo NAPAKA: app bundle ni bil pravilno sestavljen.
+    goto :error
+)
+echo.
+echo Preverjam source in runtime z Release Guard ...
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass ^
+-File "%GUARD_SCRIPT%" ^
+-Phase Source
+
+if errorlevel 1 (
+    echo NAPAKA: Source Release Guard ni uspel.
     goto :error
 )
 
@@ -136,6 +153,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass ^
 
 if errorlevel 1 (
     echo NAPAKA: Android index ni bil pravilno pripravljen.
+    goto :rollback
+)
+echo.
+echo Preverjam pripravljeni Android runtime z Release Guard ...
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass ^
+-File "%GUARD_SCRIPT%" ^
+-Phase Android ^
+-IndexFile "%ROOT%www\index.html" ^
+-ExpectedVersion "%VERSION%"
+
+if errorlevel 1 (
+    echo NAPAKA: Android Release Guard ni uspel.
     goto :rollback
 )
 
