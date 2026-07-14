@@ -1253,6 +1253,331 @@ const _clearAllV5=clearAll;clearAll=async function(){const r=await _clearAllV5()
 /* Apply profile customizations before normal V5 init runs. */
 applyProgramStateV6();
 
+/* === V7 FOCUS LOG + STABLE REST TIMER PATCH (release 1.0.37) === */
+(function(){
+  'use strict';
+  if(window.WTFocusPatchV7)return;
+
+  const PATCH_VERSION='1.0.37';
+
+  function decimalV7(value){
+    return String(value??'').trim().replace(',','.');
+  }
+
+  function displayV7(value){
+    const n=Number(value);
+    if(!Number.isFinite(n))return '';
+    return Number.isInteger(n)?String(n):String(n).replace('.',',');
+  }
+
+  function nextInlineSetV7(key,di,ei){
+    const all=getSets();
+    const sets=Array.isArray(all[key])?all[key]:[];
+    const wk=PROG.weeks[cw];
+    const total=Math.max(1,Number(nsf(di,ei,wk,key))||1);
+    let si=0;
+    while(si<total&&sets[si]?.done)si++;
+    if(si>=total)return{complete:true,si,total,kg:'',reps:''};
+
+    const cur=sets[si]||{};
+    const prev=[...sets.slice(0,si)].reverse().find(s=>s&&s.kg!==''&&s.kg!==undefined&&s.reps);
+    const kg=(cur.kg!==''&&cur.kg!==undefined&&cur.kg!==null)?cur.kg:(prev?.kg??'');
+    const reps=(cur.reps!==''&&cur.reps!==undefined&&cur.reps!==null)?cur.reps:(prev?.reps??'');
+
+    return{complete:false,si,total,kg,reps};
+  }
+
+  function renderInlineLoggerV7(key,di,ei,cn){
+    const s=nextInlineSetV7(key,di,ei);
+    const disabled=s.complete?' disabled':'';
+    const kg=safeHtml(s.complete?'':String(s.kg??''));
+    const reps=safeHtml(s.complete?'':String(s.reps??''));
+    const setLabel=s.complete?'KonÄano':`S${s.si+1}/${s.total}`;
+
+    return `<div class="quick-log-v6 quick-log-v7" data-key="${safeHtml(key)}">
+      <div class="quick-set-label-v7">${setLabel}</div>
+      <label class="quick-field-v7"><span>KG</span><input id="v7kg-${key}" type="number" inputmode="decimal" min="0" step="0.5" value="${kg}"${disabled} onkeydown="if(event.key==='Enter')quickLogSetV7('${key}',${di},${ei},${cn})"></label>
+      <label class="quick-field-v7"><span>PON</span><input id="v7reps-${key}" type="number" inputmode="numeric" min="1" step="1" value="${reps}"${disabled} onkeydown="if(event.key==='Enter')quickLogSetV7('${key}',${di},${ei},${cn})"></label>
+      <label class="quick-field-v7"><span>RPE <button type="button" class="rpe-help-v7" aria-label="Odpri RPE legendo" onclick="event.preventDefault();event.stopPropagation();toggleRpeLegendV7(this)">?</button></span><input id="v7rpe-${key}" type="number" inputmode="decimal" min="5" max="10" step="0.5" placeholder="8"${disabled} onkeydown="if(event.key==='Enter')quickLogSetV7('${key}',${di},${ei},${cn})"></label>
+      <button type="button" class="quick-log-button-v7" id="v7log-${key}"${disabled} onclick="quickLogSetV7('${key}',${di},${ei},${cn})">${s.complete?'âœ“':'LOG'}</button>
+      <div class="rpe-legend-v7" hidden>
+        <div><strong>RPE legenda</strong></div>
+        <div><b>10</b> â€” maksimum, 0 ponovitev v rezervi</div>
+        <div><b>9â€“9,5</b> â€” pribliÅ¾no 0â€“1 ponovitev v rezervi</div>
+        <div><b>8â€“8,5</b> â€” pribliÅ¾no 1â€“2 ponovitvi v rezervi</div>
+        <div><b>7</b> â€” pribliÅ¾no 3 ponovitve v rezervi</div>
+        <div><b>6</b> â€” pribliÅ¾no 4 ponovitve v rezervi</div>
+        <div><b>5</b> â€” zelo lahko oziroma ogrevanje</div>
+      </div>
+    </div>`;
+  }
+
+  function syncInlineLoggerV7(key,di,ei){
+    const s=nextInlineSetV7(key,di,ei);
+    const kg=document.getElementById('v7kg-'+key);
+    const reps=document.getElementById('v7reps-'+key);
+    const rpe=document.getElementById('v7rpe-'+key);
+    const log=document.getElementById('v7log-'+key);
+    const label=document.querySelector(`.quick-log-v7[data-key="${key}"] .quick-set-label-v7`);
+    if(!kg||!reps||!rpe||!log)return;
+
+    kg.disabled=reps.disabled=rpe.disabled=log.disabled=!!s.complete;
+    kg.value=s.complete?'':String(s.kg??'');
+    reps.value=s.complete?'':String(s.reps??'');
+    rpe.value='';
+    log.textContent=s.complete?'âœ“':'LOG';
+    log.dataset.busy='0';
+    if(label)label.textContent=s.complete?'KonÄano':`S${s.si+1}/${s.total}`;
+  }
+
+  window.toggleRpeLegendV7=function(button){
+    const box=button?.closest('.quick-log-v7')?.querySelector('.rpe-legend-v7');
+    if(!box)return;
+    box.hidden=!box.hidden;
+  };
+
+  window.quickLogSetV7=async function(key,di,ei,cn){
+    const kgEl=document.getElementById('v7kg-'+key);
+    const repsEl=document.getElementById('v7reps-'+key);
+    const rpeEl=document.getElementById('v7rpe-'+key);
+    const logEl=document.getElementById('v7log-'+key);
+    if(!kgEl||!repsEl||!rpeEl||!logEl||logEl.dataset.busy==='1')return;
+
+    const state=nextInlineSetV7(key,di,ei);
+    if(state.complete)return;
+
+    const kgRaw=decimalV7(kgEl.value);
+    const repsRaw=decimalV7(repsEl.value);
+    const rpeRaw=decimalV7(rpeEl.value);
+    const kg=Number(kgRaw);
+    const reps=Number(repsRaw);
+    const rpe=Number(rpeRaw);
+
+    if(kgRaw===''||!Number.isFinite(kg)||kg<0){
+      toast('Vnesi veljavne kilograme.','err');
+      kgEl.focus();
+      return;
+    }
+    if(repsRaw===''||!Number.isFinite(reps)||!Number.isInteger(reps)||reps<1){
+      toast('Vnesi veljavne ponovitve.','err');
+      repsEl.focus();
+      return;
+    }
+    if(!Number.isFinite(rpe)||rpe<5||rpe>10||Math.abs(rpe*2-Math.round(rpe*2))>.001){
+      toast('RPE mora biti od 5 do 10 v koraku 0,5.','err');
+      rpeEl.focus();
+      return;
+    }
+
+    logEl.dataset.busy='1';
+    logEl.disabled=true;
+    logEl.textContent='...';
+
+    try{
+      const isBarbell=BARBELL_EX.includes(PROG.days[di]?.ex?.[ei]?.n);
+      await sv(key,state.si,'kg',kgRaw,di,ei,cn,isBarbell?1:0);
+      await sv(key,state.si,'reps',String(reps),di,ei,cn,0);
+      setRpe(key,state.si,Math.round(rpe*2)/2,di,ei,cn);
+      if(!getSets()[key]?.[state.si]?.done)tgSet(key,state.si,di,ei,cn);
+      toast(`âœ“ ${displayV7(kg)}kg Ã— ${reps} @ RPE ${displayV7(rpe)}`,'ok');
+    }catch(error){
+      console.warn('V7 inline log',error);
+      toast('Set ni bil shranjen.','err');
+    }finally{
+      window.setTimeout(()=>syncInlineLoggerV7(key,di,ei),100);
+    }
+  };
+
+  quickLogSetV6=window.quickLogSetV7;
+
+  renderProgressionCardV6=function(di,ei,name){
+    if(!getV6Settings().progression)return'';
+    const r=progressionForExerciseV6(di,ei,name);
+    const symbol=r.action==='increase'?'â†‘':(r.action==='reduce'||r.action==='deload')?'â†“':'=';
+    const cls=r.action==='increase'?'up':(r.action==='reduce'||r.action==='deload')?'down':'same';
+    const detail=[r.label,...(r.reasons||[]).slice(0,2)].join(' â€” ');
+    return `<div class="prog-dir-v7 ${cls}" title="${safeHtml(detail)}" aria-label="${safeHtml(detail)}">${symbol}</div>`;
+  };
+
+  const renderExBeforeV7=renderEx;
+  renderEx=function(e,ei,di,wk,cn,isExtra){
+    let html=renderExBeforeV7(e,ei,di,wk,cn,isExtra);
+    const key=sdk(cn,cw,di,ei);
+    html=html.replace(
+      /<div class="quick-log-v6">[\s\S]*?<\/div>/,
+      renderInlineLoggerV7(key,di,ei,cn)
+    );
+    return html;
+  };
+
+  function customRestExactV7(e,name){
+    const custom=getCustomRest();
+    let raw;
+    if(e?.id&&Object.prototype.hasOwnProperty.call(custom,e.id))raw=custom[e.id];
+    else if(name&&Object.prototype.hasOwnProperty.call(custom,name))raw=custom[name];
+    const sec=Number(raw);
+    return Number.isFinite(sec)&&sec>0?sec:0;
+  }
+
+  const tgSetBeforeV7=tgSet;
+  tgSet=function(key,si,di,ei,cn){
+    const wasDone=!!getSets()[key]?.[si]?.done;
+    const result=tgSetBeforeV7(key,si,di,ei,cn);
+    const set=getSets()[key]?.[si];
+
+    if(!wasDone&&set?.done&&!set.drop){
+      const e=PROG.days[di]?.ex?.[ei];
+      const name=currentExerciseName(di,ei,key);
+      const exact=customRestExactV7(e,name);
+      if(exact>0)startT(key,exact);
+    }
+
+    window.setTimeout(()=>syncInlineLoggerV7(key,di,ei),90);
+    return result;
+  };
+
+  function restoreTimerAfterRenderV7(){
+    window.setTimeout(()=>{
+      if(typeof restoreTimer==='function')restoreTimer();
+    },80);
+  }
+
+  const addSetBeforeV7=addSet;
+  addSet=function(){
+    const result=addSetBeforeV7.apply(this,arguments);
+    restoreTimerAfterRenderV7();
+    return result;
+  };
+
+  const removeSetBeforeV7=removeSet;
+  removeSet=function(){
+    const result=removeSetBeforeV7.apply(this,arguments);
+    restoreTimerAfterRenderV7();
+    return result;
+  };
+
+  function ensureGlobalTimerV7(){
+    let el=document.getElementById('wt-global-timer-v7');
+    if(el)return el;
+    const anchor=document.querySelector('#page-workout .stb');
+    if(!anchor)return null;
+
+    el=document.createElement('div');
+    el.id='wt-global-timer-v7';
+    el.className='global-timer-v7';
+    el.innerHTML=`<div class="global-timer-time-v7" id="wt-global-timer-time-v7">â€”</div>
+      <div class="global-timer-meta-v7" id="wt-global-timer-meta-v7">odmor</div>
+      <button type="button" onclick="adjustTimerV6(-30)">âˆ’30</button>
+      <button type="button" id="wt-global-timer-pause-v7" onclick="pauseActiveTimerV7()">â…¡</button>
+      <button type="button" onclick="adjustTimerV6(30)">+30</button>
+      <button type="button" class="stop" onclick="stopActiveTimerV7()">Ã—</button>`;
+    anchor.insertAdjacentElement('afterend',el);
+    return el;
+  }
+
+  function renderGlobalTimerV7(t,remaining){
+    const el=ensureGlobalTimerV7();
+    if(!el)return;
+    if(!t){
+      el.classList.remove('on','flash');
+      return;
+    }
+
+    el.classList.add('on');
+    el.classList.remove('flash');
+    const time=document.getElementById('wt-global-timer-time-v7');
+    const meta=document.getElementById('wt-global-timer-meta-v7');
+    const pause=document.getElementById('wt-global-timer-pause-v7');
+    if(time)time.textContent=timerDisplayV6(Math.max(0,remaining||0));
+    if(meta)meta.textContent=`odmor Â· plan ${fmtRest(t.plannedSec||0)}`;
+    if(pause)pause.textContent=t.paused?'â–¶':'â…¡';
+  }
+
+  function finishGlobalTimerV7(){
+    const el=ensureGlobalTimerV7();
+    if(!el)return;
+    const time=document.getElementById('wt-global-timer-time-v7');
+    const meta=document.getElementById('wt-global-timer-meta-v7');
+    if(time)time.textContent='KONEC';
+    if(meta)meta.textContent='naslednji set';
+    el.classList.add('on','flash');
+    window.setTimeout(()=>el.classList.remove('on','flash'),5000);
+  }
+
+  window.pauseActiveTimerV7=function(){
+    const t=currentTimerV6();
+    if(t)pauseResumeTimerV6(t.key);
+  };
+
+  window.stopActiveTimerV7=function(){
+    const t=currentTimerV6();
+    if(t)stopT(t.key);
+  };
+
+  tickTimerV6=function(t){
+    const bar=document.getElementById('tb-'+t.key);
+    const cnt=document.getElementById('tc-'+t.key);
+    const meta=document.getElementById('tm-'+t.key);
+    const pause=document.getElementById('tp-'+t.key);
+    if(bar)bar.classList.add('on');
+    if(pause)pause.textContent=t.paused?'â–¶':'â…¡';
+    if(meta)meta.textContent=`plan ${fmtRest(t.plannedSec)}`;
+
+    if(t.paused){
+      const remaining=t.remainingSec||0;
+      if(cnt)cnt.textContent=timerDisplayV6(remaining);
+      renderGlobalTimerV7(t,remaining);
+      return;
+    }
+
+    const run=()=>{
+      const cur=currentTimerV6();
+      if(!cur||cur.id!==t.id)return;
+      const rem=Math.max(0,Math.ceil((cur.endTs-Date.now())/1000));
+      if(cnt)cnt.textContent=timerDisplayV6(rem);
+      renderGlobalTimerV7(cur,rem);
+
+      if(rem<=15&&rem>0&&getV6Settings().restWarning&&!cur.warned15){
+        cur.warned15=true;
+        saveTimerV6(cur);
+        if(navigator.vibrate)navigator.vibrate(80);
+        if(meta)meta.textContent='15 s do seta';
+      }
+
+      if(rem<=0){
+        clearTimerIntervalsV6();
+        localStorage.removeItem(LS_TIMER);
+        cancelScheduledNotification();
+        logRestV6(cur,'completed');
+        finishGlobalTimerV7();
+        alertEnd(cur.key);
+        renderV6Settings();
+      }
+    };
+
+    run();
+    TM[t.key]=setInterval(run,250);
+  };
+
+  const stopTBeforeV7=stopT;
+  stopT=function(key){
+    const result=stopTBeforeV7(key);
+    renderGlobalTimerV7(null,0);
+    return result;
+  };
+
+  window.WTFocusPatchV7={
+    version:PATCH_VERSION,
+    refresh:function(){
+      if(typeof restoreTimer==='function')restoreTimer();
+      document.querySelectorAll('.quick-log-v7').forEach(el=>{
+        const key=el.dataset.key||'';
+        const m=key.match(/d(\d+)e(\d+)$/);
+        if(m)syncInlineLoggerV7(key,+m[1],+m[2]);
+      });
+    }
+  };
+})();
 function renderEx(e,ei,di,wk,cn,isExtra){
   const exKey=sdk(cn,cw,di,ei);
   const n=nsf(di,ei,wk,exKey);
