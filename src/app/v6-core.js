@@ -190,102 +190,151 @@ const _clearAllV5=clearAll;clearAll=async function(){const r=await _clearAllV5()
 /* Apply profile customizations before normal V5 init runs. */
 applyProgramStateV6();
 
-/* === V7 FOCUS LOG + STABLE REST TIMER PATCH (release 1.0.37) === */
+/* === V8 FOCUS FIX (release 1.0.38) === */
 (function(){
   'use strict';
-  if(window.WTFocusPatchV7)return;
+  if(window.WTFocusPatchV8)return;
 
-  const PATCH_VERSION='1.0.37';
+  const PATCH_VERSION='1.0.38';
+  let refreshPending=false;
+  let compactBusy=false;
+  let swipeStart=null;
+  let lastTimerId='';
+  let timerFinishedUntil=0;
 
-  function decimalV7(value){
+  function parseKeyV8(key){
+    const m=String(key||'').match(/^c(\d+)w(\d+)d(\d+)e(\d+)$/);
+    return m?{cycle:+m[1],week:+m[2],day:+m[3],exercise:+m[4]}:null;
+  }
+
+  function decimalV8(value){
     return String(value??'').trim().replace(',','.');
   }
 
-  function displayV7(value){
+  function displayNumberV8(value){
     const n=Number(value);
-    if(!Number.isFinite(n))return '';
+    if(!Number.isFinite(n))return'';
     return Number.isInteger(n)?String(n):String(n).replace('.',',');
   }
 
-  function nextInlineSetV7(key,di,ei){
+  function pendingSetV8(key,di,ei){
     const all=getSets();
     const sets=Array.isArray(all[key])?all[key]:[];
     const wk=PROG.weeks[cw];
     const total=Math.max(1,Number(nsf(di,ei,wk,key))||1);
     let si=0;
     while(si<total&&sets[si]?.done)si++;
-    if(si>=total)return{complete:true,si,total,kg:'',reps:''};
 
-    const cur=sets[si]||{};
-    const prev=[...sets.slice(0,si)].reverse().find(s=>s&&s.kg!==''&&s.kg!==undefined&&s.reps);
-    const kg=(cur.kg!==''&&cur.kg!==undefined&&cur.kg!==null)?cur.kg:(prev?.kg??'');
-    const reps=(cur.reps!==''&&cur.reps!==undefined&&cur.reps!==null)?cur.reps:(prev?.reps??'');
+    if(si>=total){
+      return{complete:true,si,total,kg:'',reps:''};
+    }
 
-    return{complete:false,si,total,kg,reps};
+    const current=sets[si]||{};
+    const previous=[...sets.slice(0,si)]
+      .reverse()
+      .find(set=>set&&set.kg!==''&&set.kg!==undefined&&set.reps);
+
+    return{
+      complete:false,
+      si,
+      total,
+      kg:current.kg!==''&&current.kg!==undefined&&current.kg!==null
+        ?current.kg
+        :(previous?.kg??''),
+      reps:current.reps!==''&&current.reps!==undefined&&current.reps!==null
+        ?current.reps
+        :(previous?.reps??'')
+    };
   }
 
-  function renderInlineLoggerV7(key,di,ei,cn){
-    const s=nextInlineSetV7(key,di,ei);
-    const disabled=s.complete?' disabled':'';
-    const kg=safeHtml(s.complete?'':String(s.kg??''));
-    const reps=safeHtml(s.complete?'':String(s.reps??''));
-    const setLabel=s.complete?'KonÄano':`S${s.si+1}/${s.total}`;
+  function compactMarkupV8(key,di,ei,cn){
+    const state=pendingSetV8(key,di,ei);
+    const disabled=state.complete?' disabled':'';
+    const kg=safeHtml(state.complete?'':String(state.kg??''));
+    const reps=safeHtml(state.complete?'':String(state.reps??''));
 
-    return `<div class="quick-log-v6 quick-log-v7" data-key="${safeHtml(key)}">
-      <div class="quick-set-label-v7">${setLabel}</div>
-      <label class="quick-field-v7"><span>KG</span><input id="v7kg-${key}" type="number" inputmode="decimal" min="0" step="0.5" value="${kg}"${disabled} onkeydown="if(event.key==='Enter')quickLogSetV7('${key}',${di},${ei},${cn})"></label>
-      <label class="quick-field-v7"><span>PON</span><input id="v7reps-${key}" type="number" inputmode="numeric" min="1" step="1" value="${reps}"${disabled} onkeydown="if(event.key==='Enter')quickLogSetV7('${key}',${di},${ei},${cn})"></label>
-      <label class="quick-field-v7"><span>RPE <button type="button" class="rpe-help-v7" aria-label="Odpri RPE legendo" onclick="event.preventDefault();event.stopPropagation();toggleRpeLegendV7(this)">?</button></span><input id="v7rpe-${key}" type="number" inputmode="decimal" min="5" max="10" step="0.5" placeholder="8"${disabled} onkeydown="if(event.key==='Enter')quickLogSetV7('${key}',${di},${ei},${cn})"></label>
-      <button type="button" class="quick-log-button-v7" id="v7log-${key}"${disabled} onclick="quickLogSetV7('${key}',${di},${ei},${cn})">${s.complete?'âœ“':'LOG'}</button>
-      <div class="rpe-legend-v7" hidden>
-        <div><strong>RPE legenda</strong></div>
-        <div><b>10</b> â€” maksimum, 0 ponovitev v rezervi</div>
-        <div><b>9â€“9,5</b> â€” pribliÅ¾no 0â€“1 ponovitev v rezervi</div>
-        <div><b>8â€“8,5</b> â€” pribliÅ¾no 1â€“2 ponovitvi v rezervi</div>
-        <div><b>7</b> â€” pribliÅ¾no 3 ponovitve v rezervi</div>
-        <div><b>6</b> â€” pribliÅ¾no 4 ponovitve v rezervi</div>
-        <div><b>5</b> â€” zelo lahko oziroma ogrevanje</div>
-      </div>
-    </div>`;
+    return`
+      <div class="compact-set-label-v8">${state.complete?'KonÄano':`Set ${state.si+1}/${state.total}`}</div>
+      <label class="compact-field-v8">
+        <span>KG</span>
+        <input id="v8-kg-${key}" type="number" inputmode="decimal" min="0" step="0.5" value="${kg}"${disabled}>
+      </label>
+      <label class="compact-field-v8">
+        <span>PON</span>
+        <input id="v8-reps-${key}" type="number" inputmode="numeric" min="1" step="1" value="${reps}"${disabled}>
+      </label>
+      <label class="compact-field-v8">
+        <span>RPE <button type="button" class="rpe-help-v8" aria-label="RPE legenda">?</button></span>
+        <input id="v8-rpe-${key}" type="number" inputmode="decimal" min="5" max="10" step="0.5" placeholder="8"${disabled}>
+      </label>
+      <button type="button" class="compact-log-v8"${disabled}>${state.complete?'âœ“':'LOG'}</button>
+      <div class="rpe-legend-v8" hidden>
+        <strong>RPE legenda</strong>
+        <div><b>10</b> maksimum Â· 0 ponovitev v rezervi</div>
+        <div><b>9â€“9,5</b> pribliÅ¾no 0â€“1 v rezervi</div>
+        <div><b>8â€“8,5</b> pribliÅ¾no 1â€“2 v rezervi</div>
+        <div><b>7</b> pribliÅ¾no 3 v rezervi</div>
+        <div><b>6</b> pribliÅ¾no 4 v rezervi</div>
+        <div><b>5</b> zelo lahko oziroma ogrevanje</div>
+      </div>`;
   }
 
-  function syncInlineLoggerV7(key,di,ei){
-    const s=nextInlineSetV7(key,di,ei);
-    const kg=document.getElementById('v7kg-'+key);
-    const reps=document.getElementById('v7reps-'+key);
-    const rpe=document.getElementById('v7rpe-'+key);
-    const log=document.getElementById('v7log-'+key);
-    const label=document.querySelector(`.quick-log-v7[data-key="${key}"] .quick-set-label-v7`);
-    if(!kg||!reps||!rpe||!log)return;
+  function installCompactLoggerV8(card,force){
+    const key=String(card?.id||'').replace(/^ec-/,'');
+    const parsed=parseKeyV8(key);
+    const box=card?.querySelector('.quick-log-v6');
+    if(!parsed||!box)return;
 
-    kg.disabled=reps.disabled=rpe.disabled=log.disabled=!!s.complete;
-    kg.value=s.complete?'':String(s.kg??'');
-    reps.value=s.complete?'':String(s.reps??'');
-    rpe.value='';
-    log.textContent=s.complete?'âœ“':'LOG';
-    log.dataset.busy='0';
-    if(label)label.textContent=s.complete?'KonÄano':`S${s.si+1}/${s.total}`;
+    if(box.dataset.v8Ready==='1'&&!force)return;
+
+    box.dataset.v8Ready='1';
+    box.classList.add('compact-log-box-v8');
+    box.innerHTML=compactMarkupV8(
+      key,
+      parsed.day,
+      parsed.exercise,
+      parsed.cycle
+    );
+
+    const help=box.querySelector('.rpe-help-v8');
+    const legend=box.querySelector('.rpe-legend-v8');
+    const log=box.querySelector('.compact-log-v8');
+    const inputs=box.querySelectorAll('input');
+
+    help?.addEventListener('click',event=>{
+      event.preventDefault();
+      event.stopPropagation();
+      if(legend)legend.hidden=!legend.hidden;
+    });
+
+    log?.addEventListener('click',()=>{
+      logCompactSetV8(key,parsed.day,parsed.exercise,parsed.cycle);
+    });
+
+    inputs.forEach(input=>{
+      input.addEventListener('keydown',event=>{
+        if(event.key!=='Enter')return;
+        event.preventDefault();
+        logCompactSetV8(key,parsed.day,parsed.exercise,parsed.cycle);
+      });
+    });
   }
 
-  window.toggleRpeLegendV7=function(button){
-    const box=button?.closest('.quick-log-v7')?.querySelector('.rpe-legend-v7');
-    if(!box)return;
-    box.hidden=!box.hidden;
-  };
+  async function logCompactSetV8(key,di,ei,cn){
+    if(compactBusy)return;
 
-  window.quickLogSetV7=async function(key,di,ei,cn){
-    const kgEl=document.getElementById('v7kg-'+key);
-    const repsEl=document.getElementById('v7reps-'+key);
-    const rpeEl=document.getElementById('v7rpe-'+key);
-    const logEl=document.getElementById('v7log-'+key);
-    if(!kgEl||!repsEl||!rpeEl||!logEl||logEl.dataset.busy==='1')return;
-
-    const state=nextInlineSetV7(key,di,ei);
+    const state=pendingSetV8(key,di,ei);
     if(state.complete)return;
 
-    const kgRaw=decimalV7(kgEl.value);
-    const repsRaw=decimalV7(repsEl.value);
-    const rpeRaw=decimalV7(rpeEl.value);
+    const kgEl=document.getElementById('v8-kg-'+key);
+    const repsEl=document.getElementById('v8-reps-'+key);
+    const rpeEl=document.getElementById('v8-rpe-'+key);
+    const button=kgEl?.closest('.compact-log-box-v8')?.querySelector('.compact-log-v8');
+    if(!kgEl||!repsEl||!rpeEl||!button)return;
+
+    const kgRaw=decimalV8(kgEl.value);
+    const repsRaw=decimalV8(repsEl.value);
+    const rpeRaw=decimalV8(rpeEl.value);
     const kg=Number(kgRaw);
     const reps=Number(repsRaw);
     const rpe=Number(rpeRaw);
@@ -295,223 +344,375 @@ applyProgramStateV6();
       kgEl.focus();
       return;
     }
+
     if(repsRaw===''||!Number.isFinite(reps)||!Number.isInteger(reps)||reps<1){
       toast('Vnesi veljavne ponovitve.','err');
       repsEl.focus();
       return;
     }
-    if(!Number.isFinite(rpe)||rpe<5||rpe>10||Math.abs(rpe*2-Math.round(rpe*2))>.001){
-      toast('RPE mora biti od 5 do 10 v koraku 0,5.','err');
+
+    if(
+      !Number.isFinite(rpe)||
+      rpe<5||
+      rpe>10||
+      Math.abs(rpe*2-Math.round(rpe*2))>.001
+    ){
+      toast('RPE mora biti 5â€“10 v koraku 0,5.','err');
       rpeEl.focus();
       return;
     }
 
-    logEl.dataset.busy='1';
-    logEl.disabled=true;
-    logEl.textContent='...';
+    compactBusy=true;
+    button.disabled=true;
+    button.textContent='...';
 
     try{
-      const isBarbell=BARBELL_EX.includes(PROG.days[di]?.ex?.[ei]?.n);
+      const exercise=PROG.days[di]?.ex?.[ei];
+      const isBarbell=BARBELL_EX.includes(exercise?.n);
+
       await sv(key,state.si,'kg',kgRaw,di,ei,cn,isBarbell?1:0);
       await sv(key,state.si,'reps',String(reps),di,ei,cn,0);
       setRpe(key,state.si,Math.round(rpe*2)/2,di,ei,cn);
-      if(!getSets()[key]?.[state.si]?.done)tgSet(key,state.si,di,ei,cn);
-      toast(`âœ“ ${displayV7(kg)}kg Ã— ${reps} @ RPE ${displayV7(rpe)}`,'ok');
+
+      if(!getSets()[key]?.[state.si]?.done){
+        tgSet(key,state.si,di,ei,cn);
+      }
+
+      toast(
+        `âœ“ ${displayNumberV8(kg)}kg Ã— ${reps} @ RPE ${displayNumberV8(rpe)}`,
+        'ok'
+      );
     }catch(error){
-      console.warn('V7 inline log',error);
+      console.warn('WT V8 compact log',error);
       toast('Set ni bil shranjen.','err');
     }finally{
-      window.setTimeout(()=>syncInlineLoggerV7(key,di,ei),100);
+      compactBusy=false;
+      queueRefreshV8(30,true);
     }
-  };
-
-  quickLogSetV6=window.quickLogSetV7;
-
-  renderProgressionCardV6=function(di,ei,name){
-    if(!getV6Settings().progression)return'';
-    const r=progressionForExerciseV6(di,ei,name);
-    const symbol=r.action==='increase'?'â†‘':(r.action==='reduce'||r.action==='deload')?'â†“':'=';
-    const cls=r.action==='increase'?'up':(r.action==='reduce'||r.action==='deload')?'down':'same';
-    const detail=[r.label,...(r.reasons||[]).slice(0,2)].join(' â€” ');
-    return `<div class="prog-dir-v7 ${cls}" title="${safeHtml(detail)}" aria-label="${safeHtml(detail)}">${symbol}</div>`;
-  };
-
-  const renderExBeforeV7=renderEx;
-  renderEx=function(e,ei,di,wk,cn,isExtra){
-    let html=renderExBeforeV7(e,ei,di,wk,cn,isExtra);
-    const key=sdk(cn,cw,di,ei);
-    html=html.replace(
-      /<div class="quick-log-v6">[\s\S]*?<\/div>/,
-      renderInlineLoggerV7(key,di,ei,cn)
-    );
-    return html;
-  };
-
-  function customRestExactV7(e,name){
-    const custom=getCustomRest();
-    let raw;
-    if(e?.id&&Object.prototype.hasOwnProperty.call(custom,e.id))raw=custom[e.id];
-    else if(name&&Object.prototype.hasOwnProperty.call(custom,name))raw=custom[name];
-    const sec=Number(raw);
-    return Number.isFinite(sec)&&sec>0?sec:0;
   }
 
-  const tgSetBeforeV7=tgSet;
-  tgSet=function(key,si,di,ei,cn){
-    const wasDone=!!getSets()[key]?.[si]?.done;
-    const result=tgSetBeforeV7(key,si,di,ei,cn);
-    const set=getSets()[key]?.[si];
+  window.logCompactSetV8=logCompactSetV8;
 
-    if(!wasDone&&set?.done&&!set.drop){
-      const e=PROG.days[di]?.ex?.[ei];
-      const name=currentExerciseName(di,ei,key);
-      const exact=customRestExactV7(e,name);
-      if(exact>0)startT(key,exact);
-    }
+  function simplifyProgressionV8(card){
+    card.querySelectorAll('.prog-v6').forEach(box=>{
+      if(box.dataset.v8Ready==='1')return;
 
-    window.setTimeout(()=>syncInlineLoggerV7(key,di,ei),90);
-    return result;
-  };
+      const text=box.textContent.replace(/\s+/g,' ').trim();
+      const down=box.classList.contains('reduce')||box.classList.contains('deload');
+      const up=box.classList.contains('increase');
+      const symbol=up?'â†‘':down?'â†“':'=';
+      const cls=up?'up':down?'down':'same';
 
-  function restoreTimerAfterRenderV7(){
-    window.setTimeout(()=>{
-      if(typeof restoreTimer==='function')restoreTimer();
-    },80);
+      box.dataset.v8Ready='1';
+      box.title=text;
+      box.setAttribute('aria-label',text);
+      box.className=`prog-dir-v8 ${cls}`;
+      box.innerHTML=`<span>${symbol}</span>`;
+    });
   }
 
-  const addSetBeforeV7=addSet;
-  addSet=function(){
-    const result=addSetBeforeV7.apply(this,arguments);
-    restoreTimerAfterRenderV7();
-    return result;
-  };
+  function firstPendingCardV8(cards){
+    for(const card of cards){
+      const key=String(card.id||'').replace(/^ec-/,'');
+      try{
+        if(key&&isExercisePending(key))return card;
+      }catch(error){}
+    }
+    return cards.find(card=>!card.classList.contains('col-done'))||cards[0]||null;
+  }
 
-  const removeSetBeforeV7=removeSet;
-  removeSet=function(){
-    const result=removeSetBeforeV7.apply(this,arguments);
-    restoreTimerAfterRenderV7();
-    return result;
-  };
+  function syncFocusV8(){
+    const cards=Array.from(document.querySelectorAll('#day-content .exc'));
 
-  function ensureGlobalTimerV7(){
-    let el=document.getElementById('wt-global-timer-v7');
+    if(!getGymMode()){
+      cards.forEach(card=>{
+        card.style.removeProperty('display');
+      });
+      return;
+    }
+
+    if(!cards.length)return;
+
+    let key=localStorage.getItem('wt_active_ex')||'';
+    let active=key?document.getElementById('ec-'+key):null;
+
+    if(!active||!cards.includes(active)){
+      active=null;
+    }
+
+    if(active){
+      try{
+        if(!isExercisePending(key))active=null;
+      }catch(error){
+        active=null;
+      }
+    }
+
+    if(!active){
+      try{
+        const next=findNextPendingExerciseKey()||'';
+        const candidate=next?document.getElementById('ec-'+next):null;
+        if(candidate&&cards.includes(candidate)){
+          key=next;
+          active=candidate;
+        }
+      }catch(error){}
+    }
+
+    if(!active){
+      active=firstPendingCardV8(cards);
+      key=String(active?.id||'').replace(/^ec-/,'');
+    }
+
+    if(!active||!key)return;
+
+    localStorage.setItem('wt_active_ex',key);
+
+    cards.forEach(card=>{
+      const visible=card===active;
+      card.classList.toggle('active-ex',visible);
+      card.style.setProperty(
+        'display',
+        visible?'block':'none',
+        'important'
+      );
+    });
+
+    try{
+      updateGymFocusBar(key);
+    }catch(error){}
+  }
+
+  function ensureGlobalTimerV8(){
+    let el=document.getElementById('wt-global-timer-v8');
     if(el)return el;
-    const anchor=document.querySelector('#page-workout .stb');
-    if(!anchor)return null;
+
+    const sessionBar=document.querySelector('#page-workout .stb');
+    if(!sessionBar)return null;
 
     el=document.createElement('div');
-    el.id='wt-global-timer-v7';
-    el.className='global-timer-v7';
-    el.innerHTML=`<div class="global-timer-time-v7" id="wt-global-timer-time-v7">â€”</div>
-      <div class="global-timer-meta-v7" id="wt-global-timer-meta-v7">odmor</div>
-      <button type="button" onclick="adjustTimerV6(-30)">âˆ’30</button>
-      <button type="button" id="wt-global-timer-pause-v7" onclick="pauseActiveTimerV7()">â…¡</button>
-      <button type="button" onclick="adjustTimerV6(30)">+30</button>
-      <button type="button" class="stop" onclick="stopActiveTimerV7()">Ã—</button>`;
-    anchor.insertAdjacentElement('afterend',el);
+    el.id='wt-global-timer-v8';
+    el.className='global-timer-v8';
+    el.innerHTML=`
+      <strong id="wt-global-time-v8">â€”</strong>
+      <span id="wt-global-meta-v8">odmor</span>
+      <button type="button" data-action="minus">âˆ’30</button>
+      <button type="button" data-action="pause">â…¡</button>
+      <button type="button" data-action="plus">+30</button>
+      <button type="button" class="stop" data-action="stop">Ã—</button>`;
+
+    sessionBar.insertAdjacentElement('afterend',el);
+
+    el.querySelector('[data-action="minus"]')?.addEventListener('click',()=>{
+      adjustTimerV6(-30);
+    });
+    el.querySelector('[data-action="plus"]')?.addEventListener('click',()=>{
+      adjustTimerV6(30);
+    });
+    el.querySelector('[data-action="pause"]')?.addEventListener('click',()=>{
+      const timer=currentTimerV6();
+      if(timer)pauseResumeTimerV6(timer.key);
+    });
+    el.querySelector('[data-action="stop"]')?.addEventListener('click',()=>{
+      const timer=currentTimerV6();
+      if(timer)stopT(timer.key);
+    });
+
     return el;
   }
 
-  function renderGlobalTimerV7(t,remaining){
-    const el=ensureGlobalTimerV7();
+  function pollGlobalTimerV8(){
+    const el=ensureGlobalTimerV8();
     if(!el)return;
-    if(!t){
-      el.classList.remove('on','flash');
+
+    const timer=currentTimerV6();
+    const time=el.querySelector('#wt-global-time-v8');
+    const meta=el.querySelector('#wt-global-meta-v8');
+    const pause=el.querySelector('[data-action="pause"]');
+
+    if(timer){
+      lastTimerId=timer.id||'timer';
+      timerFinishedUntil=0;
+
+      const remaining=timer.paused
+        ?Math.max(0,Number(timer.remainingSec)||0)
+        :Math.max(0,Math.ceil((Number(timer.endTs)-Date.now())/1000));
+
+      el.classList.add('on');
+      el.classList.remove('finished');
+      if(time)time.textContent=timerDisplayV6(remaining);
+      if(meta)meta.textContent=`odmor Â· plan ${fmtRest(Number(timer.plannedSec)||0)}`;
+      if(pause)pause.textContent=timer.paused?'â–¶':'â…¡';
       return;
     }
 
-    el.classList.add('on');
-    el.classList.remove('flash');
-    const time=document.getElementById('wt-global-timer-time-v7');
-    const meta=document.getElementById('wt-global-timer-meta-v7');
-    const pause=document.getElementById('wt-global-timer-pause-v7');
-    if(time)time.textContent=timerDisplayV6(Math.max(0,remaining||0));
-    if(meta)meta.textContent=`odmor Â· plan ${fmtRest(t.plannedSec||0)}`;
-    if(pause)pause.textContent=t.paused?'â–¶':'â…¡';
-  }
+    if(lastTimerId){
+      lastTimerId='';
+      timerFinishedUntil=Date.now()+3500;
+    }
 
-  function finishGlobalTimerV7(){
-    const el=ensureGlobalTimerV7();
-    if(!el)return;
-    const time=document.getElementById('wt-global-timer-time-v7');
-    const meta=document.getElementById('wt-global-timer-meta-v7');
-    if(time)time.textContent='KONEC';
-    if(meta)meta.textContent='naslednji set';
-    el.classList.add('on','flash');
-    window.setTimeout(()=>el.classList.remove('on','flash'),5000);
-  }
-
-  window.pauseActiveTimerV7=function(){
-    const t=currentTimerV6();
-    if(t)pauseResumeTimerV6(t.key);
-  };
-
-  window.stopActiveTimerV7=function(){
-    const t=currentTimerV6();
-    if(t)stopT(t.key);
-  };
-
-  tickTimerV6=function(t){
-    const bar=document.getElementById('tb-'+t.key);
-    const cnt=document.getElementById('tc-'+t.key);
-    const meta=document.getElementById('tm-'+t.key);
-    const pause=document.getElementById('tp-'+t.key);
-    if(bar)bar.classList.add('on');
-    if(pause)pause.textContent=t.paused?'â–¶':'â…¡';
-    if(meta)meta.textContent=`plan ${fmtRest(t.plannedSec)}`;
-
-    if(t.paused){
-      const remaining=t.remainingSec||0;
-      if(cnt)cnt.textContent=timerDisplayV6(remaining);
-      renderGlobalTimerV7(t,remaining);
+    if(timerFinishedUntil>Date.now()){
+      el.classList.add('on','finished');
+      if(time)time.textContent='KONEC';
+      if(meta)meta.textContent='naslednji set';
       return;
     }
 
-    const run=()=>{
-      const cur=currentTimerV6();
-      if(!cur||cur.id!==t.id)return;
-      const rem=Math.max(0,Math.ceil((cur.endTs-Date.now())/1000));
-      if(cnt)cnt.textContent=timerDisplayV6(rem);
-      renderGlobalTimerV7(cur,rem);
+    el.classList.remove('on','finished');
+  }
 
-      if(rem<=15&&rem>0&&getV6Settings().restWarning&&!cur.warned15){
-        cur.warned15=true;
-        saveTimerV6(cur);
-        if(navigator.vibrate)navigator.vibrate(80);
-        if(meta)meta.textContent='15 s do seta';
-      }
+  function processWorkoutV8(force){
+    document.querySelectorAll('#day-content .exc').forEach(card=>{
+      installCompactLoggerV8(card,force);
+      simplifyProgressionV8(card);
+    });
+    syncFocusV8();
+    pollGlobalTimerV8();
+  }
 
-      if(rem<=0){
-        clearTimerIntervalsV6();
-        localStorage.removeItem(LS_TIMER);
-        cancelScheduledNotification();
-        logRestV6(cur,'completed');
-        finishGlobalTimerV7();
-        alertEnd(cur.key);
-        renderV6Settings();
-      }
-    };
+  function queueRefreshV8(delay,force){
+    if(refreshPending)return;
+    refreshPending=true;
+    window.setTimeout(()=>{
+      refreshPending=false;
+      processWorkoutV8(!!force);
+    },Number.isFinite(delay)?delay:0);
+  }
 
-    run();
-    TM[t.key]=setInterval(run,250);
+  function wrapRefreshV8(name,force){
+    const original=window[name];
+    if(typeof original!=='function'||original.__wtV8Wrapped)return;
+
+    function wrapped(){
+      const result=original.apply(this,arguments);
+      queueRefreshV8(0,!!force);
+      window.setTimeout(()=>processWorkoutV8(!!force),80);
+      return result;
+    }
+
+    wrapped.__wtV8Wrapped=true;
+    wrapped.__wtV8Original=original;
+    window[name]=wrapped;
+  }
+
+  function exactCustomRestV8(key,def){
+    const parsed=parseKeyV8(key);
+    if(!parsed)return 0;
+
+    const exercise=PROG.days[parsed.day]?.ex?.[parsed.exercise];
+    const name=currentExerciseName(
+      parsed.day,
+      parsed.exercise,
+      key
+    );
+    const custom=getCustomRest();
+    let raw;
+
+    if(
+      exercise?.id&&
+      Object.prototype.hasOwnProperty.call(custom,exercise.id)
+    ){
+      raw=custom[exercise.id];
+    }else if(
+      name&&
+      Object.prototype.hasOwnProperty.call(custom,name)
+    ){
+      raw=custom[name];
+    }
+
+    const seconds=Number(raw);
+    return Number.isFinite(seconds)&&seconds>0?seconds:0;
+  }
+
+  const smartRestBeforeV8=computeSmartRestV6;
+  computeSmartRestV6=function(key,si,def){
+    const exact=exactCustomRestV8(key,def);
+    if(exact>0)return exact;
+    return smartRestBeforeV8.apply(this,arguments);
   };
 
-  const stopTBeforeV7=stopT;
-  stopT=function(key){
-    const result=stopTBeforeV7(key);
-    renderGlobalTimerV7(null,0);
-    return result;
-  };
+  function installSwipeV8(){
+    const root=document.getElementById('day-content');
+    if(!root||root.dataset.v8FocusSwipe==='1')return;
+    root.dataset.v8FocusSwipe='1';
 
-  window.WTFocusPatchV7={
+    root.addEventListener('touchstart',event=>{
+      if(!getGymMode())return;
+      if(event.target.closest('input,button,select,textarea,tr'))return;
+      const touch=event.touches[0];
+      swipeStart={x:touch.clientX,y:touch.clientY};
+    },{passive:true});
+
+    root.addEventListener('touchend',event=>{
+      if(!swipeStart||!getGymMode())return;
+
+      const touch=event.changedTouches[0];
+      const dx=touch.clientX-swipeStart.x;
+      const dy=touch.clientY-swipeStart.y;
+      swipeStart=null;
+
+      if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.35)return;
+
+      moveGymFocus(dx<0?1:-1);
+      queueRefreshV8(0,true);
+    },{passive:true});
+  }
+
+  function installObserverV8(){
+    const root=document.getElementById('day-content');
+    if(!root||root.dataset.v8Observed==='1')return;
+    root.dataset.v8Observed='1';
+
+    const observer=new MutationObserver(()=>{
+      queueRefreshV8(0,false);
+    });
+
+    observer.observe(root,{
+      childList:true,
+      subtree:true
+    });
+  }
+
+  function initializeV8(){
+    [
+      'showDay',
+      'setGymMode',
+      'toggleGymMode',
+      'setGymFocus',
+      'moveGymFocus',
+      'refreshGymTarget',
+      'tgSet',
+      'addSet',
+      'removeSet'
+    ].forEach(name=>wrapRefreshV8(name,true));
+
+    installObserverV8();
+    installSwipeV8();
+    ensureGlobalTimerV8();
+    processWorkoutV8(true);
+
+    window.setTimeout(()=>{
+      installObserverV8();
+      installSwipeV8();
+      processWorkoutV8(true);
+    },250);
+
+    window.setInterval(pollGlobalTimerV8,250);
+  }
+
+  window.WTFocusPatchV8={
     version:PATCH_VERSION,
-    refresh:function(){
-      if(typeof restoreTimer==='function')restoreTimer();
-      document.querySelectorAll('.quick-log-v7').forEach(el=>{
-        const key=el.dataset.key||'';
-        const m=key.match(/d(\d+)e(\d+)$/);
-        if(m)syncInlineLoggerV7(key,+m[1],+m[2]);
-      });
-    }
+    refresh:()=>processWorkoutV8(true),
+    syncFocus:syncFocusV8
   };
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',initializeV8,{once:true});
+  }else{
+    initializeV8();
+  }
+
+  window.addEventListener('pageshow',()=>{
+    window.setTimeout(()=>processWorkoutV8(true),60);
+  });
 })();
