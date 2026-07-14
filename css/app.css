@@ -811,3 +811,172 @@ tr.v6-swipe-undo{background:var(--red-bg)!important;}
     padding-inline:3px;
   }
 }
+
+/* === V9 CLEAN EXERCISE UI + FOCUS NAV (release 1.0.39) === */
+.sug-box{
+  display:none!important;
+}
+
+html:not(.gym-mode) .ex-name{
+  font-size:17px!important;
+  font-weight:750!important;
+  letter-spacing:.01em;
+  line-height:1.25;
+}
+
+.bdg.moved-v9{
+  display:none!important;
+}
+
+.exercise-actions-v9{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+  margin:8px 0;
+  min-height:36px;
+}
+
+.exercise-actions-v9 .prog-dir-v8,
+.exercise-actions-v9 .prog-dir-v9{
+  flex:none;
+  margin:0!important;
+}
+
+.exercise-actions-v9 .b{
+  min-height:34px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:5px 10px;
+}
+
+.exercise-actions-v9 .restbtn,
+.exercise-actions-v9 .swbtn,
+.exercise-actions-v9 .ex-menu-btn,
+.exercise-actions-v9 .toggle-fold{
+  min-height:34px;
+  margin:0;
+}
+
+.swap-icon-v9{
+  width:38px;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+  font-size:21px!important;
+  font-weight:800;
+}
+
+.menu-icon-v9{
+  width:38px;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+}
+
+.menu-lines-v9{
+  width:17px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.menu-lines-v9 i{
+  display:block;
+  width:17px;
+  height:2px;
+  border-radius:2px;
+  background:currentColor;
+}
+
+.focus-nav-v9{
+  display:none;
+}
+
+html.gym-mode .focus-nav-v9.on{
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom:calc(10px + env(safe-area-inset-bottom));
+  z-index:95;
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr) 48px;
+  align-items:center;
+  gap:8px;
+  min-height:58px;
+  padding:7px;
+  border:1px solid var(--green);
+  border-radius:14px;
+  background:var(--bg2);
+  box-shadow:0 7px 24px rgba(0,0,0,.42);
+}
+
+html.gym-mode body{
+  padding-bottom:calc(92px + env(safe-area-inset-bottom))!important;
+}
+
+.focus-arrow-v9{
+  width:46px;
+  height:44px;
+  border:1px solid var(--border2);
+  border-radius:10px;
+  background:var(--bg3);
+  color:var(--text);
+  font-size:30px;
+  line-height:1;
+  cursor:pointer;
+}
+
+.focus-arrow-v9:disabled{
+  opacity:.28;
+}
+
+.focus-label-v9{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+.focus-label-v9 strong{
+  color:var(--green-text);
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.05em;
+}
+
+.focus-label-v9 span{
+  width:100%;
+  margin-top:2px;
+  overflow:hidden;
+  color:var(--text);
+  font-size:14px;
+  font-weight:750;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+html.gym-mode .wt-safe-ex-number{
+  display:none!important;
+}
+
+@media(max-width:360px){
+  html.gym-mode .focus-nav-v9.on{
+    left:8px;
+    right:8px;
+    grid-template-columns:44px minmax(0,1fr) 44px;
+  }
+
+  .focus-arrow-v9{
+    width:42px;
+  }
+
+  .exercise-actions-v9{
+    gap:4px;
+  }
+}

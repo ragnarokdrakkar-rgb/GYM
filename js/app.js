@@ -1779,6 +1779,408 @@ applyProgramStateV6();
     window.setTimeout(()=>processWorkoutV8(true),60);
   });
 })();
+
+/* === V9 CLEAN EXERCISE UI + FOCUS NAV (release 1.0.39) === */
+(function(){
+  'use strict';
+  if(window.WTUiPatchV9)return;
+
+  const PATCH_VERSION='1.0.39';
+  let processPendingV9=false;
+  let selectedFocusIndexV9=-1;
+
+  const CP1252_SPECIAL_V9=new Map([
+    [0x20ac,0x80],[0x201a,0x82],[0x0192,0x83],[0x201e,0x84],
+    [0x2026,0x85],[0x2020,0x86],[0x2021,0x87],[0x02c6,0x88],
+    [0x2030,0x89],[0x0160,0x8a],[0x2039,0x8b],[0x0152,0x8c],
+    [0x017d,0x8e],[0x2018,0x91],[0x2019,0x92],[0x201c,0x93],
+    [0x201d,0x94],[0x2022,0x95],[0x2013,0x96],[0x2014,0x97],
+    [0x02dc,0x98],[0x2122,0x99],[0x0161,0x9a],[0x203a,0x9b],
+    [0x0153,0x9c],[0x017e,0x9e],[0x0178,0x9f]
+  ]);
+
+  function suspiciousCountV9(value){
+    return (String(value||'').match(/[\u00c2\u00c3\u00c4\u00c5\u00e2]/g)||[]).length;
+  }
+
+  function decodeMojibakeV9(value){
+    const source=String(value??'');
+    if(!source||suspiciousCountV9(source)===0||typeof TextDecoder==='undefined'){
+      return source;
+    }
+
+    const bytes=[];
+    for(const char of source){
+      const cp=char.codePointAt(0);
+      if(cp<=0xff){
+        bytes.push(cp);
+      }else if(CP1252_SPECIAL_V9.has(cp)){
+        bytes.push(CP1252_SPECIAL_V9.get(cp));
+      }else{
+        return source;
+      }
+    }
+
+    try{
+      const decoded=new TextDecoder('utf-8',{fatal:true}).decode(new Uint8Array(bytes));
+      return suspiciousCountV9(decoded)<suspiciousCountV9(source)?decoded:source;
+    }catch(error){
+      return source;
+    }
+  }
+
+  function repairMojibakeV9(root){
+    const base=root||document.body;
+    if(!base)return;
+
+    const walker=document.createTreeWalker(base,NodeFilter.SHOW_TEXT);
+    const nodes=[];
+    while(walker.nextNode())nodes.push(walker.currentNode);
+
+    nodes.forEach(node=>{
+      const fixed=decodeMojibakeV9(node.nodeValue);
+      if(fixed!==node.nodeValue)node.nodeValue=fixed;
+    });
+
+    base.querySelectorAll?.('[title],[placeholder],[aria-label]').forEach(element=>{
+      ['title','placeholder','aria-label'].forEach(name=>{
+        if(!element.hasAttribute(name))return;
+        const current=element.getAttribute(name);
+        const fixed=decodeMojibakeV9(current);
+        if(fixed!==current)element.setAttribute(name,fixed);
+      });
+    });
+  }
+
+  function cardKeyV9(card){
+    return String(card?.id||'').replace(/^ec-/,'');
+  }
+
+  function exerciseCardsV9(){
+    return Array.from(document.querySelectorAll('#day-content .exc'));
+  }
+
+  function progressionNodeV9(card){
+    let node=card.querySelector('.prog-dir-v8,.prog-dir-v9');
+    if(node)return node;
+
+    node=card.querySelector('.prog-v6');
+    if(!node)return null;
+
+    const text=node.textContent.replace(/\s+/g,' ').trim();
+    const down=node.classList.contains('reduce')||node.classList.contains('deload');
+    const up=node.classList.contains('increase');
+    const symbol=up?'\u2191':down?'\u2193':'=';
+    const cls=up?'up':down?'down':'same';
+
+    node.className='prog-dir-v9 '+cls;
+    node.title=text;
+    node.setAttribute('aria-label',text);
+    node.innerHTML='<span>'+symbol+'</span>';
+    return node;
+  }
+
+  function styleMovedControlV9(control){
+    if(control.classList.contains('swbtn')){
+      control.classList.add('swap-icon-v9');
+      control.textContent='\u21c4';
+      control.title='Zamenjave';
+      control.setAttribute('aria-label','Zamenjave');
+    }
+
+    if(control.classList.contains('ex-menu-btn')){
+      control.classList.add('menu-icon-v9');
+      control.title='Vec moznosti';
+      control.setAttribute('aria-label','Vec moznosti');
+      control.innerHTML=
+        '<span class="menu-lines-v9" aria-hidden="true">'+
+          '<i></i><i></i><i></i>'+
+        '</span>';
+    }
+  }
+
+  function arrangeExerciseActionsV9(card){
+    const quick=card.querySelector('.quick-log-v6');
+    const table=card.querySelector('table.st');
+    if(!quick&&!table)return;
+
+    let toolbar=card.querySelector('.exercise-actions-v9');
+    if(!toolbar){
+      toolbar=document.createElement('div');
+      toolbar.className='exercise-actions-v9';
+      const anchor=quick||table;
+      anchor.parentNode.insertBefore(toolbar,anchor);
+    }
+
+    const progression=progressionNodeV9(card);
+    if(progression&&progression.parentNode!==toolbar){
+      toolbar.appendChild(progression);
+    }
+
+    const badges=card.querySelector('.bdg');
+    if(badges){
+      const controls=Array.from(badges.children).filter(element=>
+        element.matches(
+          '.b,.restbtn,.swbtn,.ex-menu-btn,.toggle-fold'
+        )
+      );
+
+      controls.forEach(control=>{
+        styleMovedControlV9(control);
+        toolbar.appendChild(control);
+      });
+
+      badges.classList.add('moved-v9');
+    }
+
+    const looseSwap=card.querySelector('.swbtn:not(.swap-icon-v9)');
+    if(looseSwap){
+      styleMovedControlV9(looseSwap);
+      toolbar.appendChild(looseSwap);
+    }
+
+    const looseMenu=card.querySelector('.ex-menu-btn:not(.menu-icon-v9)');
+    if(looseMenu){
+      styleMovedControlV9(looseMenu);
+      toolbar.appendChild(looseMenu);
+    }
+  }
+
+  function ensureFocusBarV9(){
+    let bar=document.getElementById('focus-nav-v9');
+    if(bar)return bar;
+
+    bar=document.createElement('div');
+    bar.id='focus-nav-v9';
+    bar.className='focus-nav-v9';
+    bar.innerHTML=
+      '<button type="button" class="focus-arrow-v9 prev" aria-label="Prejsnja vaja">'+
+        '\u2039'+
+      '</button>'+
+      '<div class="focus-label-v9">'+
+        '<strong id="focus-position-v9">1/1</strong>'+
+        '<span id="focus-name-v9">Vaja</span>'+
+      '</div>'+
+      '<button type="button" class="focus-arrow-v9 next" aria-label="Naslednja vaja">'+
+        '\u203a'+
+      '</button>';
+
+    document.body.appendChild(bar);
+
+    bar.querySelector('.prev').addEventListener('click',()=>{
+      moveFocusFromBarV9(-1);
+    });
+
+    bar.querySelector('.next').addEventListener('click',()=>{
+      moveFocusFromBarV9(1);
+    });
+
+    return bar;
+  }
+
+  function currentFocusIndexV9(cards){
+    const activeKey=localStorage.getItem('wt_active_ex')||'';
+    const index=cards.findIndex(card=>cardKeyV9(card)===activeKey);
+    if(index>=0)return index;
+
+    const activeIndex=cards.findIndex(card=>card.classList.contains('active-ex'));
+    if(activeIndex>=0)return activeIndex;
+
+    return cards.length?0:-1;
+  }
+
+  function applyFocusCardV9(cards,index,scroll){
+    if(!cards.length)return;
+
+    const safeIndex=Math.max(0,Math.min(cards.length-1,index));
+    const card=cards[safeIndex];
+    const key=cardKeyV9(card);
+    if(!key)return;
+
+    selectedFocusIndexV9=safeIndex;
+    localStorage.setItem('wt_active_ex',key);
+
+    cards.forEach((item,itemIndex)=>{
+      const active=itemIndex===safeIndex;
+      item.classList.toggle('active-ex',active);
+      if(document.documentElement.classList.contains('gym-mode')){
+        item.style.setProperty('display',active?'block':'none','important');
+      }
+    });
+
+    try{
+      if(typeof updateGymFocusBar==='function')updateGymFocusBar(key);
+    }catch(error){}
+
+    updateFocusBarV9();
+
+    if(scroll){
+      window.setTimeout(()=>{
+        card.scrollIntoView({behavior:'smooth',block:'start'});
+      },40);
+    }
+  }
+
+  function updateFocusBarV9(){
+    const bar=ensureFocusBarV9();
+    const gymMode=
+      typeof getGymMode==='function'&&getGymMode();
+
+    bar.classList.toggle('on',!!gymMode);
+    if(!gymMode)return;
+
+    const cards=exerciseCardsV9();
+    if(!cards.length){
+      bar.classList.remove('on');
+      return;
+    }
+
+    let index=currentFocusIndexV9(cards);
+    if(
+      selectedFocusIndexV9>=0&&
+      selectedFocusIndexV9<cards.length&&
+      cards[selectedFocusIndexV9].classList.contains('active-ex')
+    ){
+      index=selectedFocusIndexV9;
+    }
+
+    index=Math.max(0,index);
+    const card=cards[index];
+    const name=
+      card.querySelector('.ex-name')?.textContent?.trim()||
+      'Vaja';
+
+    const position=bar.querySelector('#focus-position-v9');
+    const nameElement=bar.querySelector('#focus-name-v9');
+    const previous=bar.querySelector('.prev');
+    const next=bar.querySelector('.next');
+
+    if(position)position.textContent=(index+1)+'/'+cards.length;
+    if(nameElement)nameElement.textContent=name;
+    if(previous)previous.disabled=index<=0;
+    if(next)next.disabled=index>=cards.length-1;
+  }
+
+  function moveFocusFromBarV9(direction){
+    const cards=exerciseCardsV9();
+    if(!cards.length)return;
+
+    const current=currentFocusIndexV9(cards);
+    const next=Math.max(
+      0,
+      Math.min(cards.length-1,current+Number(direction||0))
+    );
+
+    if(next===current)return;
+    applyFocusCardV9(cards,next,true);
+  }
+
+  function disableSwipeV9(){
+    window.moveGymFocus=function(){
+      return false;
+    };
+  }
+
+  function processWorkoutV9(){
+    document.querySelectorAll('#day-content .exc').forEach(card=>{
+      arrangeExerciseActionsV9(card);
+    });
+
+    repairMojibakeV9(document.body);
+    updateFocusBarV9();
+  }
+
+  function queueProcessV9(delay){
+    if(processPendingV9)return;
+    processPendingV9=true;
+
+    window.setTimeout(()=>{
+      processPendingV9=false;
+      processWorkoutV9();
+    },Number.isFinite(delay)?delay:0);
+  }
+
+  function installObserverV9(){
+    const root=document.getElementById('day-content');
+    if(!root||root.dataset.v9Observed==='1')return;
+
+    root.dataset.v9Observed='1';
+    const observer=new MutationObserver(()=>{
+      queueProcessV9(0);
+    });
+
+    observer.observe(root,{
+      childList:true,
+      subtree:true,
+      characterData:true
+    });
+  }
+
+  function wrapRenderFunctionV9(name){
+    const original=window[name];
+    if(typeof original!=='function'||original.__wtV9Wrapped)return;
+
+    function wrapped(){
+      const result=original.apply(this,arguments);
+      queueProcessV9(0);
+      window.setTimeout(processWorkoutV9,80);
+      return result;
+    }
+
+    wrapped.__wtV9Wrapped=true;
+    wrapped.__wtV9Original=original;
+    window[name]=wrapped;
+  }
+
+  function initializeV9(){
+    disableSwipeV9();
+
+    [
+      'showDay',
+      'setGymMode',
+      'toggleGymMode',
+      'setGymFocus',
+      'refreshGymTarget',
+      'tgSet',
+      'addSet',
+      'removeSet'
+    ].forEach(wrapRenderFunctionV9);
+
+    installObserverV9();
+    ensureFocusBarV9();
+    processWorkoutV9();
+
+    window.setTimeout(()=>{
+      disableSwipeV9();
+      installObserverV9();
+      processWorkoutV9();
+    },250);
+
+    window.setInterval(()=>{
+      disableSwipeV9();
+      repairMojibakeV9(document.body);
+      updateFocusBarV9();
+    },500);
+  }
+
+  window.moveFocusFromBarV9=moveFocusFromBarV9;
+  window.WTUiPatchV9={
+    version:PATCH_VERSION,
+    refresh:processWorkoutV9,
+    repairText:repairMojibakeV9,
+    moveFocus:moveFocusFromBarV9
+  };
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',initializeV9,{once:true});
+  }else{
+    initializeV9();
+  }
+
+  window.addEventListener('pageshow',()=>{
+    window.setTimeout(processWorkoutV9,60);
+  });
+})();
 function renderEx(e,ei,di,wk,cn,isExtra){
   const exKey=sdk(cn,cw,di,ei);
   const n=nsf(di,ei,wk,exKey);
