@@ -420,6 +420,10 @@
   };
 
   window.WTRestNotifications = {
+    reschedule: function (seconds) {
+      return scheduleNativeNotification(seconds);
+    },
+
     scheduleTest: function (seconds) {
       return scheduleNativeNotification(seconds || 5);
     },

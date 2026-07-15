@@ -136,7 +136,72 @@ const _svV5=sv;sv=async function(...a){const r=await _svV5.apply(this,a);persist
 const _setRpeV5=setRpe;setRpe=function(...a){const r=_setRpeV5.apply(this,a);persistSessionDraftV6();return r;};
 const _setExPainV5=setExPain;setExPain=function(...a){const r=_setExPainV5.apply(this,a);persistSessionDraftV6();return r;};
 const _saveNotePopV5=saveNotePop;saveNotePop=function(...a){const r=_saveNotePopV5.apply(this,a);persistSessionDraftV6();return r;};
-const _tgSetV5=tgSet;tgSet=function(key,si,di,ei,cn){const before=!!getSets()[key]?.[si]?.done;if(!before){const t=currentTimerV6();if(t&&t.key===key){logRestV6(t,'next-set');clearTimerIntervalsV6();localStorage.removeItem(LS_TIMER);cancelScheduledNotification();}}_tgSetV5(key,si,di,ei,cn);const after=getSets()[key]?.[si];if(!before&&after?.done){if(!after.drop){const e=PROG.days[di]?.ex?.[ei],nm=currentExerciseName(di,ei,key),def=restForEx(e?.id,nm,e?.r||90),sec=computeSmartRestV6(key,si,def);if(sec>0)startT(key,sec);}if(navigator.vibrate)navigator.vibrate(35);focusNextSetV6(key,si);}persistSessionDraftV6();};
+const _tgSetV5=tgSet;
+tgSet=function(key,si,di,ei,cn){
+  const before=!!getSets()[key]?.[si]?.done;
+
+  if(!before){
+    const timer=currentTimerV6();
+    if(timer&&timer.key===key){
+      logRestV6(timer,'next-set');
+      clearTimerIntervalsV6();
+      localStorage.removeItem(LS_TIMER);
+      cancelScheduledNotification();
+
+      try{
+        const nativeApi=window.WTRestNotifications;
+        if(nativeApi&&typeof nativeApi.cancel==='function'){
+          Promise.resolve(nativeApi.cancel()).catch(()=>{});
+        }
+      }catch(error){}
+    }
+  }
+
+  const startTimerOnce=startT;
+  startT=function(){};
+
+  try{
+    _tgSetV5(key,si,di,ei,cn);
+  }finally{
+    startT=startTimerOnce;
+  }
+
+  const after=getSets()[key]?.[si];
+
+  if(!before&&after?.done){
+    if(!after.drop){
+      const exercise=PROG.days[di]?.ex?.[ei];
+      const name=currentExerciseName(di,ei,key);
+      const defaultSeconds=restForEx(
+        exercise?.id,
+        name,
+        exercise?.r||90
+      );
+      const smartSeconds=computeSmartRestV6(
+        key,
+        si,
+        defaultSeconds
+      );
+
+      if(smartSeconds>0){
+        startTimerOnce(key,smartSeconds);
+      }
+    }
+
+    focusNextSetV6(key,si);
+
+    if(typeof getGymMode==='function'&&getGymMode()){
+      window.setTimeout(()=>{
+        const api=window.WTFocusPatchV10;
+        if(api&&typeof api.setFocus==='function'){
+          api.setFocus(key,false);
+        }
+      },650);
+    }
+  }
+
+  persistSessionDraftV6();
+};
 (function installSetSwipeV6(){const dc=document.getElementById('day-content');if(!dc||dc.dataset.v6Swipe)return;dc.dataset.v6Swipe='1';let sx=0,sy=0,row=null;dc.addEventListener('touchstart',e=>{const r=e.target.closest('tr[id^="row-"]');if(!r)return;const t=e.touches[0];sx=t.clientX;sy=t.clientY;row=r;},{passive:true});dc.addEventListener('touchend',e=>{if(!row)return;const r=row;row=null;const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.4)return;const m=r.id.match(/^row-(c\d+w\d+d(\d+)e(\d+))-(\d+)$/);if(!m)return;const key=m[1],di=+m[2],ei=+m[3],si=+m[4],cn=+(key.match(/^c(\d+)/)?.[1]||getCyc().num),done=!!getSets()[key]?.[si]?.done;if(dx>0&&!done){r.classList.add('v6-swipe-ok');setTimeout(()=>tgSet(key,si,di,ei,cn),90);}else if(dx<0&&done){r.classList.add('v6-swipe-undo');setTimeout(()=>tgSet(key,si,di,ei,cn),90);}},{passive:true});})();
 
 /* ---------- Session recovery ---------- */
@@ -190,543 +255,20 @@ const _clearAllV5=clearAll;clearAll=async function(){const r=await _clearAllV5()
 /* Apply profile customizations before normal V5 init runs. */
 applyProgramStateV6();
 
-/* === V8 FOCUS FIX (release 1.0.38) === */
+/* === V10 TIMER + RPE + FOCUS + BATTERY (release 1.0.40) === */
 (function(){
   'use strict';
-  if(window.WTFocusPatchV8)return;
-
-  const PATCH_VERSION='1.0.38';
-  let refreshPending=false;
-  let compactBusy=false;
-  let swipeStart=null;
-  let lastTimerId='';
-  let timerFinishedUntil=0;
-
-  function parseKeyV8(key){
-    const m=String(key||'').match(/^c(\d+)w(\d+)d(\d+)e(\d+)$/);
-    return m?{cycle:+m[1],week:+m[2],day:+m[3],exercise:+m[4]}:null;
-  }
-
-  function decimalV8(value){
-    return String(value??'').trim().replace(',','.');
-  }
-
-  function displayNumberV8(value){
-    const n=Number(value);
-    if(!Number.isFinite(n))return'';
-    return Number.isInteger(n)?String(n):String(n).replace('.',',');
-  }
-
-  function pendingSetV8(key,di,ei){
-    const all=getSets();
-    const sets=Array.isArray(all[key])?all[key]:[];
-    const wk=PROG.weeks[cw];
-    const total=Math.max(1,Number(nsf(di,ei,wk,key))||1);
-    let si=0;
-    while(si<total&&sets[si]?.done)si++;
-
-    if(si>=total){
-      return{complete:true,si,total,kg:'',reps:''};
-    }
-
-    const current=sets[si]||{};
-    const previous=[...sets.slice(0,si)]
-      .reverse()
-      .find(set=>set&&set.kg!==''&&set.kg!==undefined&&set.reps);
-
-    return{
-      complete:false,
-      si,
-      total,
-      kg:current.kg!==''&&current.kg!==undefined&&current.kg!==null
-        ?current.kg
-        :(previous?.kg??''),
-      reps:current.reps!==''&&current.reps!==undefined&&current.reps!==null
-        ?current.reps
-        :(previous?.reps??'')
-    };
-  }
-
-  function compactMarkupV8(key,di,ei,cn){
-    const state=pendingSetV8(key,di,ei);
-    const disabled=state.complete?' disabled':'';
-    const kg=safeHtml(state.complete?'':String(state.kg??''));
-    const reps=safeHtml(state.complete?'':String(state.reps??''));
-
-    return`
-      <div class="compact-set-label-v8">${state.complete?'KonÄano':`Set ${state.si+1}/${state.total}`}</div>
-      <label class="compact-field-v8">
-        <span>KG</span>
-        <input id="v8-kg-${key}" type="number" inputmode="decimal" min="0" step="0.5" value="${kg}"${disabled}>
-      </label>
-      <label class="compact-field-v8">
-        <span>PON</span>
-        <input id="v8-reps-${key}" type="number" inputmode="numeric" min="1" step="1" value="${reps}"${disabled}>
-      </label>
-      <label class="compact-field-v8">
-        <span>RPE <button type="button" class="rpe-help-v8" aria-label="RPE legenda">?</button></span>
-        <input id="v8-rpe-${key}" type="number" inputmode="decimal" min="5" max="10" step="0.5" placeholder="8"${disabled}>
-      </label>
-      <button type="button" class="compact-log-v8"${disabled}>${state.complete?'âœ“':'LOG'}</button>
-      <div class="rpe-legend-v8" hidden>
-        <strong>RPE legenda</strong>
-        <div><b>10</b> maksimum Â· 0 ponovitev v rezervi</div>
-        <div><b>9â€“9,5</b> pribliÅ¾no 0â€“1 v rezervi</div>
-        <div><b>8â€“8,5</b> pribliÅ¾no 1â€“2 v rezervi</div>
-        <div><b>7</b> pribliÅ¾no 3 v rezervi</div>
-        <div><b>6</b> pribliÅ¾no 4 v rezervi</div>
-        <div><b>5</b> zelo lahko oziroma ogrevanje</div>
-      </div>`;
-  }
-
-  function installCompactLoggerV8(card,force){
-    const key=String(card?.id||'').replace(/^ec-/,'');
-    const parsed=parseKeyV8(key);
-    const box=card?.querySelector('.quick-log-v6');
-    if(!parsed||!box)return;
-
-    if(box.dataset.v8Ready==='1'&&!force)return;
-
-    box.dataset.v8Ready='1';
-    box.classList.add('compact-log-box-v8');
-    box.innerHTML=compactMarkupV8(
-      key,
-      parsed.day,
-      parsed.exercise,
-      parsed.cycle
-    );
-
-    const help=box.querySelector('.rpe-help-v8');
-    const legend=box.querySelector('.rpe-legend-v8');
-    const log=box.querySelector('.compact-log-v8');
-    const inputs=box.querySelectorAll('input');
-
-    help?.addEventListener('click',event=>{
-      event.preventDefault();
-      event.stopPropagation();
-      if(legend)legend.hidden=!legend.hidden;
-    });
-
-    log?.addEventListener('click',()=>{
-      logCompactSetV8(key,parsed.day,parsed.exercise,parsed.cycle);
-    });
-
-    inputs.forEach(input=>{
-      input.addEventListener('keydown',event=>{
-        if(event.key!=='Enter')return;
-        event.preventDefault();
-        logCompactSetV8(key,parsed.day,parsed.exercise,parsed.cycle);
-      });
-    });
-  }
-
-  async function logCompactSetV8(key,di,ei,cn){
-    if(compactBusy)return;
-
-    const state=pendingSetV8(key,di,ei);
-    if(state.complete)return;
-
-    const kgEl=document.getElementById('v8-kg-'+key);
-    const repsEl=document.getElementById('v8-reps-'+key);
-    const rpeEl=document.getElementById('v8-rpe-'+key);
-    const button=kgEl?.closest('.compact-log-box-v8')?.querySelector('.compact-log-v8');
-    if(!kgEl||!repsEl||!rpeEl||!button)return;
-
-    const kgRaw=decimalV8(kgEl.value);
-    const repsRaw=decimalV8(repsEl.value);
-    const rpeRaw=decimalV8(rpeEl.value);
-    const kg=Number(kgRaw);
-    const reps=Number(repsRaw);
-    const rpe=Number(rpeRaw);
-
-    if(kgRaw===''||!Number.isFinite(kg)||kg<0){
-      toast('Vnesi veljavne kilograme.','err');
-      kgEl.focus();
-      return;
-    }
-
-    if(repsRaw===''||!Number.isFinite(reps)||!Number.isInteger(reps)||reps<1){
-      toast('Vnesi veljavne ponovitve.','err');
-      repsEl.focus();
-      return;
-    }
-
-    if(
-      !Number.isFinite(rpe)||
-      rpe<5||
-      rpe>10||
-      Math.abs(rpe*2-Math.round(rpe*2))>.001
-    ){
-      toast('RPE mora biti 5â€“10 v koraku 0,5.','err');
-      rpeEl.focus();
-      return;
-    }
-
-    compactBusy=true;
-    button.disabled=true;
-    button.textContent='...';
-
-    try{
-      const exercise=PROG.days[di]?.ex?.[ei];
-      const isBarbell=BARBELL_EX.includes(exercise?.n);
-
-      await sv(key,state.si,'kg',kgRaw,di,ei,cn,isBarbell?1:0);
-      await sv(key,state.si,'reps',String(reps),di,ei,cn,0);
-      setRpe(key,state.si,Math.round(rpe*2)/2,di,ei,cn);
-
-      if(!getSets()[key]?.[state.si]?.done){
-        tgSet(key,state.si,di,ei,cn);
-      }
-
-      toast(
-        `âœ“ ${displayNumberV8(kg)}kg Ã— ${reps} @ RPE ${displayNumberV8(rpe)}`,
-        'ok'
-      );
-    }catch(error){
-      console.warn('WT V8 compact log',error);
-      toast('Set ni bil shranjen.','err');
-    }finally{
-      compactBusy=false;
-      queueRefreshV8(30,true);
-    }
-  }
-
-  window.logCompactSetV8=logCompactSetV8;
-
-  function simplifyProgressionV8(card){
-    card.querySelectorAll('.prog-v6').forEach(box=>{
-      if(box.dataset.v8Ready==='1')return;
-
-      const text=box.textContent.replace(/\s+/g,' ').trim();
-      const down=box.classList.contains('reduce')||box.classList.contains('deload');
-      const up=box.classList.contains('increase');
-      const symbol=up?'â†‘':down?'â†“':'=';
-      const cls=up?'up':down?'down':'same';
-
-      box.dataset.v8Ready='1';
-      box.title=text;
-      box.setAttribute('aria-label',text);
-      box.className=`prog-dir-v8 ${cls}`;
-      box.innerHTML=`<span>${symbol}</span>`;
-    });
-  }
-
-  function firstPendingCardV8(cards){
-    for(const card of cards){
-      const key=String(card.id||'').replace(/^ec-/,'');
-      try{
-        if(key&&isExercisePending(key))return card;
-      }catch(error){}
-    }
-    return cards.find(card=>!card.classList.contains('col-done'))||cards[0]||null;
-  }
-
-  function syncFocusV8(){
-    const cards=Array.from(document.querySelectorAll('#day-content .exc'));
-
-    if(!getGymMode()){
-      cards.forEach(card=>{
-        card.style.removeProperty('display');
-      });
-      return;
-    }
-
-    if(!cards.length)return;
-
-    let key=localStorage.getItem('wt_active_ex')||'';
-    let active=key?document.getElementById('ec-'+key):null;
-
-    if(!active||!cards.includes(active)){
-      active=null;
-    }
-
-    if(active){
-      try{
-        if(!isExercisePending(key))active=null;
-      }catch(error){
-        active=null;
-      }
-    }
-
-    if(!active){
-      try{
-        const next=findNextPendingExerciseKey()||'';
-        const candidate=next?document.getElementById('ec-'+next):null;
-        if(candidate&&cards.includes(candidate)){
-          key=next;
-          active=candidate;
-        }
-      }catch(error){}
-    }
-
-    if(!active){
-      active=firstPendingCardV8(cards);
-      key=String(active?.id||'').replace(/^ec-/,'');
-    }
-
-    if(!active||!key)return;
-
-    localStorage.setItem('wt_active_ex',key);
-
-    cards.forEach(card=>{
-      const visible=card===active;
-      card.classList.toggle('active-ex',visible);
-      card.style.setProperty(
-        'display',
-        visible?'block':'none',
-        'important'
-      );
-    });
-
-    try{
-      updateGymFocusBar(key);
-    }catch(error){}
-  }
-
-  function ensureGlobalTimerV8(){
-    let el=document.getElementById('wt-global-timer-v8');
-    if(el)return el;
-
-    const sessionBar=document.querySelector('#page-workout .stb');
-    if(!sessionBar)return null;
-
-    el=document.createElement('div');
-    el.id='wt-global-timer-v8';
-    el.className='global-timer-v8';
-    el.innerHTML=`
-      <strong id="wt-global-time-v8">â€”</strong>
-      <span id="wt-global-meta-v8">odmor</span>
-      <button type="button" data-action="minus">âˆ’30</button>
-      <button type="button" data-action="pause">â…¡</button>
-      <button type="button" data-action="plus">+30</button>
-      <button type="button" class="stop" data-action="stop">Ã—</button>`;
-
-    sessionBar.insertAdjacentElement('afterend',el);
-
-    el.querySelector('[data-action="minus"]')?.addEventListener('click',()=>{
-      adjustTimerV6(-30);
-    });
-    el.querySelector('[data-action="plus"]')?.addEventListener('click',()=>{
-      adjustTimerV6(30);
-    });
-    el.querySelector('[data-action="pause"]')?.addEventListener('click',()=>{
-      const timer=currentTimerV6();
-      if(timer)pauseResumeTimerV6(timer.key);
-    });
-    el.querySelector('[data-action="stop"]')?.addEventListener('click',()=>{
-      const timer=currentTimerV6();
-      if(timer)stopT(timer.key);
-    });
-
-    return el;
-  }
-
-  function pollGlobalTimerV8(){
-    const el=ensureGlobalTimerV8();
-    if(!el)return;
-
-    const timer=currentTimerV6();
-    const time=el.querySelector('#wt-global-time-v8');
-    const meta=el.querySelector('#wt-global-meta-v8');
-    const pause=el.querySelector('[data-action="pause"]');
-
-    if(timer){
-      lastTimerId=timer.id||'timer';
-      timerFinishedUntil=0;
-
-      const remaining=timer.paused
-        ?Math.max(0,Number(timer.remainingSec)||0)
-        :Math.max(0,Math.ceil((Number(timer.endTs)-Date.now())/1000));
-
-      el.classList.add('on');
-      el.classList.remove('finished');
-      if(time)time.textContent=timerDisplayV6(remaining);
-      if(meta)meta.textContent=`odmor Â· plan ${fmtRest(Number(timer.plannedSec)||0)}`;
-      if(pause)pause.textContent=timer.paused?'â–¶':'â…¡';
-      return;
-    }
-
-    if(lastTimerId){
-      lastTimerId='';
-      timerFinishedUntil=Date.now()+3500;
-    }
-
-    if(timerFinishedUntil>Date.now()){
-      el.classList.add('on','finished');
-      if(time)time.textContent='KONEC';
-      if(meta)meta.textContent='naslednji set';
-      return;
-    }
-
-    el.classList.remove('on','finished');
-  }
-
-  function processWorkoutV8(force){
-    document.querySelectorAll('#day-content .exc').forEach(card=>{
-      installCompactLoggerV8(card,force);
-      simplifyProgressionV8(card);
-    });
-    syncFocusV8();
-    pollGlobalTimerV8();
-  }
-
-  function queueRefreshV8(delay,force){
-    if(refreshPending)return;
-    refreshPending=true;
-    window.setTimeout(()=>{
-      refreshPending=false;
-      processWorkoutV8(!!force);
-    },Number.isFinite(delay)?delay:0);
-  }
-
-  function wrapRefreshV8(name,force){
-    const original=window[name];
-    if(typeof original!=='function'||original.__wtV8Wrapped)return;
-
-    function wrapped(){
-      const result=original.apply(this,arguments);
-      queueRefreshV8(0,!!force);
-      window.setTimeout(()=>processWorkoutV8(!!force),80);
-      return result;
-    }
-
-    wrapped.__wtV8Wrapped=true;
-    wrapped.__wtV8Original=original;
-    window[name]=wrapped;
-  }
-
-  function exactCustomRestV8(key,def){
-    const parsed=parseKeyV8(key);
-    if(!parsed)return 0;
-
-    const exercise=PROG.days[parsed.day]?.ex?.[parsed.exercise];
-    const name=currentExerciseName(
-      parsed.day,
-      parsed.exercise,
-      key
-    );
-    const custom=getCustomRest();
-    let raw;
-
-    if(
-      exercise?.id&&
-      Object.prototype.hasOwnProperty.call(custom,exercise.id)
-    ){
-      raw=custom[exercise.id];
-    }else if(
-      name&&
-      Object.prototype.hasOwnProperty.call(custom,name)
-    ){
-      raw=custom[name];
-    }
-
-    const seconds=Number(raw);
-    return Number.isFinite(seconds)&&seconds>0?seconds:0;
-  }
-
-  const smartRestBeforeV8=computeSmartRestV6;
-  computeSmartRestV6=function(key,si,def){
-    const exact=exactCustomRestV8(key,def);
-    if(exact>0)return exact;
-    return smartRestBeforeV8.apply(this,arguments);
-  };
-
-  function installSwipeV8(){
-    const root=document.getElementById('day-content');
-    if(!root||root.dataset.v8FocusSwipe==='1')return;
-    root.dataset.v8FocusSwipe='1';
-
-    root.addEventListener('touchstart',event=>{
-      if(!getGymMode())return;
-      if(event.target.closest('input,button,select,textarea,tr'))return;
-      const touch=event.touches[0];
-      swipeStart={x:touch.clientX,y:touch.clientY};
-    },{passive:true});
-
-    root.addEventListener('touchend',event=>{
-      if(!swipeStart||!getGymMode())return;
-
-      const touch=event.changedTouches[0];
-      const dx=touch.clientX-swipeStart.x;
-      const dy=touch.clientY-swipeStart.y;
-      swipeStart=null;
-
-      if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.35)return;
-
-      moveGymFocus(dx<0?1:-1);
-      queueRefreshV8(0,true);
-    },{passive:true});
-  }
-
-  function installObserverV8(){
-    const root=document.getElementById('day-content');
-    if(!root||root.dataset.v8Observed==='1')return;
-    root.dataset.v8Observed='1';
-
-    const observer=new MutationObserver(()=>{
-      queueRefreshV8(0,false);
-    });
-
-    observer.observe(root,{
-      childList:true,
-      subtree:true
-    });
-  }
-
-  function initializeV8(){
-    [
-      'showDay',
-      'setGymMode',
-      'toggleGymMode',
-      'setGymFocus',
-      'moveGymFocus',
-      'refreshGymTarget',
-      'tgSet',
-      'addSet',
-      'removeSet'
-    ].forEach(name=>wrapRefreshV8(name,true));
-
-    installObserverV8();
-    installSwipeV8();
-    ensureGlobalTimerV8();
-    processWorkoutV8(true);
-
-    window.setTimeout(()=>{
-      installObserverV8();
-      installSwipeV8();
-      processWorkoutV8(true);
-    },250);
-
-    window.setInterval(pollGlobalTimerV8,250);
-  }
-
-  window.WTFocusPatchV8={
-    version:PATCH_VERSION,
-    refresh:()=>processWorkoutV8(true),
-    syncFocus:syncFocusV8
-  };
-
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',initializeV8,{once:true});
-  }else{
-    initializeV8();
-  }
-
-  window.addEventListener('pageshow',()=>{
-    window.setTimeout(()=>processWorkoutV8(true),60);
-  });
-})();
-
-/* === V9 CLEAN EXERCISE UI + FOCUS NAV (release 1.0.39) === */
-(function(){
-  'use strict';
-  if(window.WTUiPatchV9)return;
-
-  const PATCH_VERSION='1.0.39';
-  let processPendingV9=false;
-  let selectedFocusIndexV9=-1;
-
-  const CP1252_SPECIAL_V9=new Map([
+  if(window.WTFocusPatchV10)return;
+
+  const PATCH_VERSION='1.0.40';
+  const draftByKeyV10=new Map();
+  const busyKeysV10=new Set();
+  let observerV10=null;
+  let renderPendingV10=false;
+  let timerFinishedUntilV10=0;
+  let batchPersistDepthV10=0;
+
+  const CP1252_SPECIAL_V10=new Map([
     [0x20ac,0x80],[0x201a,0x82],[0x0192,0x83],[0x201e,0x84],
     [0x2026,0x85],[0x2020,0x86],[0x2021,0x87],[0x02c6,0x88],
     [0x2030,0x89],[0x0160,0x8a],[0x2039,0x8b],[0x0152,0x8c],
@@ -736,23 +278,23 @@ applyProgramStateV6();
     [0x0153,0x9c],[0x017e,0x9e],[0x0178,0x9f]
   ]);
 
-  function suspiciousCountV9(value){
+  function suspiciousCountV10(value){
     return (String(value||'').match(/[\u00c2\u00c3\u00c4\u00c5\u00e2]/g)||[]).length;
   }
 
-  function decodeMojibakeV9(value){
+  function decodeMojibakeV10(value){
     const source=String(value??'');
-    if(!source||suspiciousCountV9(source)===0||typeof TextDecoder==='undefined'){
+    if(!source||suspiciousCountV10(source)===0||typeof TextDecoder==='undefined'){
       return source;
     }
 
     const bytes=[];
     for(const char of source){
-      const cp=char.codePointAt(0);
-      if(cp<=0xff){
-        bytes.push(cp);
-      }else if(CP1252_SPECIAL_V9.has(cp)){
-        bytes.push(CP1252_SPECIAL_V9.get(cp));
+      const code=char.codePointAt(0);
+      if(code<=0xff){
+        bytes.push(code);
+      }else if(CP1252_SPECIAL_V10.has(code)){
+        bytes.push(CP1252_SPECIAL_V10.get(code));
       }else{
         return source;
       }
@@ -760,45 +302,455 @@ applyProgramStateV6();
 
     try{
       const decoded=new TextDecoder('utf-8',{fatal:true}).decode(new Uint8Array(bytes));
-      return suspiciousCountV9(decoded)<suspiciousCountV9(source)?decoded:source;
+      return suspiciousCountV10(decoded)<suspiciousCountV10(source)?decoded:source;
     }catch(error){
       return source;
     }
   }
 
-  function repairMojibakeV9(root){
-    const base=root||document.body;
-    if(!base)return;
+  function repairElementV10(root){
+    if(!root)return;
 
-    const walker=document.createTreeWalker(base,NodeFilter.SHOW_TEXT);
-    const nodes=[];
-    while(walker.nextNode())nodes.push(walker.currentNode);
+    if(root.nodeType===Node.TEXT_NODE){
+      const fixed=decodeMojibakeV10(root.nodeValue);
+      if(fixed!==root.nodeValue)root.nodeValue=fixed;
+      return;
+    }
 
-    nodes.forEach(node=>{
-      const fixed=decodeMojibakeV9(node.nodeValue);
+    if(root.nodeType!==Node.ELEMENT_NODE&&root.nodeType!==Node.DOCUMENT_FRAGMENT_NODE){
+      return;
+    }
+
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+    const textNodes=[];
+    while(walker.nextNode())textNodes.push(walker.currentNode);
+
+    textNodes.forEach(node=>{
+      const fixed=decodeMojibakeV10(node.nodeValue);
       if(fixed!==node.nodeValue)node.nodeValue=fixed;
     });
 
-    base.querySelectorAll?.('[title],[placeholder],[aria-label]').forEach(element=>{
+    const elements=[];
+    if(root.nodeType===Node.ELEMENT_NODE)elements.push(root);
+    root.querySelectorAll?.('[title],[placeholder],[aria-label]').forEach(el=>elements.push(el));
+
+    elements.forEach(element=>{
       ['title','placeholder','aria-label'].forEach(name=>{
-        if(!element.hasAttribute(name))return;
+        if(!element.hasAttribute?.(name))return;
         const current=element.getAttribute(name);
-        const fixed=decodeMojibakeV9(current);
+        const fixed=decodeMojibakeV10(current);
         if(fixed!==current)element.setAttribute(name,fixed);
       });
     });
   }
 
-  function cardKeyV9(card){
+  function decimalV10(value){
+    return String(value??'').trim().replace(',','.');
+  }
+
+  function displayNumberV10(value){
+    const number=Number(value);
+    if(!Number.isFinite(number))return'';
+    return Number.isInteger(number)
+      ?String(number)
+      :String(number).replace('.',',');
+  }
+
+  function parseKeyV10(key){
+    const match=String(key||'').match(/^c(\d+)w(\d+)d(\d+)e(\d+)$/);
+    return match
+      ?{
+          cycle:Number(match[1]),
+          week:Number(match[2]),
+          day:Number(match[3]),
+          exercise:Number(match[4])
+        }
+      :null;
+  }
+
+  function cardKeyV10(card){
     return String(card?.id||'').replace(/^ec-/,'');
   }
 
-  function exerciseCardsV9(){
+  function exerciseCardsV10(){
     return Array.from(document.querySelectorAll('#day-content .exc'));
   }
 
-  function progressionNodeV9(card){
-    let node=card.querySelector('.prog-dir-v8,.prog-dir-v9');
+  function targetRpeV10(parsed){
+    const exercise=PROG.days[parsed.day]?.ex?.[parsed.exercise];
+    const direct=Number(exercise?.targetRpe);
+    if(Number.isFinite(direct)&&direct>=5&&direct<=10)return direct;
+
+    const label=String(PROG.weeks?.[parsed.week]?.rpe||'');
+    const match=label.match(/(\d+(?:[.,]\d+)?)/);
+    const fromLabel=match?Number(match[1].replace(',','.')):NaN;
+    return Number.isFinite(fromLabel)&&fromLabel>=5&&fromLabel<=10
+      ?fromLabel
+      :8;
+  }
+
+  function pendingStateV10(key,parsed){
+    const all=getSets();
+    const sets=Array.isArray(all[key])?all[key]:[];
+    const weekPlan=PROG.weeks[parsed.week];
+    const total=Math.max(
+      1,
+      Number(nsf(parsed.day,parsed.exercise,weekPlan,key))||1
+    );
+
+    let setIndex=0;
+    while(setIndex<total&&sets[setIndex]?.done)setIndex+=1;
+
+    if(setIndex>=total){
+      return{
+        complete:true,
+        setIndex,
+        total,
+        kg:'',
+        reps:'',
+        rpe:''
+      };
+    }
+
+    const current=sets[setIndex]||{};
+    const previous=[...sets.slice(0,setIndex)]
+      .reverse()
+      .find(set=>set&&set.kg!==''&&set.kg!==undefined&&set.reps);
+
+    const draft=draftByKeyV10.get(key);
+    const useDraft=draft&&draft.setIndex===setIndex;
+
+    return{
+      complete:false,
+      setIndex,
+      total,
+      kg:useDraft
+        ?draft.kg
+        :(current.kg!==''&&current.kg!==undefined
+          ?String(current.kg)
+          :String(previous?.kg??'')),
+      reps:useDraft
+        ?draft.reps
+        :(current.reps!==''&&current.reps!==undefined
+          ?String(current.reps)
+          :String(previous?.reps??'')),
+      rpe:useDraft
+        ?draft.rpe
+        :(current.rpe!==undefined&&current.rpe!==null&&current.rpe!==''
+          ?String(current.rpe)
+          :String(targetRpeV10(parsed)))
+    };
+  }
+
+  function storeDraftFromBoxV10(box){
+    const key=box?.dataset?.key;
+    const setIndex=Number(box?.dataset?.setIndex);
+    if(!key||!Number.isInteger(setIndex))return;
+
+    draftByKeyV10.set(key,{
+      setIndex,
+      kg:box.querySelector('[data-field="kg"]')?.value??'',
+      reps:box.querySelector('[data-field="reps"]')?.value??'',
+      rpe:box.querySelector('[data-field="rpe"]')?.value??''
+    });
+  }
+
+  function captureAllDraftsV10(){
+    document.querySelectorAll('.compact-log-box-v10').forEach(storeDraftFromBoxV10);
+  }
+
+  function syncCompactToRowV10(box,field){
+    const key=box?.dataset?.key;
+    const setIndex=Number(box?.dataset?.setIndex);
+    if(!key||!Number.isInteger(setIndex))return;
+
+    const row=document.getElementById(`row-${key}-${setIndex}`);
+    if(!row)return;
+
+    if(field==='kg'){
+      const input=row.querySelector('.wi');
+      if(input)input.value=box.querySelector('[data-field="kg"]')?.value??'';
+    }
+
+    if(field==='reps'){
+      const input=row.querySelector('.ri');
+      if(input)input.value=box.querySelector('[data-field="reps"]')?.value??'';
+    }
+  }
+
+  function syncRowToCompactV10(target){
+    const row=target?.closest?.('tr[id^="row-"]');
+    if(!row)return;
+
+    const match=String(row.id).match(/^row-(c\d+w\d+d\d+e\d+)-(\d+)$/);
+    if(!match)return;
+
+    const key=match[1];
+    const setIndex=Number(match[2]);
+    const parsed=parseKeyV10(key);
+    if(!parsed)return;
+
+    const state=pendingStateV10(key,parsed);
+    if(state.complete||state.setIndex!==setIndex)return;
+
+    const box=document.querySelector(`.compact-log-box-v10[data-key="${key}"]`);
+    if(!box)return;
+
+    const kg=row.querySelector('.wi')?.value??'';
+    const reps=row.querySelector('.ri')?.value??'';
+    const kgInput=box.querySelector('[data-field="kg"]');
+    const repsInput=box.querySelector('[data-field="reps"]');
+
+    if(kgInput&&document.activeElement!==kgInput)kgInput.value=kg;
+    if(repsInput&&document.activeElement!==repsInput)repsInput.value=reps;
+
+    storeDraftFromBoxV10(box);
+  }
+
+  function loggerMarkupV10(key,state){
+    const disabled=state.complete?' disabled':'';
+    const setLabel=state.complete
+      ?'Kon\u010dano'
+      :`Set ${state.setIndex+1}/${state.total}`;
+
+    return`
+      <div class="compact-set-label-v10">${setLabel}</div>
+      <label class="compact-field-v10">
+        <span>KG</span>
+        <input data-field="kg" type="text" inputmode="decimal"
+          autocomplete="off" value="${safeHtml(state.kg)}"${disabled}>
+      </label>
+      <label class="compact-field-v10">
+        <span>PON</span>
+        <input data-field="reps" type="text" inputmode="numeric"
+          autocomplete="off" value="${safeHtml(state.reps)}"${disabled}>
+      </label>
+      <label class="compact-field-v10">
+        <span>RPE
+          <button type="button" class="rpe-help-v10"
+            aria-label="RPE legenda">?</button>
+        </span>
+        <input data-field="rpe" type="text" inputmode="decimal"
+          autocomplete="off" value="${safeHtml(state.rpe)}"${disabled}>
+      </label>
+      <button type="button" class="compact-log-v10"${disabled}>
+        ${state.complete?'\u2713':'LOG'}
+      </button>
+      <div class="rpe-legend-v10" hidden>
+        <strong>RPE legenda</strong>
+        <div><b>10</b> maksimum \u00b7 0 ponovitev v rezervi</div>
+        <div><b>9\u20139,5</b> pribli\u017eno 0\u20131 v rezervi</div>
+        <div><b>8\u20138,5</b> pribli\u017eno 1\u20132 v rezervi</div>
+        <div><b>7</b> pribli\u017eno 3 v rezervi</div>
+        <div><b>6</b> pribli\u017eno 4 v rezervi</div>
+        <div><b>5</b> zelo lahko oziroma ogrevanje</div>
+      </div>`;
+  }
+
+  function installLoggerV10(card,force){
+    const key=cardKeyV10(card);
+    const parsed=parseKeyV10(key);
+    const box=card?.querySelector('.quick-log-v6');
+    if(!parsed||!box)return;
+
+    const state=pendingStateV10(key,parsed);
+    const signature=`${key}:${state.setIndex}:${state.total}:${state.complete?'1':'0'}`;
+
+    if(
+      !force&&
+      box.classList.contains('compact-log-box-v10')&&
+      box.dataset.signature===signature
+    ){
+      return;
+    }
+
+    if(box.classList.contains('compact-log-box-v10')){
+      storeDraftFromBoxV10(box);
+    }
+
+    const freshState=pendingStateV10(key,parsed);
+    box.className='quick-log-v6 compact-log-box-v10';
+    box.dataset.key=key;
+    box.dataset.setIndex=String(freshState.setIndex);
+    box.dataset.signature=
+      `${key}:${freshState.setIndex}:${freshState.total}:${freshState.complete?'1':'0'}`;
+    box.innerHTML=loggerMarkupV10(key,freshState);
+
+    const help=box.querySelector('.rpe-help-v10');
+    const legend=box.querySelector('.rpe-legend-v10');
+    const button=box.querySelector('.compact-log-v10');
+
+    help?.addEventListener('click',event=>{
+      event.preventDefault();
+      event.stopPropagation();
+      if(legend)legend.hidden=!legend.hidden;
+    });
+
+    box.querySelectorAll('input').forEach(input=>{
+      input.addEventListener('input',()=>{
+        storeDraftFromBoxV10(box);
+        syncCompactToRowV10(box,input.dataset.field);
+      });
+
+      input.addEventListener('change',()=>{
+        storeDraftFromBoxV10(box);
+        syncCompactToRowV10(box,input.dataset.field);
+      });
+
+      input.addEventListener('keydown',event=>{
+        if(event.key!=='Enter')return;
+        event.preventDefault();
+        logCompactSetV10(box);
+      });
+    });
+
+    button?.addEventListener('click',()=>{
+      logCompactSetV10(box);
+    });
+  }
+
+  async function logCompactSetV10(box){
+    const key=box?.dataset?.key;
+    const parsed=parseKeyV10(key);
+    if(!key||!parsed||busyKeysV10.has(key))return;
+
+    const state=pendingStateV10(key,parsed);
+    if(state.complete)return;
+
+    const boxSetIndex=Number(box.dataset.setIndex);
+    if(boxSetIndex!==state.setIndex){
+      installLoggerV10(document.getElementById('ec-'+key),true);
+      toast('Set se je spremenil. Preveri trenutni vnos.','err');
+      return;
+    }
+
+    const kgInput=box.querySelector('[data-field="kg"]');
+    const repsInput=box.querySelector('[data-field="reps"]');
+    const rpeInput=box.querySelector('[data-field="rpe"]');
+    const button=box.querySelector('.compact-log-v10');
+
+    const kgRaw=decimalV10(kgInput?.value);
+    const repsRaw=decimalV10(repsInput?.value);
+    const rpeRaw=decimalV10(rpeInput?.value);
+    const kg=Number(kgRaw);
+    const reps=Number(repsRaw);
+    const rpe=Number(rpeRaw);
+
+    if(kgRaw===''||!Number.isFinite(kg)||kg<0){
+      toast('Vnesi veljavne kilograme.','err');
+      kgInput?.focus();
+      return;
+    }
+
+    if(
+      repsRaw===''||
+      !Number.isFinite(reps)||
+      !Number.isInteger(reps)||
+      reps<1
+    ){
+      toast('Vnesi veljavne ponovitve.','err');
+      repsInput?.focus();
+      return;
+    }
+
+    if(
+      rpeRaw===''||
+      !Number.isFinite(rpe)||
+      rpe<5||
+      rpe>10||
+      Math.abs(rpe*2-Math.round(rpe*2))>.001
+    ){
+      toast('RPE mora biti 5\u201310 v koraku 0,5.','err');
+      rpeInput?.focus();
+      return;
+    }
+
+    busyKeysV10.add(key);
+    batchPersistDepthV10+=1;
+    window.__WT_BATCH_SET_LOG_V10__=true;
+    if(button){
+      button.disabled=true;
+      button.textContent='...';
+    }
+
+    draftByKeyV10.set(key,{
+      setIndex:state.setIndex,
+      kg:kgInput.value,
+      reps:repsInput.value,
+      rpe:rpeInput.value
+    });
+
+    try{
+      const exercise=PROG.days[parsed.day]?.ex?.[parsed.exercise];
+      const isBarbell=BARBELL_EX.includes(exercise?.n);
+
+      await sv(
+        key,
+        state.setIndex,
+        'kg',
+        kgRaw,
+        parsed.day,
+        parsed.exercise,
+        parsed.cycle,
+        isBarbell?1:0
+      );
+
+      await sv(
+        key,
+        state.setIndex,
+        'reps',
+        String(reps),
+        parsed.day,
+        parsed.exercise,
+        parsed.cycle,
+        0
+      );
+
+      setRpe(
+        key,
+        state.setIndex,
+        Math.round(rpe*2)/2,
+        parsed.day,
+        parsed.exercise,
+        parsed.cycle
+      );
+
+      const saved=getSets()[key]?.[state.setIndex];
+      if(!saved?.done){
+        tgSet(
+          key,
+          state.setIndex,
+          parsed.day,
+          parsed.exercise,
+          parsed.cycle
+        );
+      }
+
+      draftByKeyV10.delete(key);
+      toast(
+        `\u2713 ${displayNumberV10(kg)}kg \u00d7 ${reps} @ RPE ${displayNumberV10(rpe)}`,
+        'ok'
+      );
+    }catch(error){
+      console.warn('WT V10 compact log',error);
+      toast('Set ni bil shranjen.','err');
+    }finally{
+      batchPersistDepthV10=Math.max(0,batchPersistDepthV10-1);
+      window.__WT_BATCH_SET_LOG_V10__=batchPersistDepthV10>0;
+      busyKeysV10.delete(key);
+
+      if(batchPersistDepthV10===0){
+        try{
+          persistSessionDraftV10Base();
+        }catch(error){}
+      }
+
+      queueRenderV10(20,true);
+    }
+  }
+
+  function progressionNodeV10(card){
+    let node=card.querySelector('.prog-dir-v10');
     if(node)return node;
 
     node=card.querySelector('.prog-v6');
@@ -810,311 +762,727 @@ applyProgramStateV6();
     const symbol=up?'\u2191':down?'\u2193':'=';
     const cls=up?'up':down?'down':'same';
 
-    node.className='prog-dir-v9 '+cls;
+    node.className='prog-dir-v10 '+cls;
     node.title=text;
     node.setAttribute('aria-label',text);
     node.innerHTML='<span>'+symbol+'</span>';
     return node;
   }
 
-  function styleMovedControlV9(control){
+  function styleActionControlV10(control){
     if(control.classList.contains('swbtn')){
-      control.classList.add('swap-icon-v9');
+      control.classList.add('swap-icon-v10');
       control.textContent='\u21c4';
       control.title='Zamenjave';
       control.setAttribute('aria-label','Zamenjave');
     }
 
     if(control.classList.contains('ex-menu-btn')){
-      control.classList.add('menu-icon-v9');
-      control.title='Vec moznosti';
-      control.setAttribute('aria-label','Vec moznosti');
+      control.classList.add('menu-icon-v10');
+      control.title='Ve\u010d mo\u017enosti';
+      control.setAttribute('aria-label','Ve\u010d mo\u017enosti');
       control.innerHTML=
-        '<span class="menu-lines-v9" aria-hidden="true">'+
+        '<span class="menu-lines-v10" aria-hidden="true">'+
           '<i></i><i></i><i></i>'+
         '</span>';
     }
   }
 
-  function arrangeExerciseActionsV9(card){
+  function arrangeActionsV10(card){
     const quick=card.querySelector('.quick-log-v6');
     const table=card.querySelector('table.st');
     if(!quick&&!table)return;
 
-    let toolbar=card.querySelector('.exercise-actions-v9');
+    let toolbar=card.querySelector('.exercise-actions-v10');
     if(!toolbar){
       toolbar=document.createElement('div');
-      toolbar.className='exercise-actions-v9';
+      toolbar.className='exercise-actions-v10';
       const anchor=quick||table;
       anchor.parentNode.insertBefore(toolbar,anchor);
     }
 
-    const progression=progressionNodeV9(card);
+    const progression=progressionNodeV10(card);
     if(progression&&progression.parentNode!==toolbar){
       toolbar.appendChild(progression);
     }
 
     const badges=card.querySelector('.bdg');
     if(badges){
-      const controls=Array.from(badges.children).filter(element=>
-        element.matches(
-          '.b,.restbtn,.swbtn,.ex-menu-btn,.toggle-fold'
+      Array.from(badges.children)
+        .filter(element=>
+          element.matches('.b,.restbtn,.swbtn,.ex-menu-btn,.toggle-fold')
         )
-      );
+        .forEach(control=>{
+          styleActionControlV10(control);
+          toolbar.appendChild(control);
+        });
 
-      controls.forEach(control=>{
-        styleMovedControlV9(control);
-        toolbar.appendChild(control);
-      });
-
-      badges.classList.add('moved-v9');
+      badges.classList.add('moved-v10');
     }
 
-    const looseSwap=card.querySelector('.swbtn:not(.swap-icon-v9)');
-    if(looseSwap){
-      styleMovedControlV9(looseSwap);
-      toolbar.appendChild(looseSwap);
-    }
+    card.querySelectorAll('.swbtn:not(.swap-icon-v10)').forEach(control=>{
+      styleActionControlV10(control);
+      toolbar.appendChild(control);
+    });
 
-    const looseMenu=card.querySelector('.ex-menu-btn:not(.menu-icon-v9)');
-    if(looseMenu){
-      styleMovedControlV9(looseMenu);
-      toolbar.appendChild(looseMenu);
-    }
+    card.querySelectorAll('.ex-menu-btn:not(.menu-icon-v10)').forEach(control=>{
+      styleActionControlV10(control);
+      toolbar.appendChild(control);
+    });
   }
 
-  function ensureFocusBarV9(){
-    let bar=document.getElementById('focus-nav-v9');
+  function ensureFocusNavV10(){
+    let bar=document.getElementById('focus-nav-v10');
     if(bar)return bar;
 
     bar=document.createElement('div');
-    bar.id='focus-nav-v9';
-    bar.className='focus-nav-v9';
+    bar.id='focus-nav-v10';
+    bar.className='focus-nav-v10';
     bar.innerHTML=
-      '<button type="button" class="focus-arrow-v9 prev" aria-label="Prejsnja vaja">'+
-        '\u2039'+
-      '</button>'+
-      '<div class="focus-label-v9">'+
-        '<strong id="focus-position-v9">1/1</strong>'+
-        '<span id="focus-name-v9">Vaja</span>'+
+      '<button type="button" class="focus-arrow-v10 prev" aria-label="Prej\u0161nja vaja">\u2039</button>'+
+      '<div class="focus-label-v10">'+
+        '<strong id="focus-position-v10">1/1</strong>'+
+        '<span id="focus-name-v10">Vaja</span>'+
       '</div>'+
-      '<button type="button" class="focus-arrow-v9 next" aria-label="Naslednja vaja">'+
-        '\u203a'+
-      '</button>';
+      '<button type="button" class="focus-arrow-v10 next" aria-label="Naslednja vaja">\u203a</button>';
 
     document.body.appendChild(bar);
 
-    bar.querySelector('.prev').addEventListener('click',()=>{
-      moveFocusFromBarV9(-1);
+    bar.querySelector('.prev')?.addEventListener('click',()=>{
+      moveGymFocusV10(-1);
     });
 
-    bar.querySelector('.next').addEventListener('click',()=>{
-      moveFocusFromBarV9(1);
+    bar.querySelector('.next')?.addEventListener('click',()=>{
+      moveGymFocusV10(1);
     });
 
     return bar;
   }
 
-  function currentFocusIndexV9(cards){
-    const activeKey=localStorage.getItem('wt_active_ex')||'';
-    const index=cards.findIndex(card=>cardKeyV9(card)===activeKey);
-    if(index>=0)return index;
-
-    const activeIndex=cards.findIndex(card=>card.classList.contains('active-ex'));
-    if(activeIndex>=0)return activeIndex;
-
-    return cards.length?0:-1;
+  function stableFocusKeysV10(){
+    return exerciseCardsV10()
+      .map(card=>cardKeyV10(card))
+      .filter(Boolean);
   }
 
-  function applyFocusCardV9(cards,index,scroll){
+  function activeFocusKeyV10(){
+    const keys=stableFocusKeysV10();
+    if(!keys.length)return'';
+
+    const stored=localStorage.getItem('wt_active_ex')||'';
+    return keys.includes(stored)?stored:keys[0];
+  }
+
+  function updateFocusNavV10(){
+    const bar=ensureFocusNavV10();
+    const mode=typeof getGymMode==='function'&&getGymMode();
+    const keys=stableFocusKeysV10();
+
+    bar.classList.toggle('on',!!mode&&keys.length>0);
+    if(!mode||!keys.length)return;
+
+    const key=activeFocusKeyV10();
+    const index=Math.max(0,keys.indexOf(key));
+    const card=document.getElementById('ec-'+key);
+    const name=card?.querySelector('.ex-name')?.textContent?.trim()||'Vaja';
+
+    const position=bar.querySelector('#focus-position-v10');
+    const nameElement=bar.querySelector('#focus-name-v10');
+    const previous=bar.querySelector('.prev');
+    const next=bar.querySelector('.next');
+
+    if(position)position.textContent=`${index+1}/${keys.length}`;
+    if(nameElement)nameElement.textContent=name;
+    if(previous)previous.disabled=index<=0;
+    if(next)next.disabled=index>=keys.length-1;
+  }
+
+  function setGymFocusV10(key,scroll){
+    const cards=exerciseCardsV10();
     if(!cards.length)return;
 
-    const safeIndex=Math.max(0,Math.min(cards.length-1,index));
-    const card=cards[safeIndex];
-    const key=cardKeyV9(card);
-    if(!key)return;
+    let active=cards.find(card=>cardKeyV10(card)===key);
+    if(!active)active=cards[0];
 
-    selectedFocusIndexV9=safeIndex;
-    localStorage.setItem('wt_active_ex',key);
+    const safeKey=cardKeyV10(active);
+    if(!safeKey)return;
 
-    cards.forEach((item,itemIndex)=>{
-      const active=itemIndex===safeIndex;
-      item.classList.toggle('active-ex',active);
-      if(document.documentElement.classList.contains('gym-mode')){
-        item.style.setProperty('display',active?'block':'none','important');
+    localStorage.setItem('wt_active_ex',safeKey);
+
+    const gymMode=typeof getGymMode==='function'&&getGymMode();
+    cards.forEach(card=>{
+      const selected=card===active;
+      card.classList.toggle('active-ex',selected);
+
+      if(gymMode){
+        card.style.setProperty('display',selected?'block':'none','important');
+      }else{
+        card.style.removeProperty('display');
       }
     });
 
     try{
-      if(typeof updateGymFocusBar==='function')updateGymFocusBar(key);
+      if(typeof updateGymFocusBar==='function')updateGymFocusBar(safeKey);
     }catch(error){}
 
-    updateFocusBarV9();
+    updateFocusNavV10();
 
     if(scroll){
       window.setTimeout(()=>{
-        card.scrollIntoView({behavior:'smooth',block:'start'});
+        active.scrollIntoView({behavior:'smooth',block:'start'});
       },40);
     }
   }
 
-  function updateFocusBarV9(){
-    const bar=ensureFocusBarV9();
-    const gymMode=
-      typeof getGymMode==='function'&&getGymMode();
+  function moveGymFocusV10(direction){
+    const keys=stableFocusKeysV10();
+    if(!keys.length)return;
 
-    bar.classList.toggle('on',!!gymMode);
-    if(!gymMode)return;
+    const current=activeFocusKeyV10();
+    let index=keys.indexOf(current);
+    if(index<0)index=0;
 
-    const cards=exerciseCardsV9();
-    if(!cards.length){
-      bar.classList.remove('on');
+    const nextIndex=Math.max(
+      0,
+      Math.min(keys.length-1,index+Number(direction||0))
+    );
+
+    setGymFocusV10(keys[nextIndex],nextIndex!==index);
+  }
+
+  function refreshGymTargetV10(){
+    const keys=stableFocusKeysV10();
+    if(!keys.length){
+      localStorage.removeItem('wt_active_ex');
+      exerciseCardsV10().forEach(card=>{
+        card.classList.remove('active-ex');
+        card.style.removeProperty('display');
+      });
+      updateFocusNavV10();
       return;
     }
 
-    let index=currentFocusIndexV9(cards);
-    if(
-      selectedFocusIndexV9>=0&&
-      selectedFocusIndexV9<cards.length&&
-      cards[selectedFocusIndexV9].classList.contains('active-ex')
-    ){
-      index=selectedFocusIndexV9;
+    const stored=localStorage.getItem('wt_active_ex')||'';
+    const key=keys.includes(stored)?stored:keys[0];
+    setGymFocusV10(key,false);
+  }
+
+  function syncFocusV10(){
+    const cards=exerciseCardsV10();
+    if(!cards.length){
+      updateFocusNavV10();
+      return;
     }
 
-    index=Math.max(0,index);
-    const card=cards[index];
-    const name=
-      card.querySelector('.ex-name')?.textContent?.trim()||
-      'Vaja';
+    if(!(typeof getGymMode==='function'&&getGymMode())){
+      cards.forEach(card=>card.style.removeProperty('display'));
+      updateFocusNavV10();
+      return;
+    }
 
-    const position=bar.querySelector('#focus-position-v9');
-    const nameElement=bar.querySelector('#focus-name-v9');
-    const previous=bar.querySelector('.prev');
-    const next=bar.querySelector('.next');
-
-    if(position)position.textContent=(index+1)+'/'+cards.length;
-    if(nameElement)nameElement.textContent=name;
-    if(previous)previous.disabled=index<=0;
-    if(next)next.disabled=index>=cards.length-1;
+    setGymFocusV10(activeFocusKeyV10(),false);
   }
 
-  function moveFocusFromBarV9(direction){
-    const cards=exerciseCardsV9();
-    if(!cards.length)return;
+  function ensureGlobalTimerV10(){
+    let element=document.getElementById('wt-global-timer-v10');
+    if(element)return element;
 
-    const current=currentFocusIndexV9(cards);
-    const next=Math.max(
-      0,
-      Math.min(cards.length-1,current+Number(direction||0))
-    );
+    const sessionBar=document.querySelector('#page-workout .stb');
+    if(!sessionBar)return null;
 
-    if(next===current)return;
-    applyFocusCardV9(cards,next,true);
-  }
+    element=document.createElement('div');
+    element.id='wt-global-timer-v10';
+    element.className='global-timer-v10';
+    element.innerHTML=
+      '<strong id="wt-global-time-v10">\u2014</strong>'+
+      '<span id="wt-global-meta-v10">odmor</span>'+
+      '<button type="button" data-action="minus">\u221230</button>'+
+      '<button type="button" data-action="pause">\u2161</button>'+
+      '<button type="button" data-action="plus">+30</button>'+
+      '<button type="button" class="stop" data-action="stop">\u00d7</button>';
 
-  function disableSwipeV9(){
-    window.moveGymFocus=function(){
-      return false;
-    };
-  }
+    sessionBar.insertAdjacentElement('afterend',element);
 
-  function processWorkoutV9(){
-    document.querySelectorAll('#day-content .exc').forEach(card=>{
-      arrangeExerciseActionsV9(card);
+    element.querySelector('[data-action="minus"]')?.addEventListener('click',()=>{
+      adjustTimerV6(-30);
     });
 
-    repairMojibakeV9(document.body);
-    updateFocusBarV9();
+    element.querySelector('[data-action="plus"]')?.addEventListener('click',()=>{
+      adjustTimerV6(30);
+    });
+
+    element.querySelector('[data-action="pause"]')?.addEventListener('click',()=>{
+      const timer=currentTimerV6();
+      if(timer)pauseResumeTimerV6(timer.key);
+    });
+
+    element.querySelector('[data-action="stop"]')?.addEventListener('click',()=>{
+      const timer=currentTimerV6();
+      if(timer)stopT(timer.key);
+    });
+
+    return element;
   }
 
-  function queueProcessV9(delay){
-    if(processPendingV9)return;
-    processPendingV9=true;
+  function remainingTimerSecondsV10(timer){
+    if(!timer)return 0;
+    return timer.paused
+      ?Math.max(0,Number(timer.remainingSec)||0)
+      :Math.max(0,Math.ceil((Number(timer.endTs)-Date.now())/1000));
+  }
+
+  function renderGlobalTimerV10(){
+    const element=ensureGlobalTimerV10();
+    if(!element)return;
+
+    const timer=currentTimerV6();
+    const time=element.querySelector('#wt-global-time-v10');
+    const meta=element.querySelector('#wt-global-meta-v10');
+    const pause=element.querySelector('[data-action="pause"]');
+
+    if(timer){
+      const remaining=remainingTimerSecondsV10(timer);
+      element.classList.add('on');
+      element.classList.remove('finished');
+
+      if(time)time.textContent=timerDisplayV6(remaining);
+      if(meta){
+        meta.textContent=
+          `${timer.paused?'pavza':'odmor'} \u00b7 plan ${fmtRest(Number(timer.plannedSec)||0)}`;
+      }
+      if(pause)pause.textContent=timer.paused?'\u25b6':'\u2161';
+      return;
+    }
+
+    if(timerFinishedUntilV10>Date.now()){
+      element.classList.add('on','finished');
+      if(time)time.textContent='KONEC';
+      if(meta)meta.textContent='naslednji set';
+      return;
+    }
+
+    element.classList.remove('on','finished');
+  }
+
+  function webScheduleV10(seconds){
+    if(window.__WT_ANDROID_APP__)return;
+    cancelScheduledNotification();
+    scheduleNotification(seconds);
+  }
+
+  function webCancelV10(){
+    if(window.__WT_ANDROID_APP__)return;
+    cancelScheduledNotification();
+  }
+
+  function nativeRescheduleV10(seconds){
+    if(!window.__WT_ANDROID_APP__)return;
+
+    const api=window.WTRestNotifications;
+    if(!api||typeof api.reschedule!=='function')return;
+
+    Promise.resolve(api.reschedule(seconds)).catch(error=>{
+      console.warn('Native timer reschedule failed',error);
+    });
+  }
+
+  function nativeCancelV10(){
+    if(!window.__WT_ANDROID_APP__)return;
+
+    const api=window.WTRestNotifications;
+    if(!api||typeof api.cancel!=='function')return;
+
+    Promise.resolve(api.cancel()).catch(error=>{
+      console.warn('Native timer cancel failed',error);
+    });
+  }
+
+  function finishTimerV10(timer,foregroundAlert){
+    clearTimerIntervalsV6();
+    localStorage.removeItem(LS_TIMER);
+    webCancelV10();
+
+    try{
+      logRestV6(timer,'completed');
+    }catch(error){}
+
+    timerFinishedUntilV10=Date.now()+3500;
+    renderGlobalTimerV10();
+
+    if(foregroundAlert&&!document.hidden){
+      alertEnd(timer.key);
+    }
+
+    try{
+      renderV6Settings();
+    }catch(error){}
+  }
+
+  tickTimerV6=function(timer){
+    clearTimerIntervalsV6();
+    renderGlobalTimerV10();
+
+    if(!timer||timer.paused||document.hidden)return;
+
+    const run=()=>{
+      const current=currentTimerV6();
+      if(!current||current.id!==timer.id){
+        clearTimerIntervalsV6();
+        renderGlobalTimerV10();
+        return;
+      }
+
+      const remaining=remainingTimerSecondsV10(current);
+      renderGlobalTimerV10();
+
+      if(
+        remaining<=15&&
+        remaining>0&&
+        getV6Settings().restWarning&&
+        !current.warned15
+      ){
+        current.warned15=true;
+        saveTimerV6(current);
+        if(navigator.vibrate)navigator.vibrate(80);
+      }
+
+      if(remaining<=0){
+        finishTimerV10(current,true);
+      }
+    };
+
+    run();
+
+    const active=currentTimerV6();
+    if(active&&active.id===timer.id&&!document.hidden){
+      TM[timer.key]=setInterval(run,1000);
+    }
+  };
+
+  startT=function(key,seconds){
+    const safeSeconds=Math.max(1,Math.round(Number(seconds)||0));
+    clearTimerIntervalsV6();
+    webCancelV10();
+
+    const timer={
+      id:'rest_'+Date.now(),
+      key,
+      endTs:Date.now()+safeSeconds*1000,
+      startedTs:Date.now(),
+      plannedSec:safeSeconds,
+      remainingSec:safeSeconds,
+      paused:false,
+      warned15:false
+    };
+
+    saveTimerV6(timer);
+    webScheduleV10(safeSeconds);
+    tickTimerV6(timer);
+  };
+
+  stopT=function(key){
+    const timer=currentTimerV6();
+    if(timer){
+      try{
+        logRestV6(timer,'stopped');
+      }catch(error){}
+    }
+
+    clearTimerIntervalsV6();
+    localStorage.removeItem(LS_TIMER);
+    webCancelV10();
+    timerFinishedUntilV10=0;
+
+    const bar=document.getElementById('tb-'+key);
+    if(bar)bar.classList.remove('on','flash');
+
+    const count=document.getElementById('tc-'+key);
+    if(count)count.textContent='\u2014';
+
+    renderGlobalTimerV10();
+
+    try{
+      renderV6Settings();
+    }catch(error){}
+  };
+
+  adjustTimerV6=function(delta){
+    const timer=currentTimerV6();
+    if(!timer)return;
+
+    const now=Date.now();
+    const change=Number(delta)||0;
+
+    if(timer.paused){
+      timer.remainingSec=Math.max(0,(Number(timer.remainingSec)||0)+change);
+    }else{
+      timer.endTs=Math.max(now,timer.endTs+change*1000);
+    }
+
+    timer.plannedSec=Math.max(0,(Number(timer.plannedSec)||0)+change);
+    saveTimerV6(timer);
+
+    const remaining=remainingTimerSecondsV10(timer);
+    if(timer.paused){
+      webCancelV10();
+      nativeCancelV10();
+    }else{
+      webScheduleV10(remaining);
+      nativeRescheduleV10(remaining);
+    }
+
+    tickTimerV6(timer);
+  };
+
+  pauseResumeTimerV6=function(key){
+    const timer=currentTimerV6();
+    if(!timer||timer.key!==key)return;
+
+    if(timer.paused){
+      timer.paused=false;
+      timer.endTs=Date.now()+Math.max(0,Number(timer.remainingSec)||0)*1000;
+      saveTimerV6(timer);
+
+      const remaining=remainingTimerSecondsV10(timer);
+      webScheduleV10(remaining);
+      nativeRescheduleV10(remaining);
+    }else{
+      timer.remainingSec=remainingTimerSecondsV10(timer);
+      timer.paused=true;
+      saveTimerV6(timer);
+      webCancelV10();
+      nativeCancelV10();
+    }
+
+    tickTimerV6(timer);
+  };
+
+  restoreTimer=function(){
+    if(window.v6RecoveryPending&&!stRun)return;
+
+    const timer=currentTimerV6();
+    if(!timer){
+      renderGlobalTimerV10();
+      return;
+    }
+
+    if(!timer.paused&&remainingTimerSecondsV10(timer)<=0){
+      clearTimerIntervalsV6();
+      localStorage.removeItem(LS_TIMER);
+
+      try{
+        logRestV6(timer,'completed');
+      }catch(error){}
+
+      timerFinishedUntilV10=Date.now()+2500;
+      renderGlobalTimerV10();
+      return;
+    }
+
+    tickTimerV6(timer);
+  };
+
+  const persistSessionDraftV10Base=persistSessionDraftV6;
+  persistSessionDraftV6=function(){
+    if(batchPersistDepthV10>0||window.__WT_BATCH_SET_LOG_V10__)return;
+    return persistSessionDraftV10Base.apply(this,arguments);
+  };
+
+  function processCardsV10(force){
+    document.querySelectorAll('#day-content .exc').forEach(card=>{
+      arrangeActionsV10(card);
+      installLoggerV10(card,!!force);
+    });
+
+    syncFocusV10();
+    renderGlobalTimerV10();
+  }
+
+  function queueRenderV10(delay,force){
+    if(renderPendingV10)return;
+    renderPendingV10=true;
 
     window.setTimeout(()=>{
-      processPendingV9=false;
-      processWorkoutV9();
+      renderPendingV10=false;
+      processCardsV10(!!force);
     },Number.isFinite(delay)?delay:0);
   }
 
-  function installObserverV9(){
-    const root=document.getElementById('day-content');
-    if(!root||root.dataset.v9Observed==='1')return;
-
-    root.dataset.v9Observed='1';
-    const observer=new MutationObserver(()=>{
-      queueProcessV9(0);
-    });
-
-    observer.observe(root,{
-      childList:true,
-      subtree:true,
-      characterData:true
-    });
-  }
-
-  function wrapRenderFunctionV9(name){
+  function wrapRenderV10(name,force){
     const original=window[name];
-    if(typeof original!=='function'||original.__wtV9Wrapped)return;
+    if(typeof original!=='function'||original.__wtV10Wrapped)return;
 
     function wrapped(){
+      captureAllDraftsV10();
       const result=original.apply(this,arguments);
-      queueProcessV9(0);
-      window.setTimeout(processWorkoutV9,80);
+      queueRenderV10(0,!!force);
       return result;
     }
 
-    wrapped.__wtV9Wrapped=true;
-    wrapped.__wtV9Original=original;
+    wrapped.__wtV10Wrapped=true;
+    wrapped.__wtV10Original=original;
     window[name]=wrapped;
   }
 
-  function initializeV9(){
-    disableSwipeV9();
+  function installRowSyncV10(){
+    const root=document.getElementById('day-content');
+    if(!root||root.dataset.v10RowSync==='1')return;
+
+    root.dataset.v10RowSync='1';
+
+    root.addEventListener('input',event=>{
+      if(event.target.matches('.wi,.ri')){
+        syncRowToCompactV10(event.target);
+      }
+    });
+
+    root.addEventListener('change',event=>{
+      if(event.target.matches('.wi,.ri')){
+        syncRowToCompactV10(event.target);
+      }
+    });
+
+    root.addEventListener('click',event=>{
+      if(!event.target.closest('.stp-btn'))return;
+      window.setTimeout(()=>{
+        syncRowToCompactV10(event.target);
+      },0);
+    });
+  }
+
+  function installObserverV10(){
+    const root=document.getElementById('day-content');
+    if(!root||observerV10)return;
+
+    observerV10=new MutationObserver(mutations=>{
+      let needsRender=false;
+
+      mutations.forEach(mutation=>{
+        mutation.addedNodes.forEach(node=>{
+          repairElementV10(node);
+
+          if(
+            node.nodeType===Node.ELEMENT_NODE&&
+            (
+              node.matches?.('.exc,.quick-log-v6')||
+              node.querySelector?.('.exc,.quick-log-v6')
+            )
+          ){
+            needsRender=true;
+          }
+        });
+      });
+
+      if(needsRender)queueRenderV10(0,false);
+    });
+
+    observerV10.observe(root,{
+      childList:true,
+      subtree:true
+    });
+  }
+
+  function disconnectObserverV10(){
+    if(!observerV10)return;
+    observerV10.disconnect();
+    observerV10=null;
+  }
+
+  function updateKeyboardClassV10(){
+    const active=document.activeElement;
+    const open=!!(
+      active&&
+      active.matches?.('input,textarea,select')&&
+      active.closest?.('#page-workout')
+    );
+
+    document.documentElement.classList.toggle('wt-keyboard-open',open);
+  }
+
+  function syncVisibilityV10(){
+    if(document.hidden){
+      clearTimerIntervalsV6();
+      disconnectObserverV10();
+
+      try{
+        if(stInt){
+          clearInterval(stInt);
+          stInt=null;
+        }
+      }catch(error){}
+
+      return;
+    }
+
+    installObserverV10();
+    installRowSyncV10();
+    restoreTimer();
+    processCardsV10(false);
+
+    try{
+      if(stRun){
+        clearInterval(stInt);
+        stInt=setInterval(tickSessionClock,1000);
+        tickSessionClock();
+      }
+    }catch(error){}
+  }
+
+  function initializeV10(){
+    window.setGymFocus=setGymFocusV10;
+    window.moveGymFocus=moveGymFocusV10;
+    window.refreshGymTarget=refreshGymTargetV10;
 
     [
       'showDay',
       'setGymMode',
       'toggleGymMode',
-      'setGymFocus',
-      'refreshGymTarget',
       'tgSet',
       'addSet',
-      'removeSet'
-    ].forEach(wrapRenderFunctionV9);
+      'removeSet',
+      'stepKg',
+      'stepReps'
+    ].forEach(name=>wrapRenderV10(name,true));
 
-    installObserverV9();
-    ensureFocusBarV9();
-    processWorkoutV9();
+    ensureFocusNavV10();
+    ensureGlobalTimerV10();
+    installRowSyncV10();
+    installObserverV10();
 
-    window.setTimeout(()=>{
-      disableSwipeV9();
-      installObserverV9();
-      processWorkoutV9();
-    },250);
+    repairElementV10(document.body);
+    processCardsV10(true);
+    restoreTimer();
 
-    window.setInterval(()=>{
-      disableSwipeV9();
-      repairMojibakeV9(document.body);
-      updateFocusBarV9();
-    },500);
+    document.addEventListener('focusin',updateKeyboardClassV10);
+    document.addEventListener('focusout',()=>{
+      window.setTimeout(updateKeyboardClassV10,30);
+    });
+
+    document.addEventListener('visibilitychange',syncVisibilityV10);
+
+    window.addEventListener('pageshow',()=>{
+      window.setTimeout(()=>{
+        installObserverV10();
+        processCardsV10(false);
+        restoreTimer();
+      },60);
+    });
   }
 
-  window.moveFocusFromBarV9=moveFocusFromBarV9;
-  window.WTUiPatchV9={
+  window.logCompactSetV10=logCompactSetV10;
+  window.WTFocusPatchV10={
     version:PATCH_VERSION,
-    refresh:processWorkoutV9,
-    repairText:repairMojibakeV9,
-    moveFocus:moveFocusFromBarV9
+    refresh:()=>processCardsV10(true),
+    repairText:repairElementV10,
+    setFocus:setGymFocusV10,
+    moveFocus:moveGymFocusV10,
+    focusKeys:stableFocusKeysV10,
+    renderTimer:renderGlobalTimerV10
   };
 
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',initializeV9,{once:true});
+    document.addEventListener('DOMContentLoaded',initializeV10,{once:true});
   }else{
-    initializeV9();
+    initializeV10();
   }
-
-  window.addEventListener('pageshow',()=>{
-    window.setTimeout(processWorkoutV9,60);
-  });
 })();
