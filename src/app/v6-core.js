@@ -1710,3 +1710,174 @@ applyProgramStateV6();
     initializeV11();
   }
 })();
+/* === V12 FOCUS DOT NAVIGATION (release 1.0.43) === */
+(function(){
+  'use strict';
+  if(window.WTFocusPatchV12)return;
+
+  const PATCH_VERSION='1.0.43';
+  let renderFrameV12=0;
+
+  function focusApiV12(){
+    return window.WTFocusPatchV10||null;
+  }
+
+  function dotsApiV12(){
+    return window.WTFocusPatchV11||null;
+  }
+
+  function refreshDotsV12(smooth){
+    const dotsApi=dotsApiV12();
+
+    if(dotsApi&&typeof dotsApi.renderDots==='function'){
+      try{
+        dotsApi.renderDots();
+      }catch(error){}
+    }
+
+    window.cancelAnimationFrame(renderFrameV12);
+
+    renderFrameV12=window.requestAnimationFrame(()=>{
+      const dots=document.querySelectorAll('.focus-dot-v11');
+      const active=document.querySelector('.focus-dot-v11.active');
+
+      dots.forEach(dot=>{
+        if(dot===active){
+          dot.setAttribute('aria-current','step');
+        }else{
+          dot.removeAttribute('aria-current');
+        }
+      });
+
+      if(!active)return;
+
+      try{
+        active.scrollIntoView({
+          behavior:smooth?'smooth':'auto',
+          block:'nearest',
+          inline:'center'
+        });
+      }catch(error){}
+    });
+  }
+
+  function moveFocusV12(direction){
+    const api=focusApiV12();
+
+    if(api&&typeof api.moveFocus==='function'){
+      api.moveFocus(direction);
+      refreshDotsV12(true);
+      window.setTimeout(()=>refreshDotsV12(false),90);
+      return;
+    }
+
+    if(typeof window.moveGymFocus==='function'){
+      window.moveGymFocus(direction);
+      refreshDotsV12(true);
+      window.setTimeout(()=>refreshDotsV12(false),90);
+    }
+  }
+
+  function handleArrowClickV12(event){
+    const arrow=event.target?.closest?.(
+      '#focus-nav-v10 .focus-arrow-v10'
+    );
+
+    if(!arrow||arrow.disabled)return;
+
+    const direction=arrow.classList.contains('prev')?-1:
+      arrow.classList.contains('next')?1:0;
+
+    if(!direction)return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    moveFocusV12(direction);
+  }
+
+  function handleDotClickV12(event){
+    if(!event.target?.closest?.('.focus-dot-v11'))return;
+    window.setTimeout(()=>refreshDotsV12(true),0);
+    window.setTimeout(()=>refreshDotsV12(false),100);
+  }
+
+  function handleKeyboardV12(event){
+    if(
+      event.defaultPrevented||
+      event.altKey||
+      event.ctrlKey||
+      event.metaKey
+    ){
+      return;
+    }
+
+    if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
+
+    const target=event.target;
+
+    if(
+      target?.matches?.(
+        'input,textarea,select,[contenteditable="true"]'
+      )
+    ){
+      return;
+    }
+
+    const gymMode=
+      typeof window.getGymMode==='function'&&
+      window.getGymMode();
+
+    if(!gymMode)return;
+
+    event.preventDefault();
+    moveFocusV12(event.key==='ArrowLeft'?-1:1);
+  }
+
+  function initializeV12(){
+    document.addEventListener(
+      'click',
+      handleArrowClickV12,
+      true
+    );
+
+    document.addEventListener(
+      'click',
+      handleDotClickV12,
+      false
+    );
+
+    document.addEventListener(
+      'keydown',
+      handleKeyboardV12,
+      true
+    );
+
+    document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden){
+        refreshDotsV12(false);
+      }
+    });
+
+    window.addEventListener('pageshow',()=>{
+      window.setTimeout(()=>refreshDotsV12(false),60);
+    });
+
+    refreshDotsV12(false);
+  }
+
+  window.WTFocusPatchV12={
+    version:PATCH_VERSION,
+    refresh:refreshDotsV12,
+    move:moveFocusV12
+  };
+
+  if(document.readyState==='loading'){
+    document.addEventListener(
+      'DOMContentLoaded',
+      initializeV12,
+      {once:true}
+    );
+  }else{
+    initializeV12();
+  }
+})();

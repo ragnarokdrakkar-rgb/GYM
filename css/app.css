@@ -1095,3 +1095,58 @@ html.gym-mode .focus-nav-v10.on{
     gap:6px;
   }
 }
+/* === V12 FOCUS DOT NAVIGATION (release 1.0.43) === */
+.focus-dots-v11{
+  gap:9px;
+  min-height:20px;
+  padding:2px 6px 3px;
+  scroll-behavior:smooth;
+  scroll-snap-type:x proximity;
+  overscroll-behavior-x:contain;
+}
+
+.focus-dot-v11{
+  width:12px;
+  height:12px;
+  min-width:12px;
+  min-height:12px;
+  scroll-snap-align:center;
+  touch-action:manipulation;
+  transition:
+    width .16s ease,
+    height .16s ease,
+    min-width .16s ease,
+    min-height .16s ease,
+    transform .12s ease,
+    box-shadow .16s ease;
+}
+
+.focus-dot-v11.active{
+  width:16px;
+  height:16px;
+  min-width:16px;
+  min-height:16px;
+}
+
+.focus-dot-v11:active{
+  transform:scale(.86);
+}
+
+.focus-dot-v11:focus-visible{
+  outline:2px solid var(--text);
+  outline-offset:3px;
+}
+
+.focus-arrow-v10{
+  touch-action:manipulation;
+}
+
+.focus-arrow-v10:active:not(:disabled){
+  transform:scale(.94);
+}
+
+@media(max-width:360px){
+  .focus-dots-v11{
+    gap:8px;
+  }
+}
