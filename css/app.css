@@ -1008,3 +1008,90 @@ html.gym-mode .wt-safe-ex-number{
     gap:4px;
   }
 }
+/* === V11 MANUAL RPE + STABLE FOCUS DOTS (release 1.0.41) === */
+html.wt-keyboard-open .focus-nav-v10.on,
+html.gym-mode .focus-nav-v10.on{
+  display:grid!important;
+}
+
+html.gym-mode .focus-nav-v10.on{
+  grid-template-columns:48px minmax(0,1fr) 48px;
+  grid-template-rows:auto minmax(48px,auto);
+  row-gap:5px;
+}
+
+.focus-dots-v11{
+  grid-column:1/-1;
+  grid-row:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:13px;
+  overflow-x:auto;
+  padding:1px 4px 2px;
+  scrollbar-width:none;
+}
+
+.focus-dots-v11::-webkit-scrollbar{
+  display:none;
+}
+
+.focus-dot-v11{
+  flex:0 0 auto;
+  width:9px;
+  height:9px;
+  min-width:9px;
+  min-height:9px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  box-shadow:0 0 0 1px rgba(255,255,255,.12);
+}
+
+.focus-dot-v11.pending{
+  background:var(--red);
+}
+
+.focus-dot-v11.complete{
+  background:var(--green);
+}
+
+.focus-dot-v11.active{
+  width:12px;
+  height:12px;
+  min-width:12px;
+  min-height:12px;
+  box-shadow:0 0 0 2px var(--bg2),0 0 0 3px var(--text2);
+}
+
+.focus-nav-v10>.focus-arrow-v10,
+.focus-nav-v10>.focus-label-v10{
+  grid-row:2;
+}
+
+.focus-nav-v10>.focus-arrow-v10.prev{
+  grid-column:1;
+}
+
+.focus-nav-v10>.focus-label-v10{
+  grid-column:2;
+}
+
+.focus-nav-v10>.focus-arrow-v10.next{
+  grid-column:3;
+}
+
+.compact-log-box-v10 [data-field="rpe"]::placeholder{
+  color:var(--text3);
+  opacity:.8;
+}
+
+@media(max-width:360px){
+  html.gym-mode .focus-nav-v10.on{
+    grid-template-columns:44px minmax(0,1fr) 44px;
+  }
+  .focus-dots-v11{
+    gap:6px;
+  }
+}
