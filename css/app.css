@@ -1150,3 +1150,121 @@ html.gym-mode .focus-nav-v10.on{
     gap:8px;
   }
 }
+/* === V13 CLEANUP FOCUS PLATE UI (release 1.0.44) === */
+html.gym-mode .focus-nav-v10.on{
+  grid-template-rows:minmax(28px,auto) minmax(48px,auto);
+  row-gap:7px;
+  min-height:86px;
+  padding:9px 7px 7px;
+  overflow:visible;
+}
+
+.focus-dots-v11{
+  min-height:28px;
+  padding:6px 9px 4px;
+  overflow-x:auto;
+  overflow-y:visible;
+}
+
+.focus-dot-v11.pending{
+  background:var(--red)!important;
+}
+
+.focus-dot-v11.pending.active{
+  background:var(--blue)!important;
+}
+
+.focus-dot-v11.complete,
+.focus-dot-v11.complete.active{
+  background:var(--green)!important;
+}
+
+html.gym-mode body{
+  padding-bottom:calc(122px + env(safe-area-inset-bottom))!important;
+}
+
+.plate-toggle-v13{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:28px;
+  min-width:28px;
+  height:28px;
+  padding:0;
+  border:1px solid var(--border2);
+  border-radius:50%;
+  background:var(--bg3);
+  color:var(--text3);
+  font-size:14px;
+  font-weight:900;
+  line-height:1;
+  touch-action:manipulation;
+}
+
+.plate-toggle-v13.on{
+  border-color:var(--blue);
+  background:var(--blue-bg);
+  color:var(--blue-text);
+}
+
+.plate-toggle-v13.off{
+  opacity:.62;
+}
+
+.plate-toggle-v13:focus-visible{
+  outline:2px solid var(--blue);
+  outline-offset:2px;
+}
+
+.plate-choice-card-v13{
+  max-width:390px;
+}
+
+.plate-choice-name-v13{
+  margin:.25rem 0 .85rem;
+  color:var(--text2);
+  font-size:12px;
+  line-height:1.45;
+}
+
+.plate-choice-actions-v13{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+}
+
+.plate-choice-on-v13{
+  border-color:var(--green)!important;
+  background:var(--green-bg)!important;
+  color:var(--green-text)!important;
+}
+
+.plate-choice-off-v13{
+  border-color:var(--red)!important;
+  background:var(--red-bg)!important;
+  color:var(--red-text)!important;
+}
+
+.plate-choice-close-v13{
+  width:100%;
+  margin-top:10px;
+  background:var(--bg3)!important;
+}
+
+.wubox,
+[id^="wu-dyn-"],
+.deload-warn{
+  display:none!important;
+}
+
+@media(max-width:360px){
+  html.gym-mode .focus-nav-v10.on{
+    min-height:84px;
+    padding-top:8px;
+  }
+
+  .focus-dots-v11{
+    min-height:27px;
+    padding-top:5px;
+  }
+}

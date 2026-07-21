@@ -2943,7 +2943,928 @@ applyProgramStateV6();
   }else{
     initializeV12();
   }
-})();function renderEx(e,ei,di,wk,cn,isExtra){
+})();
+/* === V13 CLEANUP EXPORT CALENDAR FOCUS PLATES (release 1.0.44) === */
+(function(){
+  'use strict';
+
+  if(window.WTReleasePatchV13)return;
+
+  const PATCH_VERSION='1.0.44';
+  const PLATE_PREF_KEY='wt_plate_calc_exercises_v13';
+  let plateDialogState=null;
+  let renderQueued=false;
+  let observer=null;
+
+  function localDateKey(value){
+    const date=value instanceof Date?value:new Date(value);
+    if(Number.isNaN(date.getTime()))return '';
+    return [
+      date.getFullYear(),
+      String(date.getMonth()+1).padStart(2,'0'),
+      String(date.getDate()).padStart(2,'0')
+    ].join('-');
+  }
+
+  function readPlatePrefs(){
+    try{
+      const parsed=JSON.parse(
+        localStorage.getItem(PLATE_PREF_KEY)||'{}'
+      );
+      return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)
+        ?parsed
+        :{};
+    }catch(error){
+      return {};
+    }
+  }
+
+  function savePlatePrefs(value){
+    localStorage.setItem(
+      PLATE_PREF_KEY,
+      JSON.stringify(value||{})
+    );
+  }
+
+  function parseExerciseKey(key){
+    const match=String(key||'').match(
+      /^c(\d+)w(\d+)d(\d+)e(\d+)$/
+    );
+    if(!match)return null;
+    return {
+      cycle:Number(match[1]),
+      week:Number(match[2]),
+      day:Number(match[3]),
+      exercise:Number(match[4])
+    };
+  }
+
+  function exerciseContext(key){
+    const parsed=parseExerciseKey(key);
+    if(!parsed)return null;
+
+    const exercise=
+      typeof PROG!=='undefined'
+        ?PROG.days?.[parsed.day]?.ex?.[parsed.exercise]||null
+        :null;
+
+    let item=null;
+    try{
+      item=getDayLists?.()?.[parsed.day]?.[parsed.exercise]||null;
+    }catch(error){}
+
+    let name=exercise?.n||item?.n0||'Vaja';
+    try{
+      name=currentExerciseName(
+        parsed.day,
+        parsed.exercise,
+        key
+      )||name;
+    }catch(error){}
+
+    return {
+      key,
+      parsed,
+      exercise,
+      item,
+      name
+    };
+  }
+
+  function plateIdentity(context){
+    if(context?.item?.id)return String(context.item.id);
+    if(context?.exercise?.id)return String(context.exercise.id);
+
+    let stable=context?.name||'vaja';
+    try{
+      stable=exStableId(stable);
+    }catch(error){}
+
+    return `d${context.parsed.day}|${stable}`;
+  }
+
+  function defaultPlateEnabled(context){
+    const exercise=context?.exercise||{};
+    const name=String(context?.name||exercise.n||'');
+    let equipment=String(
+      context?.item?.eq||
+      exercise.eq||
+      ''
+    ).toLowerCase();
+
+    try{
+      if(!equipment){
+        equipment=String(
+          EXERCISE_DB.find(item=>item.n===name)?.eq||''
+        ).toLowerCase();
+      }
+    }catch(error){}
+
+    if(equipment==='barbell')return true;
+    if(exercise.fl||exercise.bbb)return true;
+
+    try{
+      if(
+        Array.isArray(BARBELL_EX)&&
+        BARBELL_EX.includes(name)
+      ){
+        return true;
+      }
+    }catch(error){}
+
+    return /\bbarbell\b|deadlift|front squat|back squat|good morning|power clean|clean and press|snatch/i.test(name);
+  }
+
+  function plateEnabledForKey(key){
+    const context=exerciseContext(key);
+    if(!context)return false;
+
+    const prefs=readPlatePrefs();
+    const identity=plateIdentity(context);
+
+    if(Object.prototype.hasOwnProperty.call(prefs,identity)){
+      return !!prefs[identity];
+    }
+
+    return defaultPlateEnabled(context);
+  }
+
+  function setPlateEnabled(key,enabled){
+    const context=exerciseContext(key);
+    if(!context)return false;
+
+    const prefs=readPlatePrefs();
+    prefs[plateIdentity(context)]=!!enabled;
+    savePlatePrefs(prefs);
+    return true;
+  }
+
+  function cardForKey(key){
+    return document.getElementById('ec-'+key);
+  }
+
+  function firstWeight(card){
+    return Number(
+      String(
+        card?.querySelector('tr[id^="row-"] .wi')?.value||''
+      ).replace(',','.')
+    )||0;
+  }
+
+  function renderPlateBox(card,key,kg){
+    if(!card)return;
+
+    let box=card.querySelector('.platebox');
+
+    if(!box){
+      box=document.createElement('div');
+      box.className='platebox';
+      box.id='pb-'+key;
+
+      const table=card.querySelector('table.st');
+      if(table)table.parentNode.insertBefore(box,table);
+      else card.querySelector('.ex-body')?.appendChild(box);
+    }
+
+    if(kg<=0){
+      box.innerHTML=
+        '<span style="color:var(--text3);">'+
+        'Vnesi tezo za prikaz plosc'+
+        '</span>';
+      return;
+    }
+
+    let plates=null;
+    try{
+      plates=calcPlatesFor(kg);
+    }catch(error){}
+
+    if(!plates){
+      box.textContent=
+        `Ni mogoce sestaviti ${kg}kg s trenutnimi ploscami.`;
+      return;
+    }
+
+    box.innerHTML=
+      `<strong>Vsaka stran:</strong> ${plates.each}`+
+      `<span class="pl-each">`+
+      `Palica ${plates.bar}kg + ${plates.perSide*2}kg = `+
+      `${plates.total}kg</span>`;
+  }
+
+  function renderPlateMini(card,key,setIndex,kg){
+    const row=document.getElementById(
+      `row-${key}-${setIndex}`
+    );
+    const cell=row?.querySelector('.kg-cell');
+    if(!cell)return;
+
+    let mini=row.querySelector('.pl-mini');
+
+    if(!mini){
+      mini=document.createElement('div');
+      mini.id=`pl-${key}-${setIndex}`;
+      mini.className='pl-mini';
+      cell.appendChild(mini);
+    }
+
+    let result={text:'',cls:''};
+    try{
+      result=platesShort(kg);
+    }catch(error){}
+
+    const nextText=result?.text||'';
+    const nextClass='pl-mini '+(result?.cls||'');
+
+    if(mini.textContent!==nextText){
+      mini.textContent=nextText;
+    }
+
+    if(mini.className!==nextClass){
+      mini.className=nextClass;
+    }
+  }
+
+  function ensurePlateButton(card,key,enabled){
+    let button=card.querySelector('.plate-toggle-v13');
+
+    if(!button){
+      button=document.createElement('button');
+      button.type='button';
+      button.className='plate-toggle-v13';
+      button.textContent='!';
+      button.setAttribute(
+        'aria-label',
+        'Plate calculation'
+      );
+
+      button.addEventListener('click',event=>{
+        event.preventDefault();
+        event.stopPropagation();
+        openPlateDialog(key);
+      });
+    }
+
+    button.classList.toggle('on',!!enabled);
+    button.classList.toggle('off',!enabled);
+    button.title=
+      `Plate calculation ${enabled?'ON':'OFF'}`;
+
+    const toolbar=
+      card.querySelector('.exercise-actions-v10')||
+      card.querySelector('.bdg')||
+      card.querySelector('.ex-top');
+
+    if(toolbar&&button.parentNode!==toolbar){
+      toolbar.appendChild(button);
+    }
+  }
+
+  function applyPlateCard(card){
+    const key=String(card?.id||'').replace(/^ec-/,'');
+    if(!key)return;
+
+    const enabled=plateEnabledForKey(key);
+    card.dataset.plateCalc=enabled?'1':'0';
+    ensurePlateButton(card,key,enabled);
+
+    if(!enabled){
+      card.querySelectorAll('.platebox,.pl-mini')
+        .forEach(node=>node.remove());
+      return;
+    }
+
+    renderPlateBox(card,key,firstWeight(card));
+
+    card.querySelectorAll('tr[id^="row-"]').forEach(row=>{
+      const match=String(row.id).match(/-(\d+)$/);
+      if(!match)return;
+
+      const setIndex=Number(match[1]);
+      const kg=Number(
+        String(row.querySelector('.wi')?.value||'')
+          .replace(',','.')
+      )||0;
+
+      renderPlateMini(card,key,setIndex,kg);
+    });
+  }
+
+  function focusKeys(){
+    try{
+      const api=window.WTFocusPatchV10;
+      if(api&&typeof api.focusKeys==='function'){
+        return api.focusKeys().filter(Boolean);
+      }
+    }catch(error){}
+
+    return Array.from(
+      document.querySelectorAll('#day-content .exc')
+    )
+      .map(card=>String(card.id||'').replace(/^ec-/,''))
+      .filter(Boolean);
+  }
+
+  function refreshFocusDots(){
+    const keys=focusKeys();
+    const active=localStorage.getItem('wt_active_ex')||'';
+
+    document.querySelectorAll('.focus-dot-v11')
+      .forEach((dot,index)=>{
+        const key=keys[index]||'';
+        const selected=key!==''&&key===active;
+        dot.classList.toggle('active',selected);
+
+        if(selected){
+          dot.setAttribute('aria-current','step');
+        }else{
+          dot.removeAttribute('aria-current');
+        }
+      });
+  }
+
+  function removeDynamicLegacyUi(){
+    document.querySelectorAll(
+      '.wubox,[id^="wu-dyn-"],.deload-warn'
+    ).forEach(node=>node.remove());
+  }
+
+  function applyUi(){
+    document.querySelectorAll('#day-content .exc')
+      .forEach(applyPlateCard);
+
+    removeDynamicLegacyUi();
+    refreshFocusDots();
+  }
+
+  function scheduleUi(){
+    if(renderQueued)return;
+    renderQueued=true;
+
+    window.requestAnimationFrame(()=>{
+      renderQueued=false;
+      applyUi();
+    });
+  }
+
+  function ensurePlateDialog(){
+    let popup=document.getElementById('plate-calc-pop-v13');
+    if(popup)return popup;
+
+    popup=document.createElement('div');
+    popup.className='note-pop';
+    popup.id='plate-calc-pop-v13';
+    popup.innerHTML=`
+      <div class="note-pop-card plate-choice-card-v13">
+        <h3>Plate calculation</h3>
+        <div class="plate-choice-name-v13"
+          id="plate-choice-name-v13">Vaja</div>
+        <div class="plate-choice-actions-v13">
+          <button type="button"
+            class="sb plate-choice-on-v13">
+            Plate calculation ON
+          </button>
+          <button type="button"
+            class="sb plate-choice-off-v13">
+            Plate calculation OFF
+          </button>
+        </div>
+        <button type="button"
+          class="sb plate-choice-close-v13">
+          Preklici
+        </button>
+      </div>`;
+
+    popup.querySelector('.plate-choice-on-v13')
+      ?.addEventListener('click',()=>confirmPlateChoice(true));
+
+    popup.querySelector('.plate-choice-off-v13')
+      ?.addEventListener('click',()=>confirmPlateChoice(false));
+
+    popup.querySelector('.plate-choice-close-v13')
+      ?.addEventListener('click',closePlateDialog);
+
+    popup.addEventListener('click',event=>{
+      if(event.target===popup)closePlateDialog();
+    });
+
+    document.body.appendChild(popup);
+    return popup;
+  }
+
+  function openPlateDialog(key){
+    const context=exerciseContext(key);
+    if(!context){
+      toast('Vaja ni bila najdena.','err');
+      return;
+    }
+
+    plateDialogState={key};
+    const popup=ensurePlateDialog();
+    const label=popup.querySelector('#plate-choice-name-v13');
+    const enabled=plateEnabledForKey(key);
+
+    if(label){
+      label.textContent=
+        `${context.name} · trenutno ${enabled?'ON':'OFF'}`;
+    }
+
+    popup.classList.add('on');
+  }
+
+  function closePlateDialog(){
+    document.getElementById('plate-calc-pop-v13')
+      ?.classList.remove('on');
+    plateDialogState=null;
+  }
+
+  function confirmPlateChoice(enabled){
+    const key=plateDialogState?.key;
+    if(!key)return;
+
+    if(!setPlateEnabled(key,enabled)){
+      toast('Nastavitve ni bilo mogoce shraniti.','err');
+      return;
+    }
+
+    closePlateDialog();
+    applyPlateCard(cardForKey(key));
+    toast(`Plate calculation ${enabled?'ON':'OFF'}`,'ok');
+  }
+
+  function installPlateWrappers(){
+    if(typeof sv==='function'&&!sv.__wtV13Wrapped){
+      const base=sv;
+
+      async function wrapped(
+        key,
+        setIndex,
+        field,
+        value,
+        dayIndex,
+        exerciseIndex,
+        cycle,
+        isBarbell
+      ){
+        const enabled=plateEnabledForKey(key);
+        const result=await base.call(
+          this,
+          key,
+          setIndex,
+          field,
+          value,
+          dayIndex,
+          exerciseIndex,
+          cycle,
+          enabled?1:0
+        );
+
+        scheduleUi();
+        return result;
+      }
+
+      wrapped.__wtV13Wrapped=true;
+      wrapped.__wtV13Original=base;
+      sv=wrapped;
+      window.sv=wrapped;
+    }
+
+    if(
+      typeof updatePlateBox==='function'&&
+      !updatePlateBox.__wtV13Wrapped
+    ){
+      const base=updatePlateBox;
+
+      function wrapped(key,kg){
+        const card=cardForKey(key);
+
+        if(!plateEnabledForKey(key)){
+          card?.querySelectorAll('.platebox')
+            .forEach(node=>node.remove());
+          return;
+        }
+
+        renderPlateBox(card,key,Number(kg)||0);
+      }
+
+      wrapped.__wtV13Wrapped=true;
+      wrapped.__wtV13Original=base;
+      updatePlateBox=wrapped;
+      window.updatePlateBox=wrapped;
+    }
+
+    if(
+      typeof updatePlMini==='function'&&
+      !updatePlMini.__wtV13Wrapped
+    ){
+      const base=updatePlMini;
+
+      function wrapped(key,setIndex,kg){
+        const card=cardForKey(key);
+
+        if(!plateEnabledForKey(key)){
+          document.getElementById(`pl-${key}-${setIndex}`)
+            ?.remove();
+          return;
+        }
+
+        renderPlateMini(
+          card,
+          key,
+          Number(setIndex),
+          Number(kg)||0
+        );
+      }
+
+      wrapped.__wtV13Wrapped=true;
+      wrapped.__wtV13Original=base;
+      updatePlMini=wrapped;
+      window.updatePlMini=wrapped;
+    }
+
+    [
+      'showDay',
+      'setGymFocus',
+      'moveGymFocus',
+      'refreshGymTarget',
+      'tgSet',
+      'addSet',
+      'removeSet'
+    ].forEach(name=>{
+      const original=window[name];
+      if(
+        typeof original!=='function'||
+        original.__wtV13UiWrapped
+      ){
+        return;
+      }
+
+      function wrapped(){
+        const result=original.apply(this,arguments);
+        scheduleUi();
+        window.setTimeout(scheduleUi,80);
+        return result;
+      }
+
+      wrapped.__wtV13UiWrapped=true;
+      wrapped.__wtV13Original=original;
+      window[name]=wrapped;
+
+      try{
+        eval(`${name}=window[name]`);
+      }catch(error){}
+    });
+  }
+
+  function installRemovedFeatureGuards(){
+    try{
+      const settings=getV6Settings();
+      settings.smartRest=false;
+      settings.restWarning=false;
+      saveV6Settings(settings);
+    }catch(error){}
+
+    if(typeof smartRestFromMetaV6==='function'){
+      smartRestFromMetaV6=function(meta){
+        return Math.max(
+          1,
+          Number(meta?.defaultSec)||90
+        );
+      };
+      window.smartRestFromMetaV6=smartRestFromMetaV6;
+    }
+
+    if(typeof computeSmartRestV6==='function'){
+      computeSmartRestV6=function(key,setIndex,seconds){
+        return Math.max(1,Number(seconds)||90);
+      };
+      window.computeSmartRestV6=computeSmartRestV6;
+    }
+
+    if(typeof renderStagnationAlertsV6==='function'){
+      renderStagnationAlertsV6=function(){};
+      window.renderStagnationAlertsV6=renderStagnationAlertsV6;
+    }
+
+    if(typeof collectStagnationAlertsV6==='function'){
+      collectStagnationAlertsV6=function(){return [];};
+      window.collectStagnationAlertsV6=
+        collectStagnationAlertsV6;
+    }
+
+    if(typeof runSelfTestsV6==='function'){
+      runSelfTestsV6=async function(){return [];};
+      window.runSelfTestsV6=runSelfTestsV6;
+    }
+
+    if(typeof checkDeloadNeeded==='function'){
+      checkDeloadNeeded=function(){};
+      window.checkDeloadNeeded=checkDeloadNeeded;
+    }
+  }
+
+  function installDateFixes(){
+    if(
+      typeof getSessions==='function'&&
+      !getSessions.__wtV13Wrapped
+    ){
+      const base=getSessions;
+
+      function wrapped(){
+        return base.call(this).map(session=>{
+          if(!session||!session.startISO)return session;
+
+          const corrected=localDateKey(session.startISO);
+          if(!corrected||session.date===corrected)return session;
+
+          return {
+            ...session,
+            date:corrected
+          };
+        });
+      }
+
+      wrapped.__wtV13Wrapped=true;
+      wrapped.__wtV13Original=base;
+      getSessions=wrapped;
+      window.getSessions=wrapped;
+    }
+
+    if(
+      typeof buildImmutableSessionRecord==='function'&&
+      !buildImmutableSessionRecord.__wtV13Wrapped
+    ){
+      const base=buildImmutableSessionRecord;
+
+      function wrapped(start,end,duration,context){
+        const record=base.call(
+          this,
+          start,
+          end,
+          duration,
+          context
+        );
+
+        record.date=localDateKey(start);
+        return record;
+      }
+
+      wrapped.__wtV13Wrapped=true;
+      wrapped.__wtV13Original=base;
+      buildImmutableSessionRecord=wrapped;
+      window.buildImmutableSessionRecord=wrapped;
+    }
+
+    [
+      'renderTrainCalendar',
+      'renderSessHist'
+    ].forEach(name=>{
+      const original=window[name];
+
+      if(
+        typeof original!=='function'||
+        original.__wtV13DateWrapped
+      ){
+        return;
+      }
+
+      function wrapped(){
+        const nativeToISOString=Date.prototype.toISOString;
+
+        Date.prototype.toISOString=function(){
+          const shifted=new Date(
+            this.getTime()-
+            this.getTimezoneOffset()*60000
+          );
+          return nativeToISOString.call(shifted);
+        };
+
+        try{
+          return original.apply(this,arguments);
+        }finally{
+          Date.prototype.toISOString=nativeToISOString;
+        }
+      }
+
+      wrapped.__wtV13DateWrapped=true;
+      wrapped.__wtV13Original=original;
+      window[name]=wrapped;
+
+      try{
+        eval(`${name}=window[name]`);
+      }catch(error){}
+    });
+  }
+
+  async function saveBackupFile(json,filename){
+    const plugin=window.Capacitor?.Plugins?.BackupExport;
+
+    if(plugin&&typeof plugin.saveJson==='function'){
+      await plugin.saveJson({
+        content:json,
+        filename
+      });
+      return 'native';
+    }
+
+    const file=new File(
+      [json],
+      filename,
+      {type:'application/json'}
+    );
+
+    let canShare=false;
+    try{
+      canShare=
+        typeof navigator.share==='function'&&
+        (
+          typeof navigator.canShare!=='function'||
+          navigator.canShare({files:[file]})
+        );
+    }catch(error){
+      canShare=false;
+    }
+
+    if(canShare){
+      await navigator.share({
+        files:[file],
+        title:'Workout Tracker backup'
+      });
+      return 'share';
+    }
+
+    const url=URL.createObjectURL(file);
+    const link=document.createElement('a');
+    link.href=url;
+    link.download=filename;
+    link.style.display='none';
+    document.body.appendChild(link);
+    link.click();
+
+    window.setTimeout(()=>{
+      link.remove();
+      URL.revokeObjectURL(url);
+    },2000);
+
+    return 'download';
+  }
+
+  function installBackupFixes(){
+    if(
+      typeof buildBackupJSON==='function'&&
+      !buildBackupJSON.__wtV13Wrapped
+    ){
+      const base=buildBackupJSON;
+
+      async function wrapped(includePhotos){
+        const backup=JSON.parse(
+          await base.call(this,includePhotos)
+        );
+
+        backup.platePrefsV13=readPlatePrefs();
+        return JSON.stringify(backup);
+      }
+
+      wrapped.__wtV13Wrapped=true;
+      wrapped.__wtV13Original=base;
+      buildBackupJSON=wrapped;
+      window.buildBackupJSON=wrapped;
+    }
+
+    if(
+      typeof restoreBackupObjectP1==='function'&&
+      !restoreBackupObjectP1.__wtV13Wrapped
+    ){
+      const base=restoreBackupObjectP1;
+
+      async function wrapped(backup,options={}){
+        if((options.mode||'replace')==='replace'){
+          localStorage.removeItem(PLATE_PREF_KEY);
+        }
+
+        await base.call(this,backup,options);
+
+        if(
+          backup?.platePrefsV13&&
+          typeof backup.platePrefsV13==='object'
+        ){
+          savePlatePrefs(backup.platePrefsV13);
+        }
+
+        installRemovedFeatureGuards();
+        scheduleUi();
+      }
+
+      wrapped.__wtV13Wrapped=true;
+      wrapped.__wtV13Original=base;
+      restoreBackupObjectP1=wrapped;
+      window.restoreBackupObjectP1=wrapped;
+    }
+
+    exportData=async function(){
+      try{
+        const json=await buildBackupJSON(true);
+        const parsed=JSON.parse(json);
+        const validation=validateBackupP1(parsed);
+
+        if(!validation.ok){
+          throw new Error(
+            validation.msg||'Backup ni veljaven.'
+          );
+        }
+
+        const now=new Date();
+        const filename=
+          `workout_backup_v6_${localDateKey(now)}.json`;
+
+        await saveBackupFile(json,filename);
+
+        const completedAt=now.toISOString();
+        localStorage.setItem(
+          'wt_last_backup',
+          completedAt
+        );
+
+        try{
+          localStorage.setItem(
+            V6_KEYS.lastExternal,
+            completedAt
+          );
+        }catch(error){}
+
+        try{
+          renderBackupStatusV6();
+        }catch(error){}
+
+        toast('Backup je bil uspesno shranjen.','ok');
+        return true;
+      }catch(error){
+        console.warn(
+          'Workout backup export failed',
+          error
+        );
+
+        toast(
+          `Backup ni bil shranjen: ${
+            error?.message||'neznana napaka'
+          }`,
+          'err'
+        );
+
+        return false;
+      }
+    };
+
+    window.exportData=exportData;
+  }
+
+  function installObserver(){
+    if(observer||!document.body)return;
+
+    observer=new MutationObserver(()=>{
+      scheduleUi();
+    });
+
+    observer.observe(document.body,{
+      childList:true,
+      subtree:true
+    });
+  }
+
+  function initialize(){
+    installRemovedFeatureGuards();
+    installDateFixes();
+    installBackupFixes();
+    installPlateWrappers();
+    ensurePlateDialog();
+    installObserver();
+    applyUi();
+
+    document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden)scheduleUi();
+    });
+
+    window.addEventListener('pageshow',scheduleUi);
+  }
+
+  window.WTReleasePatchV13={
+    version:PATCH_VERSION,
+    localDateKey,
+    plateEnabled:plateEnabledForKey,
+    refresh:scheduleUi
+  };
+
+  if(document.readyState==='loading'){
+    document.addEventListener(
+      'DOMContentLoaded',
+      initialize,
+      {once:true}
+    );
+  }else{
+    initialize();
+  }
+})();
+function renderEx(e,ei,di,wk,cn,isExtra){
   const exKey=sdk(cn,cw,di,ei);
   const n=nsf(di,ei,wk,exKey);
   const all=getSets();

@@ -124,11 +124,6 @@
     <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
     <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
   </div>
-  <div class="card" id="v6-alert-card">
-    <div class="v6-card-title"><div class="ct" style="margin:0;">🚦 Opozorila in stagnacija</div><span class="v6-chip" id="v6-alert-count">0</span></div>
-    <div id="v6-stagnation-alerts"><div style="font-size:12px;color:var(--text3);">Analiza bo prikazana po prvih ponovljenih treningih.</div></div>
-  </div>
-
   <!-- Weekly Summary -->
   <div class="card" id="summary-card">
     <div class="ct">📊 Tedenski povzetek</div>
@@ -298,28 +293,6 @@
 </div>
 
 <!-- DATA EDITOR POPUP -->
-<div class="note-pop" id="data-edit-pop">
-  <div class="note-pop-card" style="max-width:520px;max-height:88vh;display:flex;flex-direction:column;">
-    <h3>✎ Uredi pretekle podatke</h3>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Izberi cikel, teden in dan. Popravi kile/ponovitve neposredno.</div>
-    <div style="display:flex;gap:6px;margin-bottom:.5rem;">
-      <select class="si" id="de-cycle" onchange="renderDataEditor()" style="flex:1;"></select>
-      <select class="si" id="de-week" onchange="renderDataEditor()" style="flex:1;">
-        <option value="0">T1 Heavy</option>
-        <option value="1">T2 Moderate</option>
-        <option value="2">T3 Volume</option>
-        <option value="3">T4 Deload</option>
-      </select>
-      <select class="si" id="de-day" onchange="renderDataEditor()" style="flex:1;"></select>
-    </div>
-    <div id="de-content" style="flex:1;overflow-y:auto;max-height:60vh;"></div>
-    <div class="note-pop-actions">
-      <button class="sb" onclick="closeDataEditor()" style="background:var(--bg3);">Zapri</button>
-      <button class="sb" onclick="saveDataEditor()" style="background:var(--green-bg);border-color:var(--green);color:var(--green-text);">💾 Shrani</button>
-    </div>
-  </div>
-</div>
-
 <!-- NOTE POPUP -->
 <button class="gym-fab" onclick="scrollToActiveEx()" title="Skoči na aktivno vajo">🎯</button>
 <div class="note-pop" id="confirm-pop">
@@ -458,25 +431,9 @@
       <div class="v6-builder-field"><label>Min. izvedba za povečanje (%)</label><input id="v6-completion-up" type="number" min="50" max="100" step="5" onchange="saveProgressionSettingsV6()"></div>
       <div class="v6-builder-field"><label>Bolečina za stop/zmanjšanje</label><input id="v6-pain-stop" type="number" min="1" max="10" step="1" onchange="saveProgressionSettingsV6()"></div>
     </div>
-  </div>
-  <div class="card">
-    <div class="ct">⏱ Pametni počitek</div>
-    <div class="set-row"><span class="sl-l">Samodejno prilagajanje<br><span style="font-size:10px;color:var(--text3);">daljši počitek po težkem setu, krajši pri izolacijah</span></span><div class="toggle-sw" id="v6-rest-toggle" onclick="toggleV6Setting('smartRest')"></div></div>
-    <div class="set-row"><span class="sl-l">Opozorilo 15 sekund prej</span><div class="toggle-sw" id="v6-rest-warn-toggle" onclick="toggleV6Setting('restWarning')"></div></div>
-    <div id="v6-rest-summary" style="font-size:11px;color:var(--text3);margin-top:.6rem;"></div>
-  </div>
-  <div class="card">
-    <div class="v6-card-title"><div class="ct" style="margin:0;">🧪 Sistemski testi</div><span class="v6-chip" id="v6-test-status">še niso zagnani</span></div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:.6rem;">Preveri session zaklep, backup shemo, progresijo, pametni timer in strukturo programa brez spreminjanja tvojih podatkov.</div>
+  </div>  <div class="card">    <div style="font-size:11px;color:var(--text3);margin-bottom:.6rem;">Preveri session zaklep, backup shemo, progresijo, pametni timer in strukturo programa brez spreminjanja tvojih podatkov.</div>
     <button class="sb" onclick="runSelfTestsV6()">Zaženi teste</button>
     <div id="v6-test-results" style="margin-top:.65rem;"></div>
-  </div>
-
-  <div class="card">
-    <div class="ct">🔍 Diagnostika podatkov</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;">Preveri, ali imajo katere vaje podatke, ki pripadajo drugi (npr. iz starejše verzije, pred popravkom premikanja/brisanja vaj).</div>
-    <button class="sb" onclick="runDataDiagnostic()">Zaženi preverbo</button>
-    <div id="diag-results" style="margin-top:.75rem;"></div>
   </div>
   <div class="card">
     <div class="ct">📱 Prikaz</div>
@@ -529,13 +486,7 @@
     <div id="v6-backup-status" style="margin-bottom:.55rem;"></div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:.4rem;font-weight:500;">Lokalni snapshoti (zadnjih 12):</div>
     <div id="backup-list"></div>
-  </div>
-  <div class="card">
-    <div class="ct">✎ Uredi pretekle podatke</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;line-height:1.4;">Popravi kile/ponovitve katerekoli pretekle vaje (npr. če so se podatki pomešali). Izbereš cikel, teden, dan.</div>
-    <button class="sb" onclick="openDataEditor()" style="width:100%;">Odpri urejevalnik</button>
-  </div>
-  <div class="card">
+  </div>  <div class="card">
     <div class="ct">➕ Dodaj svojo vajo</div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;line-height:1.4;">Vaje se shranijo trajno in pojavijo med "Zamenjave" pri vsaki vaji.</div>
     <div class="ir"><span class="lbl">Ime vaje</span><input class="si" type="text" id="cust-name" placeholder="npr. Cable crossover"></div>
@@ -634,15 +585,7 @@
     <div class="ir"><span class="lbl">Ponovitve</span><input class="si" type="number" id="orm-reps" placeholder="reps" min="1" max="30"></div>
     <button class="sb" onclick="calcORM()">Izračunaj</button>
     <div class="rb2" id="orm-res"></div>
-  </div>
-  <div class="card">
-    <div class="ct">🔥 Ogrevanje</div>
-    <div class="ir"><span class="lbl">Delovna teža</span><input class="si" type="number" id="wu-kg" placeholder="kg" min="0" step="2.5"></div>
-    <div class="ir"><span class="lbl">Tip</span><select class="si" id="wu-t"><option value="upper">Zgornji del</option><option value="lower">Spodnji del</option></select></div>
-    <button class="sb" onclick="calcWU()">Pokaži</button>
-    <div class="rb2" id="wu-res"></div>
-  </div>
-  <button class="clrb" onclick="clearAll()">Ponastavi vse podatke</button>
+  </div>  <button class="clrb" onclick="clearAll()">Ponastavi vse podatke</button>
 </div>
 
 <script src="vendor/chart.umd.js"></script>
