@@ -1,16 +1,16 @@
 package com.kemal.workouttracker;
 
-import android.app.Activity;
-import android.content.Intent;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.net.Uri;
-
-import androidx.activity.result.ActivityResult;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
-import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.BufferedInputStream;
@@ -25,13 +25,10 @@ import java.nio.charset.StandardCharsets;
 @CapacitorPlugin(name = "BackupExport")
 public class BackupExportPlugin extends Plugin {
 
-    private File pendingBackupFile;
-    private long pendingBackupBytes;
-
     @PluginMethod
     public void saveJson(PluginCall call) {
         String content = call.getString("content");
-        String filename = call.getString(
+        String requestedName = call.getString(
             "filename",
             "workout-backup.json"
         );
@@ -41,178 +38,198 @@ public class BackupExportPlugin extends Plugin {
             return;
         }
 
-        if (pendingBackupFile != null) {
-            call.reject("Drug backup se ze shranjuje.");
+        byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+
+        if (bytes.length == 0) {
+            call.reject("Backup ima 0 bajtov.");
             return;
         }
 
-        File temporaryFile = null;
+        String filename = sanitizeFilename(requestedName);
 
         try {
-            byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+            JSObject result;
 
-            if (bytes.length == 0) {
-                call.reject("Backup ima 0 bajtov.");
-                return;
-            }
-
-            temporaryFile = File.createTempFile(
-                "workout-backup-",
-                ".json",
-                getContext().getCacheDir()
-            );
-
-            try (
-                FileOutputStream output =
-                    new FileOutputStream(temporaryFile)
-            ) {
-                output.write(bytes);
-                output.flush();
-                output.getFD().sync();
-            }
-
-            long temporaryLength = temporaryFile.length();
-
-            if (temporaryLength != bytes.length) {
-                throw new IllegalStateException(
-                    "Zacasni backup ni bil v celoti zapisan. " +
-                    "Pricakovano: " + bytes.length +
-                    ", zapisano: " + temporaryLength
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                result = saveWithMediaStore(
+                    filename,
+                    bytes
+                );
+            } else {
+                result = saveLegacyDownload(
+                    filename,
+                    bytes
                 );
             }
 
-            pendingBackupFile = temporaryFile;
-            pendingBackupBytes = temporaryLength;
-
-            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("application/json");
-            intent.putExtra(Intent.EXTRA_TITLE, filename);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-
-            startActivityForResult(
-                call,
-                intent,
-                "saveJsonResult"
-            );
+            call.resolve(result);
         } catch (Exception error) {
-            if (temporaryFile != null) {
-                temporaryFile.delete();
-            }
-
-            clearPendingBackup();
-
             call.reject(
-                "Backupa ni bilo mogoce pripraviti.",
+                "Backup ni bil shranjen.",
                 null,
                 error
             );
         }
     }
 
-    @ActivityCallback
-    private void saveJsonResult(
-        PluginCall call,
-        ActivityResult activityResult
-    ) {
-        File sourceFile = pendingBackupFile;
-        long expectedBytes = pendingBackupBytes;
+    private JSObject saveWithMediaStore(
+        String filename,
+        byte[] bytes
+    ) throws Exception {
+        ContentResolver resolver =
+            getContext().getContentResolver();
 
-        clearPendingBackup();
+        ContentValues values = new ContentValues();
+        values.put(
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            filename
+        );
+        values.put(
+            MediaStore.MediaColumns.MIME_TYPE,
+            "application/json"
+        );
+        values.put(
+            MediaStore.MediaColumns.RELATIVE_PATH,
+            Environment.DIRECTORY_DOWNLOADS
+        );
+        values.put(
+            MediaStore.MediaColumns.IS_PENDING,
+            1
+        );
 
-        if (call == null) {
-            deleteQuietly(sourceFile);
-            return;
+        Uri uri = resolver.insert(
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            values
+        );
+
+        if (uri == null) {
+            throw new IllegalStateException(
+                "Android ni ustvaril backup datoteke."
+            );
         }
 
-        Intent data = activityResult.getData();
-
-        if (
-            activityResult.getResultCode() != Activity.RESULT_OK ||
-            data == null ||
-            data.getData() == null
-        ) {
-            deleteQuietly(sourceFile);
-            call.reject("Shranjevanje backupa je bilo preklicano.");
-            return;
-        }
-
-        if (
-            sourceFile == null ||
-            !sourceFile.exists() ||
-            sourceFile.length() <= 0
-        ) {
-            deleteQuietly(sourceFile);
-            call.reject("Zacasni backup manjka ali je prazen.");
-            return;
-        }
-
-        Uri uri = data.getData();
+        boolean completed = false;
 
         try {
-            long copiedBytes = copyToDocument(sourceFile, uri);
+            writeBytes(resolver, uri, bytes);
 
-            if (
-                copiedBytes <= 0 ||
-                copiedBytes != expectedBytes
-            ) {
+            long verifiedBytes = countUriBytes(
+                resolver,
+                uri
+            );
+
+            if (verifiedBytes != bytes.length) {
                 throw new IllegalStateException(
-                    "Backup ni bil v celoti prekopiran. " +
-                    "Pricakovano: " + expectedBytes +
-                    ", kopirano: " + copiedBytes
+                    "Napacna velikost backupa. " +
+                    "Pricakovano: " + bytes.length +
+                    ", zapisano: " + verifiedBytes
                 );
             }
 
-            long verifiedBytes = countDocumentBytes(uri);
+            ContentValues publish = new ContentValues();
+            publish.put(
+                MediaStore.MediaColumns.IS_PENDING,
+                0
+            );
 
-            if (
-                verifiedBytes <= 0 ||
-                verifiedBytes != expectedBytes
-            ) {
+            int updated = resolver.update(
+                uri,
+                publish,
+                null,
+                null
+            );
+
+            if (updated <= 0) {
                 throw new IllegalStateException(
-                    "Preverjanje shranjene datoteke ni uspelo. " +
-                    "Pricakovano: " + expectedBytes +
-                    ", prebrano: " + verifiedBytes
+                    "Backupa ni bilo mogoce objaviti v Download."
                 );
             }
+
+            completed = true;
 
             JSObject result = new JSObject();
             result.put("uri", uri.toString());
             result.put("bytes", verifiedBytes);
-            call.resolve(result);
-        } catch (Exception error) {
-            call.reject(
-                "Backup datoteka ni bila pravilno zapisana.",
-                null,
-                error
-            );
+            result.put("filename", filename);
+            result.put("location", "Download");
+            return result;
         } finally {
-            deleteQuietly(sourceFile);
+            if (!completed) {
+                resolver.delete(uri, null, null);
+            }
         }
     }
 
-    private long copyToDocument(
-        File sourceFile,
-        Uri destinationUri
+    private JSObject saveLegacyDownload(
+        String filename,
+        byte[] bytes
     ) throws Exception {
-        OutputStream rawOutput = null;
+        File downloads =
+            Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS
+            );
 
-        try {
-            rawOutput =
-                getContext()
-                    .getContentResolver()
-                    .openOutputStream(destinationUri, "rwt");
-        } catch (Exception ignored) {
-            // Nekateri ponudniki dokumentov ne podpirajo "rwt".
+        if (
+            !downloads.exists() &&
+            !downloads.mkdirs()
+        ) {
+            throw new IllegalStateException(
+                "Mape Download ni bilo mogoce ustvariti."
+            );
         }
 
-        if (rawOutput == null) {
-            rawOutput =
-                getContext()
-                    .getContentResolver()
-                    .openOutputStream(destinationUri);
+        File target = uniqueFile(
+            downloads,
+            filename
+        );
+
+        boolean completed = false;
+
+        try (
+            OutputStream output =
+                new BufferedOutputStream(
+                    new FileOutputStream(target)
+                )
+        ) {
+            output.write(bytes);
+            output.flush();
+            completed = true;
+        } finally {
+            if (!completed && target.exists()) {
+                target.delete();
+            }
         }
+
+        long verifiedBytes = countFileBytes(target);
+
+        if (verifiedBytes != bytes.length) {
+            target.delete();
+
+            throw new IllegalStateException(
+                "Napacna velikost backupa. " +
+                "Pricakovano: " + bytes.length +
+                ", zapisano: " + verifiedBytes
+            );
+        }
+
+        JSObject result = new JSObject();
+        result.put(
+            "uri",
+            Uri.fromFile(target).toString()
+        );
+        result.put("bytes", verifiedBytes);
+        result.put("filename", target.getName());
+        result.put("location", "Download");
+        return result;
+    }
+
+    private void writeBytes(
+        ContentResolver resolver,
+        Uri uri,
+        byte[] bytes
+    ) throws Exception {
+        OutputStream rawOutput =
+            resolver.openOutputStream(uri, "w");
 
         if (rawOutput == null) {
             throw new IllegalStateException(
@@ -220,35 +237,21 @@ public class BackupExportPlugin extends Plugin {
             );
         }
 
-        long total = 0;
-        byte[] buffer = new byte[64 * 1024];
-
         try (
-            InputStream input =
-                new BufferedInputStream(
-                    new FileInputStream(sourceFile)
-                );
             OutputStream output =
                 new BufferedOutputStream(rawOutput)
         ) {
-            int read;
-
-            while ((read = input.read(buffer)) != -1) {
-                output.write(buffer, 0, read);
-                total += read;
-            }
-
+            output.write(bytes);
             output.flush();
         }
-
-        return total;
     }
 
-    private long countDocumentBytes(Uri uri) throws Exception {
+    private long countUriBytes(
+        ContentResolver resolver,
+        Uri uri
+    ) throws Exception {
         InputStream rawInput =
-            getContext()
-                .getContentResolver()
-                .openInputStream(uri);
+            resolver.openInputStream(uri);
 
         if (rawInput == null) {
             throw new IllegalStateException(
@@ -256,31 +259,86 @@ public class BackupExportPlugin extends Plugin {
             );
         }
 
-        long total = 0;
-        byte[] buffer = new byte[64 * 1024];
-
         try (
             InputStream input =
                 new BufferedInputStream(rawInput)
         ) {
-            int read;
+            return countBytes(input);
+        }
+    }
 
-            while ((read = input.read(buffer)) != -1) {
-                total += read;
-            }
+    private long countFileBytes(File file) throws Exception {
+        try (
+            InputStream input =
+                new BufferedInputStream(
+                    new FileInputStream(file)
+                )
+        ) {
+            return countBytes(input);
+        }
+    }
+
+    private long countBytes(InputStream input) throws Exception {
+        long total = 0;
+        byte[] buffer = new byte[64 * 1024];
+        int read;
+
+        while ((read = input.read(buffer)) != -1) {
+            total += read;
         }
 
         return total;
     }
 
-    private void clearPendingBackup() {
-        pendingBackupFile = null;
-        pendingBackupBytes = 0;
+    private String sanitizeFilename(String value) {
+        String filename =
+            value == null ? "" : value.trim();
+
+        if (filename.isEmpty()) {
+            filename = "workout-backup.json";
+        }
+
+        filename = filename.replaceAll(
+            "[\\\\/:*?\"<>|]",
+            "_"
+        );
+
+        if (!filename.toLowerCase().endsWith(".json")) {
+            filename += ".json";
+        }
+
+        return filename;
     }
 
-    private void deleteQuietly(File file) {
-        if (file != null && file.exists()) {
-            file.delete();
+    private File uniqueFile(
+        File directory,
+        String filename
+    ) {
+        File candidate = new File(
+            directory,
+            filename
+        );
+
+        if (!candidate.exists()) {
+            return candidate;
         }
+
+        int dot = filename.lastIndexOf('.');
+        String base =
+            dot > 0 ? filename.substring(0, dot) : filename;
+        String extension =
+            dot > 0 ? filename.substring(dot) : "";
+
+        int number = 1;
+
+        while (candidate.exists()) {
+            candidate = new File(
+                directory,
+                base + " (" + number + ")" + extension
+            );
+            number += 1;
+        }
+
+        return candidate;
     }
 }
