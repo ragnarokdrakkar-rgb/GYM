@@ -3864,6 +3864,1271 @@ applyProgramStateV6();
     initialize();
   }
 })();
+/* === V14 PROGRAM BUILDER + DAY COMPLETION (release 1.0.47) === */
+(function(){
+  'use strict';
+
+  if(window.WTBuilderPatchV14)return;
+
+  const PATCH_VERSION='1.0.47';
+  const BASE_DAY_COUNT={cut:5,bulk:5};
+  const PLATE_PREF_KEY='wt_plate_calc_exercises_v13';
+
+  let chooserDayV14=null;
+  let customDayV14=null;
+  let viewportFrameV14=0;
+
+  const baseGetProgramMetaV14=getProgramMetaV6;
+  const baseSaveProgramMetaV14=saveProgramMetaV6;
+  const baseRenderBuilderDayV14=renderProgramBuilderDayV6;
+
+  function uidV14(prefix){
+    return `${prefix}-${Date.now().toString(36)}-${
+      Math.random().toString(36).slice(2,8)
+    }`;
+  }
+
+  function profileV14(){
+    return typeof getActiveProfile==='function'
+      ?getActiveProfile()
+      :'cut';
+  }
+
+  function normalizedMetaV14(profile=profileV14()){
+    const meta=baseGetProgramMetaV14(profile);
+    let changed=false;
+
+    meta.days.forEach((day,index)=>{
+      if(!day.id){
+        day.id=uidV14(`day-${profile}-${index+1}`);
+        changed=true;
+      }
+
+      if(day.deleted===true&&day.active!==false){
+        day.active=false;
+        changed=true;
+      }
+
+      if(
+        index>=(BASE_DAY_COUNT[profile]||5)&&
+        day.isCopy===undefined&&
+        day.customDay===undefined
+      ){
+        const copyLike=/kopija|copy/i.test(
+          `${day.name||''} ${day.title||''}`
+        );
+
+        if(copyLike)day.isCopy=true;
+        else day.customDay=true;
+
+        changed=true;
+      }
+    });
+
+    if(changed){
+      baseSaveProgramMetaV14(meta,profile);
+    }
+
+    return meta;
+  }
+
+  getProgramMetaV6=function(profile=profileV14()){
+    return normalizedMetaV14(profile);
+  };
+  window.getProgramMetaV6=getProgramMetaV6;
+
+  function activeDayObjectsV14(){
+    const meta=getProgramMetaV6();
+
+    return meta.days
+      .map((day,index)=>({day,index}))
+      .filter(({day})=>
+        day.deleted!==true&&
+        day.active!==false
+      );
+  }
+
+  activeDayIndicesV6=function(){
+    return activeDayObjectsV14().map(entry=>entry.index);
+  };
+  window.activeDayIndicesV6=activeDayIndicesV6;
+
+  function dayListAtV14(dayIndex,cycle,week){
+    try{
+      const list=dayListFor(dayIndex,cycle,week);
+      if(Array.isArray(list))return list;
+    }catch(error){}
+
+    try{
+      const list=buildDayExList(dayIndex);
+      return Array.isArray(list)?list:[];
+    }catch(error){
+      return [];
+    }
+  }
+
+  function targetSetsV14(item,weekPlan,key){
+    let base;
+
+    if(Number(item?.targetSets)>0){
+      base=Math.max(1,Math.min(12,Number(item.targetSets)));
+
+      if(weekPlan?.dl){
+        base=Math.min(3,base);
+      }
+    }else{
+      base=weekPlan?.dl
+        ?3
+        :(item?.m?Number(weekPlan?.sM)||4:Number(weekPlan?.sA)||4);
+    }
+
+    return Math.max(
+      1,
+      Math.round(base)+(Number(getExtraSets(key))||0)
+    );
+  }
+
+  isDayComplete=function(cycle,week,dayIndex){
+    const meta=getProgramMetaV6();
+    const day=meta.days?.[dayIndex];
+
+    if(
+      !day||
+      day.deleted===true||
+      day.active===false
+    ){
+      return false;
+    }
+
+    const list=dayListAtV14(dayIndex,cycle,week);
+    const allSets=getSets();
+    const hidden=getHiddenEx();
+    const weekPlan=PROG.weeks?.[week]||PROG.weeks?.[cw];
+
+    const visible=list
+      .map((item,exerciseIndex)=>({
+        item,
+        exerciseIndex,
+        key:sdk(cycle,week,dayIndex,exerciseIndex)
+      }))
+      .filter(({item,key})=>
+        item?.programDisabled!==true&&
+        !hidden[key]
+      );
+
+    if(visible.length===0)return false;
+
+    return visible.every(({item,key})=>{
+      const expected=targetSetsV14(item,weekPlan,key);
+      const sets=Array.isArray(allSets[key])
+        ?allSets[key].slice(0,expected)
+        :[];
+
+      return (
+        sets.length===expected&&
+        sets.every(set=>set&&set.done===true)
+      );
+    });
+  };
+  window.isDayComplete=isDayComplete;
+
+  updateTabColors=function(){
+    const cycle=getCyc().num;
+
+    document.querySelectorAll('.wt').forEach((tab,week)=>{
+      tab.classList.toggle(
+        'done',
+        isWeekComplete(cycle,week)
+      );
+    });
+
+    document.querySelectorAll('.dt').forEach(tab=>{
+      const dayIndex=Number(tab.dataset.dayIndex);
+
+      tab.classList.toggle(
+        'done',
+        Number.isInteger(dayIndex)&&
+        isDayComplete(cycle,cw,dayIndex)
+      );
+    });
+  };
+  window.updateTabColors=updateTabColors;
+
+  renderDayTabsV6=function(){
+    const tabs=document.querySelector('.dtabs');
+    if(!tabs)return;
+
+    const meta=getProgramMetaV6();
+    const activeCount=activeDayIndicesV6().length||1;
+    let visibleOrdinal=0;
+
+    tabs.style.gridTemplateColumns=
+      `repeat(${Math.min(activeCount,7)},1fr)`;
+
+    tabs.innerHTML=meta.days.map((day,index)=>{
+      const visible=
+        day.deleted!==true&&
+        day.active!==false;
+
+      if(visible)visibleOrdinal+=1;
+
+      const ordinal=visible?visibleOrdinal:index+1;
+      const hiddenClass=visible?'':' v6-hidden-day';
+
+      return (
+        `<div class="dt${index===cd?' active':''}${hiddenClass}" `+
+        `data-day-index="${index}" `+
+        `onclick="showDay(${index})" `+
+        `${visible?'':'aria-hidden="true"'}>`+
+          `<div class="dt-n">Dan ${ordinal}</div>`+
+          `<div class="dt-l">${
+            safeHtml(day.name||`Dan ${ordinal}`)
+          }</div>`+
+        `</div>`
+      );
+    }).join('');
+
+    updateTabColors();
+  };
+  window.renderDayTabsV6=renderDayTabsV6;
+
+  function visibleBuilderDaysV14(meta){
+    return meta.days
+      .map((day,index)=>({day,index}))
+      .filter(({day})=>day.deleted!==true);
+  }
+
+  renderProgramBuilderV6=function(){
+    applyProgramStateV6();
+    ensureDayLists();
+
+    const meta=getProgramMetaV6();
+    const profile=profileV14();
+    const visible=visibleBuilderDaysV14(meta);
+    const available=visible.map(entry=>entry.index);
+
+    if(!available.includes(v6BuilderDay)){
+      v6BuilderDay=
+        activeDayIndicesV6()[0]??
+        available[0]??
+        0;
+    }
+
+    const badge=document.getElementById('v6-builder-profile');
+    if(badge)badge.textContent=profile==='bulk'?'Bulk':'Cut';
+
+    const days=document.getElementById('v6-builder-days');
+
+    if(days){
+      days.innerHTML=visible.map(({day,index})=>
+        `<button type="button" `+
+        `class="v6-builder-day${
+          index===v6BuilderDay?' active':''
+        }${day.active===false?' off':''}" `+
+        `data-builder-day-index="${index}">`+
+        `${safeHtml(day.name||`Dan ${index+1}`)}`+
+        `${day.active===false?' · off':''}`+
+        `</button>`
+      ).join('');
+
+      days.querySelectorAll('[data-builder-day-index]')
+        .forEach(button=>{
+          button.addEventListener('click',()=>{
+            v6BuilderDay=Number(
+              button.dataset.builderDayIndex
+            );
+            renderProgramBuilderV6();
+          });
+        });
+    }
+
+    renderProgramBuilderDayV6(v6BuilderDay);
+  };
+  window.renderProgramBuilderV6=renderProgramBuilderV6;
+
+  function isRemovableDayV14(day,index){
+    return (
+      day?.isCopy===true||
+      day?.customDay===true||
+      index>=(BASE_DAY_COUNT[profileV14()]||5)
+    );
+  }
+
+  function appendDayControlsV14(dayIndex){
+    const content=document.getElementById('v6-builder-content');
+    const meta=getProgramMetaV6();
+    const day=meta.days?.[dayIndex];
+
+    if(!content||!day)return;
+
+    const controls=document.createElement('div');
+    controls.className='builder-day-controls-v14';
+
+    const status=document.createElement('div');
+    status.className='builder-day-status-v14';
+    status.textContent=
+      day.active===false?'Dan je arhiviran':'Dan je aktiven';
+    controls.appendChild(status);
+
+    const actions=document.createElement('div');
+    actions.className='builder-day-control-actions-v14';
+
+    const statusButton=document.createElement('button');
+    statusButton.type='button';
+    statusButton.className='sb';
+    statusButton.textContent=
+      day.active===false
+        ?'Ponovno aktiviraj'
+        :'Arhiviraj dan';
+
+    statusButton.addEventListener('click',()=>{
+      setDayActiveV14(dayIndex,day.active===false);
+    });
+
+    actions.appendChild(statusButton);
+
+    if(isRemovableDayV14(day,dayIndex)){
+      const deleteButton=document.createElement('button');
+      deleteButton.type='button';
+      deleteButton.className='sb danger-action';
+      deleteButton.textContent=
+        day.isCopy===true
+          ?'Izbriši kopijo'
+          :'Izbriši dan';
+
+      deleteButton.addEventListener('click',()=>{
+        deleteProgramDayV14(dayIndex);
+      });
+
+      actions.appendChild(deleteButton);
+    }
+
+    controls.appendChild(actions);
+    content.insertBefore(controls,content.firstChild);
+  }
+
+  function upgradeExercisePickerV14(dayIndex){
+    const input=document.getElementById('v6-add-ex-name');
+    if(!input)return;
+
+    input.removeAttribute('list');
+    input.readOnly=true;
+    input.autocomplete='off';
+    input.classList.add('builder-picker-input-v14');
+    input.placeholder='Tapni za izbiro vaje';
+
+    const open=event=>{
+      event?.preventDefault?.();
+      input.blur();
+      openExerciseChooserV14(dayIndex);
+    };
+
+    input.addEventListener('click',open);
+    input.addEventListener('focus',open);
+
+    document.getElementById('v6-ex-options')?.remove();
+
+    const field=input.closest('.v6-builder-field');
+    const label=field?.querySelector('label');
+    if(label)label.textContent='Izberi vajo';
+
+    const actions=input
+      .closest('.v6-ex-edit')
+      ?.querySelector('.v6-builder-actions');
+
+    if(actions){
+      const create=document.createElement('button');
+      create.type='button';
+      create.className='sb builder-create-v14';
+      create.textContent='+ Ustvari novo vajo';
+      create.addEventListener('click',()=>{
+        openCustomExerciseV14(dayIndex);
+      });
+      actions.appendChild(create);
+    }
+  }
+
+  renderProgramBuilderDayV6=function(dayIndex){
+    baseRenderBuilderDayV14(dayIndex);
+    appendDayControlsV14(dayIndex);
+    upgradeExercisePickerV14(dayIndex);
+    syncViewportV14();
+  };
+  window.renderProgramBuilderDayV6=renderProgramBuilderDayV6;
+
+  async function setDayActiveV14(dayIndex,active){
+    const meta=getProgramMetaV6();
+    const day=meta.days?.[dayIndex];
+    if(!day)return;
+
+    if(!active&&activeDayIndicesV6().length<=1){
+      toast('Vsaj en dan mora ostati aktiven.','err');
+      return;
+    }
+
+    day.active=!!active;
+    baseSaveProgramMetaV14(meta,profileV14());
+    applyProgramStateV6();
+
+    if(!active&&v6BuilderDay===dayIndex){
+      v6BuilderDay=activeDayIndicesV6()[0]??dayIndex;
+    }
+
+    renderProgramBuilderV6();
+    renderDayTabsV6();
+
+    toast(
+      active
+        ?'Dan je ponovno aktiven.'
+        :'Dan je arhiviran.',
+      'ok'
+    );
+  }
+
+  async function deleteProgramDayV14(dayIndex){
+    const meta=getProgramMetaV6();
+    const day=meta.days?.[dayIndex];
+
+    if(!day||!isRemovableDayV14(day,dayIndex)){
+      toast('Osnovnega programskega dne ni mogoče izbrisati.','err');
+      return;
+    }
+
+    if(
+      day.active!==false&&
+      activeDayIndicesV6().length<=1
+    ){
+      toast('Vsaj en dan mora ostati aktiven.','err');
+      return;
+    }
+
+    const accepted=await uiConfirm(
+      `Izbrišem "${day.name||'ta dan'}" iz programa?\n\n`+
+      'Stara zgodovina ostane varno shranjena.'
+    );
+
+    if(!accepted)return;
+
+    day.deleted=true;
+    day.active=false;
+    day.deletedAt=new Date().toISOString();
+
+    baseSaveProgramMetaV14(meta,profileV14());
+    applyProgramStateV6();
+
+    const remaining=visibleBuilderDaysV14(
+      getProgramMetaV6()
+    ).map(entry=>entry.index);
+
+    v6BuilderDay=
+      activeDayIndicesV6()[0]??
+      remaining[0]??
+      0;
+
+    renderProgramBuilderV6();
+    renderDayTabsV6();
+
+    toast('Dan je odstranjen iz programa.','ok');
+  }
+
+  window.deleteProgramDayV14=deleteProgramDayV14;
+
+  addProgramDayV6=async function(){
+    const meta=getProgramMetaV6();
+    const visible=visibleBuilderDaysV14(meta);
+
+    if(visible.length>=7){
+      toast('Največ 7 aktivnih programskih dni.','err');
+      return;
+    }
+
+    const dayIndex=meta.days.length;
+    const number=visible.length+1;
+
+    meta.days.push({
+      id:uidV14(`day-${profileV14()}-${number}`),
+      name:`Dan ${number}`,
+      title:`Nov trening ${number}`,
+      sub:'',
+      active:true,
+      customDay:true,
+      deleted:false
+    });
+
+    baseSaveProgramMetaV14(meta,profileV14());
+    applyProgramStateV6();
+
+    const all=getDayLists()||{};
+    all[dayIndex]=[];
+    saveDayLists(all);
+
+    v6BuilderDay=dayIndex;
+    renderProgramBuilderV6();
+  };
+  window.addProgramDayV6=addProgramDayV6;
+
+  duplicateProgramDayV6=async function(dayIndex){
+    const meta=getProgramMetaV6();
+    const visible=visibleBuilderDaysV14(meta);
+
+    if(visible.length>=7){
+      toast('Največ 7 aktivnih programskih dni.','err');
+      return;
+    }
+
+    const source=meta.days?.[dayIndex];
+    if(!source)return;
+
+    const newIndex=meta.days.length;
+    const copyName=(source.name||`Dan ${dayIndex+1}`)+' kopija';
+
+    meta.days.push({
+      ...JSON.parse(JSON.stringify(source)),
+      id:uidV14(`day-${profileV14()}-copy`),
+      sourceId:source.id||null,
+      isCopy:true,
+      customDay:false,
+      deleted:false,
+      deletedAt:null,
+      name:copyName,
+      title:(source.title||'Trening')+' — kopija',
+      active:true
+    });
+
+    baseSaveProgramMetaV14(meta,profileV14());
+    applyProgramStateV6();
+
+    const all=getDayLists()||{};
+    const sourceList=Array.isArray(all[dayIndex])
+      ?all[dayIndex]
+      :[];
+
+    all[newIndex]=sourceList.map(item=>({
+      ...JSON.parse(JSON.stringify(item)),
+      id:_newExId(item.n0||item.n||'vaja')
+    }));
+
+    saveDayLists(all);
+
+    v6BuilderDay=newIndex;
+    renderProgramBuilderV6();
+    toast('Kopija dneva je ustvarjena.','ok');
+  };
+  window.duplicateProgramDayV6=duplicateProgramDayV6;
+
+  function exerciseOptionsV14(){
+    const options=new Map();
+
+    (Array.isArray(EXERCISE_DB)?EXERCISE_DB:[])
+      .forEach(item=>{
+        const name=String(item?.n||'').trim();
+        if(!name)return;
+
+        options.set(name.toLowerCase(),{
+          name,
+          muscle:item.m||'',
+          secondary:item.s||'',
+          category:item.c||'isolation',
+          equipment:item.eq||'other',
+          description:item.d||'',
+          rest:item.c==='compound'?120:75,
+          custom:false
+        });
+      });
+
+    (typeof getCustomExercises==='function'
+      ?getCustomExercises()
+      :[]
+    ).forEach(item=>{
+      const name=String(item?.n||'').trim();
+      if(!name)return;
+
+      options.set(name.toLowerCase(),{
+        name,
+        muscle:item.muscle||item.m||'',
+        secondary:item.secondary||item.s||'',
+        category:item.cat||item.c||'isolation',
+        equipment:item.eq||'other',
+        description:item.desc||item.d||'',
+        rest:Number(item.defaultRest)||75,
+        targetSets:Number(item.targetSets)||null,
+        targetReps:item.targetReps||'',
+        targetRpe:Number(item.targetRpe)||null,
+        main:item.main===true,
+        plateDefault:
+          typeof item.plateDefault==='boolean'
+            ?item.plateDefault
+            :item.eq==='barbell',
+        custom:true
+      });
+    });
+
+    return Array.from(options.values()).sort((a,b)=>
+      a.name.localeCompare(b.name,'sl')
+    );
+  }
+
+  function ensureChooserV14(){
+    let popup=document.getElementById('builder-ex-picker-v14');
+    if(popup)return popup;
+
+    popup=document.createElement('div');
+    popup.id='builder-ex-picker-v14';
+    popup.className='note-pop builder-sheet-v14';
+    popup.innerHTML=`
+      <div class="note-pop-card builder-sheet-card-v14">
+        <div class="builder-sheet-head-v14">
+          <div>
+            <h3>Izberi vajo</h3>
+            <div class="builder-sheet-sub-v14">
+              Tapni vajo, da jo dodaš v trening.
+            </div>
+          </div>
+          <button type="button"
+            class="builder-sheet-x-v14"
+            aria-label="Zapri">×</button>
+        </div>
+        <input type="search"
+          id="builder-ex-search-v14"
+          class="builder-search-v14"
+          placeholder="Išči po imenu, mišici ali opremi"
+          autocomplete="off">
+        <div id="builder-ex-list-v14"
+          class="builder-ex-list-v14"></div>
+        <button type="button"
+          class="sb builder-new-ex-v14">
+          + Ustvari novo vajo
+        </button>
+      </div>`;
+
+    popup.querySelector('.builder-sheet-x-v14')
+      ?.addEventListener('click',closeExerciseChooserV14);
+
+    popup.querySelector('.builder-new-ex-v14')
+      ?.addEventListener('click',()=>{
+        const dayIndex=chooserDayV14;
+        closeExerciseChooserV14();
+        openCustomExerciseV14(dayIndex);
+      });
+
+    popup.querySelector('#builder-ex-search-v14')
+      ?.addEventListener('input',event=>{
+        renderChooserListV14(event.target.value);
+      });
+
+    popup.addEventListener('click',event=>{
+      if(event.target===popup)closeExerciseChooserV14();
+    });
+
+    document.body.appendChild(popup);
+    return popup;
+  }
+
+  function renderChooserListV14(query=''){
+    const list=document.getElementById('builder-ex-list-v14');
+    if(!list)return;
+
+    const needle=String(query||'').trim().toLowerCase();
+
+    const matches=exerciseOptionsV14().filter(item=>{
+      if(!needle)return true;
+
+      return [
+        item.name,
+        item.muscle,
+        item.secondary,
+        item.category,
+        item.equipment
+      ].some(value=>
+        String(value||'').toLowerCase().includes(needle)
+      );
+    });
+
+    list.innerHTML='';
+
+    if(matches.length===0){
+      const empty=document.createElement('div');
+      empty.className='builder-empty-v14';
+      empty.textContent='Ni zadetkov.';
+      list.appendChild(empty);
+      return;
+    }
+
+    matches.slice(0,100).forEach(item=>{
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='builder-ex-option-v14';
+
+      const title=document.createElement('strong');
+      title.textContent=(item.custom?'★ ':'')+item.name;
+
+      const meta=document.createElement('span');
+      meta.textContent=[
+        item.muscle,
+        item.equipment,
+        item.category==='compound'?'compound':'isolation'
+      ].filter(Boolean).join(' · ');
+
+      button.append(title,meta);
+
+      button.addEventListener('click',()=>{
+        const dayIndex=chooserDayV14;
+        addExerciseToDayV14(dayIndex,item);
+      });
+
+      list.appendChild(button);
+    });
+  }
+
+  function openExerciseChooserV14(dayIndex){
+    if(!Number.isInteger(Number(dayIndex)))return;
+
+    chooserDayV14=Number(dayIndex);
+    const popup=ensureChooserV14();
+    const search=popup.querySelector('#builder-ex-search-v14');
+
+    if(document.activeElement?.blur){
+      document.activeElement.blur();
+    }
+
+    if(search)search.value='';
+    renderChooserListV14('');
+    popup.classList.add('on');
+    syncViewportV14();
+
+    window.setTimeout(()=>{
+      search?.focus();
+    },80);
+  }
+
+  function closeExerciseChooserV14(){
+    document.getElementById('builder-ex-picker-v14')
+      ?.classList.remove('on');
+
+    document.activeElement?.blur?.();
+    chooserDayV14=null;
+  }
+
+  window.openExerciseChooserV14=openExerciseChooserV14;
+  window.closeExerciseChooserV14=closeExerciseChooserV14;
+
+  function readPlatePrefsV14(){
+    try{
+      const value=JSON.parse(
+        localStorage.getItem(PLATE_PREF_KEY)||'{}'
+      );
+
+      return value&&typeof value==='object'
+        ?value
+        :{};
+    }catch(error){
+      return {};
+    }
+  }
+
+  function setPlatePreferenceV14(exerciseId,enabled){
+    if(!exerciseId)return;
+
+    const prefs=readPlatePrefsV14();
+    prefs[String(exerciseId)]=!!enabled;
+
+    localStorage.setItem(
+      PLATE_PREF_KEY,
+      JSON.stringify(prefs)
+    );
+  }
+
+  function exerciseItemV14(option){
+    return {
+      id:_newExId(option.name),
+      n0:option.name,
+      m:option.main===true,
+      r:Math.max(30,Math.min(600,Number(option.rest)||75)),
+      rl:'',
+      d:option.description||'',
+      tip:'',
+      extra:true,
+      progMode:'auto',
+      eq:option.equipment||'other',
+      targetSets:
+        Number(option.targetSets)>0
+          ?Math.max(1,Math.min(12,Number(option.targetSets)))
+          :undefined,
+      targetReps:option.targetReps||undefined,
+      targetRpe:
+        Number(option.targetRpe)>=5
+          ?Math.max(5,Math.min(10,Number(option.targetRpe)))
+          :undefined
+    };
+  }
+
+  function addExerciseToDayV14(dayIndex,option){
+    const di=Number(dayIndex);
+    if(!Number.isInteger(di)||!option?.name)return;
+
+    ensureDayLists();
+
+    const all=getDayLists()||{};
+    const list=Array.isArray(all[di])?all[di]:[];
+    const wanted=option.name.trim().toLowerCase();
+    const cycle=getCyc().num;
+
+    const existing=list.find(item=>{
+      const displayed=String(
+        dispNameForItem(item,cycle,cw)||''
+      ).trim().toLowerCase();
+
+      const original=String(item.n0||'')
+        .trim()
+        .toLowerCase();
+
+      return displayed===wanted||original===wanted;
+    });
+
+    if(existing){
+      if(existing.programDisabled){
+        existing.programDisabled=false;
+        all[di]=list;
+        saveDayLists(all);
+
+        closeExerciseChooserV14();
+        closeCustomExerciseV14();
+        renderProgramBuilderV6();
+        toast('Vaja je ponovno aktivirana.','ok');
+        return;
+      }
+
+      toast('Vaja je že na tem dnevu.','err');
+      return;
+    }
+
+    const item=exerciseItemV14(option);
+
+    mutateDayList(di,items=>{
+      items.push(item);
+    });
+
+    if(typeof option.plateDefault==='boolean'){
+      setPlatePreferenceV14(
+        item.id,
+        option.plateDefault
+      );
+    }
+
+    closeExerciseChooserV14();
+    closeCustomExerciseV14();
+    renderProgramBuilderV6();
+
+    toast(`${option.name} je dodana.`, 'ok');
+  }
+
+  function ensureCustomPopupV14(){
+    let popup=document.getElementById('builder-custom-ex-v14');
+    if(popup)return popup;
+
+    popup=document.createElement('div');
+    popup.id='builder-custom-ex-v14';
+    popup.className='note-pop builder-sheet-v14';
+    popup.innerHTML=`
+      <div class="note-pop-card builder-sheet-card-v14
+        builder-custom-card-v14">
+        <div class="builder-sheet-head-v14">
+          <div>
+            <h3>Ustvari novo vajo</h3>
+            <div class="builder-sheet-sub-v14">
+              Vaja se shrani in takoj doda v izbrani trening.
+            </div>
+          </div>
+          <button type="button"
+            class="builder-sheet-x-v14"
+            aria-label="Zapri">×</button>
+        </div>
+
+        <div class="builder-custom-scroll-v14">
+          <label class="builder-field-v14 full">
+            <span>Ime vaje</span>
+            <input id="builder-custom-name-v14"
+              maxlength="100"
+              autocomplete="off">
+          </label>
+
+          <div class="builder-custom-grid-v14">
+            <label class="builder-field-v14">
+              <span>Mišična skupina</span>
+              <select id="builder-custom-muscle-v14">
+                <option>Prsa</option>
+                <option>Hrbet</option>
+                <option>Ramena</option>
+                <option>Bicepsi</option>
+                <option>Tricepsi</option>
+                <option>Kvadricepsi</option>
+                <option>Hamstringi</option>
+                <option>Gluteusi</option>
+                <option>Mečni</option>
+                <option>Core</option>
+                <option>Celo telo</option>
+              </select>
+            </label>
+
+            <label class="builder-field-v14">
+              <span>Tip</span>
+              <select id="builder-custom-category-v14">
+                <option value="compound">Compound</option>
+                <option value="isolation">Isolation</option>
+              </select>
+            </label>
+
+            <label class="builder-field-v14">
+              <span>Oprema</span>
+              <select id="builder-custom-equipment-v14">
+                <option value="barbell">Barbell</option>
+                <option value="dumbbell">Dumbbell</option>
+                <option value="machine">Machine</option>
+                <option value="cable">Cable</option>
+                <option value="bodyweight">Bodyweight</option>
+                <option value="other">Drugo</option>
+              </select>
+            </label>
+
+            <label class="builder-field-v14">
+              <span>Vloga</span>
+              <select id="builder-custom-role-v14">
+                <option value="accessory">Pomožna</option>
+                <option value="main">Glavna</option>
+              </select>
+            </label>
+
+            <label class="builder-field-v14">
+              <span>Privzeti seti</span>
+              <input id="builder-custom-sets-v14"
+                type="number" min="1" max="12" value="4">
+            </label>
+
+            <label class="builder-field-v14">
+              <span>Ponovitve</span>
+              <input id="builder-custom-reps-v14"
+                value="8–12" maxlength="30">
+            </label>
+
+            <label class="builder-field-v14">
+              <span>Ciljni RPE</span>
+              <input id="builder-custom-rpe-v14"
+                type="number" min="5" max="10"
+                step="0.5" value="8">
+            </label>
+
+            <label class="builder-field-v14">
+              <span>Počitek (sek)</span>
+              <input id="builder-custom-rest-v14"
+                type="number" min="30" max="600"
+                step="15" value="90">
+            </label>
+
+            <label class="builder-field-v14 full">
+              <span>Plate calculation</span>
+              <select id="builder-custom-plate-v14">
+                <option value="1">ON</option>
+                <option value="0">OFF</option>
+              </select>
+            </label>
+
+            <label class="builder-field-v14 full">
+              <span>Opis oziroma navodilo</span>
+              <textarea id="builder-custom-desc-v14"
+                rows="4" maxlength="1000"></textarea>
+            </label>
+          </div>
+        </div>
+
+        <div class="builder-custom-actions-v14">
+          <button type="button"
+            class="sb builder-custom-cancel-v14">
+            Prekliči
+          </button>
+          <button type="button"
+            class="sb builder-custom-save-v14">
+            Shrani in dodaj
+          </button>
+        </div>
+      </div>`;
+
+    popup.querySelector('.builder-sheet-x-v14')
+      ?.addEventListener('click',closeCustomExerciseV14);
+
+    popup.querySelector('.builder-custom-cancel-v14')
+      ?.addEventListener('click',closeCustomExerciseV14);
+
+    popup.querySelector('.builder-custom-save-v14')
+      ?.addEventListener('click',saveCustomExerciseV14);
+
+    popup.querySelector('#builder-custom-equipment-v14')
+      ?.addEventListener('change',event=>{
+        const plate=popup.querySelector(
+          '#builder-custom-plate-v14'
+        );
+
+        if(plate){
+          plate.value=
+            event.target.value==='barbell'?'1':'0';
+        }
+      });
+
+    popup.addEventListener('click',event=>{
+      if(event.target===popup)closeCustomExerciseV14();
+    });
+
+    document.body.appendChild(popup);
+    return popup;
+  }
+
+  function openCustomExerciseV14(dayIndex){
+    const di=Number(dayIndex);
+    if(!Number.isInteger(di))return;
+
+    customDayV14=di;
+    const popup=ensureCustomPopupV14();
+
+    popup.querySelector('#builder-custom-name-v14').value='';
+    popup.querySelector('#builder-custom-muscle-v14').value='Prsa';
+    popup.querySelector('#builder-custom-category-v14').value='compound';
+    popup.querySelector('#builder-custom-equipment-v14').value='barbell';
+    popup.querySelector('#builder-custom-role-v14').value='accessory';
+    popup.querySelector('#builder-custom-sets-v14').value='4';
+    popup.querySelector('#builder-custom-reps-v14').value='8–12';
+    popup.querySelector('#builder-custom-rpe-v14').value='8';
+    popup.querySelector('#builder-custom-rest-v14').value='90';
+    popup.querySelector('#builder-custom-plate-v14').value='1';
+    popup.querySelector('#builder-custom-desc-v14').value='';
+
+    document.activeElement?.blur?.();
+    popup.classList.add('on');
+    syncViewportV14();
+
+    window.setTimeout(()=>{
+      popup.querySelector('#builder-custom-name-v14')?.focus();
+    },80);
+  }
+
+  function closeCustomExerciseV14(){
+    document.getElementById('builder-custom-ex-v14')
+      ?.classList.remove('on');
+
+    document.activeElement?.blur?.();
+    customDayV14=null;
+  }
+
+  function fieldValueV14(popup,id){
+    return popup.querySelector('#'+id)?.value??'';
+  }
+
+  function saveCustomExerciseV14(){
+    const popup=document.getElementById('builder-custom-ex-v14');
+    const dayIndex=customDayV14;
+    if(!popup||!Number.isInteger(dayIndex))return;
+
+    const name=plainImportedText(
+      fieldValueV14(popup,'builder-custom-name-v14').trim(),
+      100
+    );
+
+    if(!name){
+      toast('Vnesi ime vaje.','err');
+      popup.querySelector('#builder-custom-name-v14')?.focus();
+      return;
+    }
+
+    const exists=exerciseOptionsV14().some(item=>
+      item.name.toLowerCase()===name.toLowerCase()
+    );
+
+    if(exists){
+      toast('Vaja s tem imenom že obstaja.','err');
+      return;
+    }
+
+    const muscle=plainImportedText(
+      fieldValueV14(popup,'builder-custom-muscle-v14'),
+      80
+    );
+    const category=
+      fieldValueV14(popup,'builder-custom-category-v14')===
+      'compound'
+        ?'compound'
+        :'isolation';
+    const equipment=
+      fieldValueV14(popup,'builder-custom-equipment-v14')||
+      'other';
+    const main=
+      fieldValueV14(popup,'builder-custom-role-v14')==='main';
+    const targetSets=Math.max(
+      1,
+      Math.min(
+        12,
+        Number(fieldValueV14(
+          popup,
+          'builder-custom-sets-v14'
+        ))||4
+      )
+    );
+    const targetReps=plainImportedText(
+      fieldValueV14(popup,'builder-custom-reps-v14'),
+      30
+    );
+    const targetRpe=Math.max(
+      5,
+      Math.min(
+        10,
+        Number(fieldValueV14(
+          popup,
+          'builder-custom-rpe-v14'
+        ))||8
+      )
+    );
+    const rest=Math.max(
+      30,
+      Math.min(
+        600,
+        Number(fieldValueV14(
+          popup,
+          'builder-custom-rest-v14'
+        ))||90
+      )
+    );
+    const plateDefault=
+      fieldValueV14(popup,'builder-custom-plate-v14')==='1';
+    const description=plainImportedText(
+      fieldValueV14(popup,'builder-custom-desc-v14').trim(),
+      1000
+    );
+
+    const custom={
+      n:name,
+      muscle,
+      m:muscle,
+      cat:category,
+      c:category,
+      eq:equipment,
+      desc:description,
+      d:description,
+      defaultRest:rest,
+      targetSets,
+      targetReps,
+      targetRpe,
+      main,
+      plateDefault
+    };
+
+    const customs=getCustomExercises();
+    customs.push(custom);
+    saveCustomExercises(customs);
+
+    addExerciseToDayV14(dayIndex,{
+      name,
+      muscle,
+      category,
+      equipment,
+      description,
+      rest,
+      targetSets,
+      targetReps,
+      targetRpe,
+      main,
+      plateDefault,
+      custom:true
+    });
+  }
+
+  window.openCustomExerciseV14=openCustomExerciseV14;
+  window.closeCustomExerciseV14=closeCustomExerciseV14;
+  window.saveCustomExerciseV14=saveCustomExerciseV14;
+
+  function syncViewportV14(){
+    window.cancelAnimationFrame(viewportFrameV14);
+
+    viewportFrameV14=window.requestAnimationFrame(()=>{
+      const height=window.visualViewport?.height||
+        window.innerHeight;
+
+      document.documentElement.style.setProperty(
+        '--wt-visual-height-v14',
+        `${Math.max(320,Math.round(height))}px`
+      );
+    });
+  }
+
+  function closeTopBuilderPopupV14(){
+    const custom=document.getElementById('builder-custom-ex-v14');
+    if(custom?.classList.contains('on')){
+      closeCustomExerciseV14();
+      return true;
+    }
+
+    const chooser=document.getElementById('builder-ex-picker-v14');
+    if(chooser?.classList.contains('on')){
+      closeExerciseChooserV14();
+      return true;
+    }
+
+    return false;
+  }
+
+  function initializeV14(){
+    normalizedMetaV14('cut');
+    normalizedMetaV14('bulk');
+
+    syncViewportV14();
+    renderDayTabsV6();
+
+    window.visualViewport?.addEventListener(
+      'resize',
+      syncViewportV14
+    );
+    window.visualViewport?.addEventListener(
+      'scroll',
+      syncViewportV14
+    );
+    window.addEventListener('resize',syncViewportV14);
+
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape'&&closeTopBuilderPopupV14()){
+        event.preventDefault();
+      }
+    },true);
+
+    document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden){
+        syncViewportV14();
+        renderDayTabsV6();
+      }
+    });
+  }
+
+  window.WTBuilderPatchV14={
+    version:PATCH_VERSION,
+    refresh:()=>{
+      renderDayTabsV6();
+      if(
+        document.getElementById('v6-builder-pop')
+          ?.classList.contains('on')
+      ){
+        renderProgramBuilderV6();
+      }
+    },
+    isDayComplete,
+    openChooser:openExerciseChooserV14,
+    createExercise:openCustomExerciseV14
+  };
+
+  if(document.readyState==='loading'){
+    document.addEventListener(
+      'DOMContentLoaded',
+      initializeV14,
+      {once:true}
+    );
+  }else{
+    initializeV14();
+  }
+})();
 function renderEx(e,ei,di,wk,cn,isExtra){
   const exKey=sdk(cn,cw,di,ei);
   const n=nsf(di,ei,wk,exKey);
