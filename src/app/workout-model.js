@@ -44,7 +44,7 @@ function dedupeByDisplayName(list,di,c,w){
 function _dlKey(){return 'wt_daylist_'+getActiveProfile();}
 function _newExId(n){const slug=(n||'ex').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,24);return slug+'-'+Math.random().toString(36).slice(2,7);}
 function getDayLists(){try{return JSON.parse(localStorage.getItem(_dlKey())||'null');}catch{return null;}}
-function saveDayLists(all){localStorage.setItem(_dlKey(),JSON.stringify(all));}
+function saveDayLists(all){return safeSetRaw(_dlKey(),JSON.stringify(all));}
 // Prikazano ime vaje za (cikel,teden) — upošteva zgodovino preimenovanj (sw: [{n,c,w},...])
 function dispNameForItem(it,c,w){
   let n=it.n0;

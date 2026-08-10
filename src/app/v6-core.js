@@ -35,7 +35,7 @@ function applyProgramStateV6(profile=getActiveProfile()){
   PROG=base;DAY_NAMES.length=meta.days.length;meta.days.forEach((m,i)=>DAY_NAMES[i]=m.name||`Dan ${i+1}`);
   try{const all=getDayLists();if(all){let ch=false;meta.days.forEach((_,i)=>{if(!Array.isArray(all[i])){all[i]=[];ch=true;}});if(ch)saveDayLists(all);}}catch(e){}
 }
-function renderDayTabsV6(){const tabs=document.querySelector('.dtabs');if(!tabs)return;const meta=getProgramMetaV6(),active=meta.days.filter(d=>d.active!==false).length||1;tabs.style.gridTemplateColumns=`repeat(${Math.min(active,7)},1fr)`;tabs.innerHTML=meta.days.map((d,i)=>`<div class="dt${i===cd?' active':''}${d.active===false?' v6-hidden-day':''}" onclick="showDay(${i})"><div class="dt-n">Dan ${i+1}</div><div class="dt-l">${safeHtml(d.name||`Dan ${i+1}`)}</div></div>`).join('');updateTabColors();}
+function renderDayTabsV6(){const tabs=document.querySelector('.dtabs');if(!tabs)return;const meta=getProgramMetaV6(),active=meta.days.filter(d=>d.active!==false).length||1;tabs.style.gridTemplateColumns=`repeat(${Math.min(active,7)},1fr)`;tabs.innerHTML=meta.days.map((d,i)=>`<button type="button" class="dt${i===cd?' active':''}${d.active===false?' v6-hidden-day':''}" onclick="showDay(${i})"><span class="dt-n">Dan ${i+1}</span><span class="dt-l">${safeHtml(d.name||`Dan ${i+1}`)}</span></button>`).join('');updateTabColors();}
 const _isWeekCompleteV5=isWeekComplete;
 isWeekComplete=function(cn,w){const ids=activeDayIndicesV6();if(!ids.length)return false;return ids.every(di=>isDayComplete(cn,w,di));};
 getSuggestedDayIndex=function(){const active=activeDayIndicesV6();if(!active.length)return 0;const sessions=getSessions();if(!sessions.length)return active[0];const last=sessions[0],i=typeof last.dayIdx==='number'?last.dayIdx:DAY_NAMES.indexOf(last.dayName),pos=active.indexOf(i);return active[(pos<0?0:pos+1)%active.length];};
@@ -113,7 +113,7 @@ function repeatPreviousSetV6(key,di,ei,cn){let all=getSets(),a=all[key]||[],si=n
 function copyWeightForwardV6(key,di,ei){const all=getSets(),a=all[key]||[],wk=PROG.weeks[cw],n=nsf(di,ei,wk,key),si=nextPendingSetIndexV6(key,di,ei),src=(si<n?a[si]?.kg:null)||[...a.slice(0,Math.min(si,n))].reverse().find(x=>x.kg)?.kg;if(!src){toast('Najprej vnesi težo.','err');return;}if(si>=n){toast('Vsi ciljni seti so že zaključeni.','ok');return;}for(let i=si;i<n;i++)if(!a[i]?.done){if(!a[i])a[i]={kg:'',reps:'',done:false};a[i].kg=src;}saveSets(all);showDay(di);toast(`↓ ${src} kg kopirano naprej`,'ok');}
 function focusNextSetV6(key,si){setTimeout(()=>{const row=document.getElementById(`row-${key}-${si+1}`);const inp=row?.querySelector('.wi,.ri');if(inp){inp.focus();inp.select?.();}},120);}
 const _renderExV5=renderEx;
-renderEx=function(e,ei,di,wk,cn,isExtra){const wk2={...wk,reps:e.targetReps||wk.reps,rpe:e.targetRpe?`RPE ${e.targetRpe}`:wk.rpe};let html=_renderExV5(e,ei,di,wk2,cn,isExtra),key=sdk(cn,cw,di,ei),name=e.n;const prog=renderProgressionCardV6(di,ei,name),quick=`<div class="quick-log-v6"><input id="v6q-${key}" placeholder="120x5@8" onkeydown="if(event.key==='Enter')quickLogSetV6('${key}',${di},${ei},${cn})"><button class="primary" onclick="quickLogSetV6('${key}',${di},${ei},${cn})">Log set</button><button onclick="repeatPreviousSetV6('${key}',${di},${ei},${cn})">↺ set</button><button onclick="copyWeightForwardV6('${key}',${di},${ei})">↓ kg</button></div>`;html=html.replace('<table class="st">',prog+quick+'<table class="st">');html=html.replace(`<button class="txb" onclick="stopT('${key}')">X</button></div>`,`<button class="timer-v6-btn" onclick="adjustTimerV6(-30)">−30</button><button class="timer-v6-btn" onclick="pauseResumeTimerV6('${key}')" id="tp-${key}">Ⅱ</button><button class="timer-v6-btn" onclick="adjustTimerV6(30)">+30</button><button class="txb" onclick="stopT('${key}')">X</button><span class="timer-v6-meta" id="tm-${key}"></span></div>`);return html;};
+  renderEx=function(e,ei,di,wk,cn,isExtra){const wk2={...wk,reps:e.targetReps||wk.reps,rpe:e.targetRpe?`RPE ${e.targetRpe}`:wk.rpe};let html=_renderExV5(e,ei,di,wk2,cn,isExtra),key=sdk(cn,cw,di,ei),name=e.n;const prog=renderProgressionCardV6(di,ei,name),quick=`<div class="quick-log-v6"><input id="v6q-${key}" aria-label="Hitri vnos seta" placeholder="120x5@8" onkeydown="if(event.key==='Enter')quickLogSetV6('${key}',${di},${ei},${cn})"><button class="primary" onclick="quickLogSetV6('${key}',${di},${ei},${cn})">Zapiši set</button><button aria-label="Ponovi prejšnji set" onclick="repeatPreviousSetV6('${key}',${di},${ei},${cn})">↺ set</button><button aria-label="Kopiraj težo naprej" onclick="copyWeightForwardV6('${key}',${di},${ei})">↓ kg</button></div>`;html=html.replace('<table class="st">',prog+quick+'<table class="st">');html=html.replace(`<button class="txb" onclick="stopT('${key}')">X</button></div>`,`<button class="timer-v6-btn" aria-label="Skrajšaj čas za 30 sekund" onclick="adjustTimerV6(-30)">−30</button><button class="timer-v6-btn" aria-label="Premor ali nadaljevanje časovnika" onclick="pauseResumeTimerV6('${key}')" id="tp-${key}">Ⅱ</button><button class="timer-v6-btn" aria-label="Podaljšaj čas za 30 sekund" onclick="adjustTimerV6(30)">+30</button><button class="txb" aria-label="Ustavi časovnik" onclick="stopT('${key}')">X</button><span class="timer-v6-meta" id="tm-${key}"></span></div>`);return html;};
 
 /* ---------- Smart rest timer ---------- */
 function smartRestFromMetaV6(meta){let sec=meta.defaultSec||90;if(!getV6Settings().smartRest)return sec;if(meta.drop)return 0;if(meta.warm)return 75;if(meta.category==='main')sec=Math.max(sec,180);else if(meta.category==='compound')sec=Math.max(sec,120);else sec=Math.max(60,Math.min(sec,105));if(meta.rpe>=9.5)sec+=60;else if(meta.rpe>=9)sec+=45;else if(meta.rpe>=8.5)sec+=30;if(meta.reps>=15&&meta.category==='isolation')sec=Math.max(45,sec-15);return Math.min(420,Math.round(sec/15)*15);}
@@ -511,7 +511,7 @@ applyProgramStateV6();
     const disabled=state.complete?' disabled':'';
     const setLabel=state.complete
       ?'Kon\u010dano'
-      :`Set ${state.setIndex+1}/${state.total}`;
+      :`Serija ${state.setIndex+1}/${state.total}`;
 
     return`
       <div class="compact-set-label-v10">${setLabel}</div>
@@ -534,7 +534,7 @@ applyProgramStateV6();
           autocomplete="off" value="${safeHtml(state.rpe)}"${disabled}>
       </label>
       <button type="button" class="compact-log-v10"${disabled}>
-        ${state.complete?'\u2713':'LOG'}
+        ${state.complete?'\u2713':'ZAPIŠI'}
       </button>
       <div class="rpe-legend-v10" hidden>
         <strong>RPE legenda</strong>
@@ -1486,6 +1486,326 @@ applyProgramStateV6();
     initializeV10();
   }
 })();
+
+/* === V15 STABILITY + UNDO + SAVE STATUS + SESSION SUMMARY (release 1.0.48) === */
+(function(){
+  'use strict';
+
+  const PATCH_VERSION='1.0.48';
+  const UNDO_KEY='wt_undo_v15';
+  let saveStatusTimerV15=null;
+
+  function markSaveStateV15(state='saved'){
+    const el=document.getElementById('save-status-v15');
+    if(!el)return;
+
+    window.clearTimeout(saveStatusTimerV15);
+    el.classList.remove('saving','saved','error');
+    el.classList.add(state);
+
+    if(state==='saving'){
+      el.textContent='Shranjujem…';
+      return;
+    }
+
+    if(state==='error'){
+      el.textContent='Ni shranjeno';
+      return;
+    }
+
+    el.textContent='Shranjeno';
+    saveStatusTimerV15=window.setTimeout(()=>{
+      el.classList.remove('saved');
+    },1800);
+  }
+
+  window.markSaveStateV15=markSaveStateV15;
+
+  function readUndoStackV15(){
+    try{
+      const value=JSON.parse(localStorage.getItem(UNDO_KEY)||'[]');
+      return Array.isArray(value)?value:[];
+    }catch(error){
+      return [];
+    }
+  }
+
+  function writeUndoStackV15(stack){
+    safeSetRaw(UNDO_KEY,JSON.stringify((stack||[]).slice(-12)));
+    updateUndoButtonV15();
+  }
+
+  function clearUndoStackV15(){
+    safeRemoveRaw(UNDO_KEY);
+    updateUndoButtonV15();
+  }
+
+  function updateUndoButtonV15(){
+    const button=document.getElementById('undo-set-v15');
+    if(!button)return;
+    const stack=readUndoStackV15();
+    button.disabled=stack.length===0;
+    const last=stack[stack.length-1];
+    button.title=last
+      ?`Razveljavi: ${last.exerciseName||'vaja'}, set ${last.si+1}`
+      :'Ni seta za razveljavitev';
+  }
+
+  function cloneSetV15(value){
+    return JSON.parse(JSON.stringify(value||{
+      kg:'',reps:'',rpe:null,done:false
+    }));
+  }
+
+  function captureUndoV15(key,si,di,ei,cn){
+    const current=getSets()[key]?.[si];
+    const exerciseName=currentExerciseName(di,ei,key);
+    const stack=readUndoStackV15();
+    stack.push({
+      key,
+      si,
+      di,
+      ei,
+      cn,
+      week:cw,
+      exerciseName,
+      before:cloneSetV15(current),
+      capturedAt:new Date().toISOString()
+    });
+    writeUndoStackV15(stack);
+  }
+
+  const baseToggleSetV15=tgSet;
+  tgSet=function(key,si,di,ei,cn){
+    captureUndoV15(key,si,di,ei,cn);
+    const result=baseToggleSetV15.apply(this,arguments);
+    markSaveStateV15('saved');
+    updateUndoButtonV15();
+    return result;
+  };
+
+  function undoLastSetV15(){
+    const stack=readUndoStackV15();
+    const item=stack.pop();
+    if(!item){
+      toast('Ni seta za razveljavitev.','err');
+      updateUndoButtonV15();
+      return;
+    }
+
+    const all=getSets();
+    if(!Array.isArray(all[item.key]))all[item.key]=[];
+    while(all[item.key].length<=item.si){
+      all[item.key].push({kg:'',reps:'',rpe:null,done:false});
+    }
+    all[item.key][item.si]=cloneSetV15(item.before);
+    saveSets(all);
+    writeUndoStackV15(stack);
+
+    try{
+      const timer=JSON.parse(
+        localStorage.getItem('wt_active_timer')||'null'
+      );
+      if(timer?.key===item.key)stopT(item.key);
+    }catch(error){}
+
+    cw=Number.isInteger(item.week)?item.week:cw;
+    showDay(item.di);
+    setGymFocus(item.key,false);
+    toast(`↶ Razveljavljen ${item.exerciseName}, set ${item.si+1}`,'ok');
+  }
+
+  window.undoLastSetV15=undoLastSetV15;
+
+  function ensureSessionSummaryV15(){
+    let popup=document.getElementById('session-summary-v15');
+    if(popup)return popup;
+
+    popup=document.createElement('div');
+    popup.id='session-summary-v15';
+    popup.className='note-pop session-summary-v15';
+    popup.innerHTML=`
+      <div class="note-pop-card session-summary-card-v15">
+        <div class="session-summary-kicker-v15">TRENING SHRANJEN</div>
+        <h3 id="session-summary-title-v15">Povzetek treninga</h3>
+        <div class="session-summary-grid-v15" id="session-summary-grid-v15"></div>
+        <div class="session-summary-best-v15" id="session-summary-best-v15"></div>
+        <div class="session-summary-next-v15" id="session-summary-next-v15"></div>
+        <div class="session-summary-actions-v15">
+          <button type="button" class="sb" onclick="openProgressFromSummaryV15()">Poglej napredek</button>
+          <button type="button" class="sb primary" onclick="closeSessionSummaryV15()">Končano</button>
+        </div>
+      </div>`;
+    popup.addEventListener('click',event=>{
+      if(event.target===popup)closeSessionSummaryV15();
+    });
+    document.body.appendChild(popup);
+    return popup;
+  }
+
+  function sessionPrCountV15(record){
+    try{
+      return Object.values(getPRs()).filter(value=>
+        value&&typeof value==='object'&&value.date===record.date
+      ).length;
+    }catch(error){
+      return 0;
+    }
+  }
+
+  function bestSessionSetV15(record){
+    const sets=(record.exercises||[]).flatMap(exercise=>
+      (exercise.sets||[])
+        .filter(set=>set.done&&Number(set.kg)>0&&Number(set.reps)>0)
+        .map(set=>({...set,exerciseName:exercise.name}))
+    );
+    if(!sets.length)return null;
+    return sets.reduce((best,set)=>{
+      const score=Number(set.kg)*(1+Number(set.reps)/30);
+      const bestScore=Number(best.kg)*(1+Number(best.reps)/30);
+      return score>bestScore?set:best;
+    });
+  }
+
+  function nextSessionSuggestionV15(record){
+    try{
+      const exercise=(record.exercises||[]).find(item=>
+        item.isMain&&(item.sets||[]).some(set=>set.done)
+      )||(record.exercises||[]).find(item=>
+        (item.sets||[]).some(set=>set.done)
+      );
+      if(!exercise)return 'Naslednji korak: zabeleži vsaj en delovni set.';
+      const list=buildDayExList(record.dayIdx)||[];
+      const ei=Math.max(0,list.findIndex(item=>
+        dispNameForItem(item,record.cycle,record.weekIdx)===exercise.name
+      ));
+      const suggestion=progressionForExerciseV6(
+        record.dayIdx,
+        ei,
+        exercise.name
+      );
+      const kg=suggestion.suggestedKg
+        ?` · predlog ${suggestion.suggestedKg} kg`
+        :'';
+      return `${suggestion.label}${kg}`;
+    }catch(error){
+      return 'Naslednji trening nadaljuj po trenutnem programu.';
+    }
+  }
+
+  function showSessionSummaryV15(record){
+    if(!record)return;
+    const popup=ensureSessionSummaryV15();
+    const totals=record.totals||{};
+    const doneSets=(record.exercises||[]).flatMap(item=>item.sets||[])
+      .filter(set=>set.done);
+    const rpes=doneSets.map(set=>Number(set.rpe)).filter(Number.isFinite);
+    const avgRpe=rpes.length
+      ?(rpes.reduce((sum,value)=>sum+value,0)/rpes.length).toFixed(1)
+      :'—';
+    const prCount=sessionPrCountV15(record);
+    const best=bestSessionSetV15(record);
+
+    popup.querySelector('#session-summary-title-v15').textContent=
+      `${record.dayName||'Trening'} · ${record.durationMin||0} min`;
+    popup.querySelector('#session-summary-grid-v15').innerHTML=`
+      <div><strong>${totals.doneSets||0}/${totals.sets||0}</strong><span>serij</span></div>
+      <div><strong>${Math.round(totals.tonnage||0).toLocaleString('sl-SI')}</strong><span>kg volumna</span></div>
+      <div><strong>${avgRpe}</strong><span>povp. RPE</span></div>
+      <div><strong>${prCount}</strong><span>novih PR</span></div>`;
+    popup.querySelector('#session-summary-best-v15').textContent=best
+      ?`Najboljši set: ${best.exerciseName} · ${best.kg} kg × ${best.reps}${best.rpe?' @ '+best.rpe:''}`
+      :'Ni dokončanih delovnih setov.';
+    popup.querySelector('#session-summary-next-v15').textContent=
+      nextSessionSuggestionV15(record);
+    popup.classList.add('on');
+  }
+
+  function closeSessionSummaryV15(){
+    document.getElementById('session-summary-v15')
+      ?.classList.remove('on');
+  }
+
+  function openProgressFromSummaryV15(){
+    closeSessionSummaryV15();
+    showProgressPage('gymlog');
+  }
+
+  window.closeSessionSummaryV15=closeSessionSummaryV15;
+  window.openProgressFromSummaryV15=openProgressFromSummaryV15;
+
+  const baseToggleSessionV15=toggleSess;
+  toggleSess=async function(){
+    const wasRunning=stRun;
+    const beforeId=getSessions()[0]?.id||'';
+    const result=await baseToggleSessionV15.apply(this,arguments);
+
+    if(!wasRunning&&stRun){
+      clearUndoStackV15();
+    }
+
+    if(wasRunning&&!stRun){
+      const record=getSessions()[0];
+      clearUndoStackV15();
+      if(record&&record.id!==beforeId)showSessionSummaryV15(record);
+    }
+
+    return result;
+  };
+
+  function syncActiveSemanticsV15(){
+    document.querySelectorAll('.nt,.wt,.dt').forEach(button=>{
+      if(button.classList.contains('active')){
+        button.setAttribute('aria-current',
+          button.classList.contains('nt')?'page':'true'
+        );
+      }else{
+        button.removeAttribute('aria-current');
+      }
+    });
+  }
+
+  const baseShowPageV15=showPage;
+  showPage=function(){
+    const result=baseShowPageV15.apply(this,arguments);
+    syncActiveSemanticsV15();
+    return result;
+  };
+
+  const baseSetWeekV15=setWeek;
+  setWeek=function(){
+    const result=baseSetWeekV15.apply(this,arguments);
+    syncActiveSemanticsV15();
+    return result;
+  };
+
+  const baseShowDayV15=showDay;
+  showDay=function(){
+    const result=baseShowDayV15.apply(this,arguments);
+    syncActiveSemanticsV15();
+    return result;
+  };
+
+  function initializeV15(){
+    markSaveStateV15('saved');
+    updateUndoButtonV15();
+    syncActiveSemanticsV15();
+    safeSetRaw('wt_release_version',PATCH_VERSION);
+  }
+
+  window.WTStabilityPatchV15={
+    version:PATCH_VERSION,
+    undo:undoLastSetV15,
+    saveState:markSaveStateV15,
+    showSummary:showSessionSummaryV15
+  };
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',initializeV15,{once:true});
+  }else{
+    initializeV15();
+  }
+})();
 /* === V11 MANUAL RPE + STABLE FOCUS DOTS (release 1.0.41) === */
 (function(){
   'use strict';
@@ -1917,7 +2237,7 @@ applyProgramStateV6();
   }
 
   function savePlatePrefs(value){
-    localStorage.setItem(
+    safeSetRaw(
       PLATE_PREF_KEY,
       JSON.stringify(value||{})
     );
@@ -2129,10 +2449,10 @@ applyProgramStateV6();
       button=document.createElement('button');
       button.type='button';
       button.className='plate-toggle-v13';
-      button.textContent='!';
+      button.textContent='PL';
       button.setAttribute(
         'aria-label',
-        'Plate calculation'
+        'Izračun plošč'
       );
 
       button.addEventListener('click',event=>{
@@ -2145,7 +2465,7 @@ applyProgramStateV6();
     button.classList.toggle('on',!!enabled);
     button.classList.toggle('off',!enabled);
     button.title=
-      `Plate calculation ${enabled?'ON':'OFF'}`;
+      `Izračun plošč ${enabled?'ON':'OFF'}`;
 
     const toolbar=
       card.querySelector('.exercise-actions-v10')||
@@ -2253,22 +2573,22 @@ applyProgramStateV6();
     popup.id='plate-calc-pop-v13';
     popup.innerHTML=`
       <div class="note-pop-card plate-choice-card-v13">
-        <h3>Plate calculation</h3>
+        <h3>Izračun plošč</h3>
         <div class="plate-choice-name-v13"
           id="plate-choice-name-v13">Vaja</div>
         <div class="plate-choice-actions-v13">
           <button type="button"
             class="sb plate-choice-on-v13">
-            Plate calculation ON
+            Izračun plošč ON
           </button>
           <button type="button"
             class="sb plate-choice-off-v13">
-            Plate calculation OFF
+            Izračun plošč OFF
           </button>
         </div>
         <button type="button"
           class="sb plate-choice-close-v13">
-          Preklici
+          Prekliči
         </button>
       </div>`;
 
@@ -2326,7 +2646,7 @@ applyProgramStateV6();
 
     closePlateDialog();
     applyPlateCard(cardForKey(key));
-    toast(`Plate calculation ${enabled?'ON':'OFF'}`,'ok');
+    toast(`Izračun plošč ${enabled?'ON':'OFF'}`,'ok');
   }
 
   function installPlateWrappers(){
@@ -3762,7 +4082,7 @@ applyProgramStateV6();
             </label>
 
             <label class="builder-field-v14 full">
-              <span>Plate calculation</span>
+              <span>Izračun plošč</span>
               <select id="builder-custom-plate-v14">
                 <option value="1">ON</option>
                 <option value="0">OFF</option>

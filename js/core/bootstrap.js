@@ -2,7 +2,7 @@ const LS={sets:'wt_s6',pr:'wt_p6',notes:'wt_n6',bw:'wt_bw6',cycle:'wt_c6',meas:'
 const REST_T={main:180,acc:90,iso:60,lat:45};
 // Poljuben počitek per vaja (shranjen po imenu vaje)
 function getCustomRest(){try{return JSON.parse(localStorage.getItem('wt_custom_rest')||'{}');}catch{return {};}}
-function setCustomRestFor(key,secs){const r=getCustomRest();if(secs)r[key]=secs;else delete r[key];localStorage.setItem('wt_custom_rest',JSON.stringify(r));}
+function setCustomRestFor(key,secs){const r=getCustomRest();if(secs)r[key]=secs;else delete r[key];safeSetRaw('wt_custom_rest',JSON.stringify(r));}
 function restForEx(id,name,def){const r=getCustomRest();return r[id]||r[name]||def;}
 function fmtRest(s){if(s%60===0)return (s/60)+' min';if(s>60)return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');return s+'s';}
 let _restEditCtx=null;
@@ -88,7 +88,7 @@ function confirmRestEdit(){
 const WEEK_PCTS=[1.0,0.90,0.82,0.62];
 const BARBELL_EX=["Barbell bench press","Barbell row","Barbell squat","Romanian deadlift","Overhead press — barbell","Barbell curl","Deadlift","Barbell bench press — BBB","Barbell squat — BBB","Overhead press — BBB","Deadlift — BBB"];
 const MAIN_LIFTS=["Barbell bench press","Barbell squat","Deadlift","Overhead press — barbell","Weighted pull-ups","Barbell row"];
-const APP_VERSION='6.0.2';
+const APP_VERSION='1.0.48';
 const DAY_NAMES=["Push A","Pull A","Noge","Push B","Pull B"];
 const WEEK_DAYS=["Pon","Tor","Sre","Čet","Pet","Sob","Ned"];
 const MEAS_FIELDS=["Prsa","Pas","Boki","L roka","D roka","L stegno","D stegno"];

@@ -18,17 +18,17 @@
 <div id="toast-el"></div>
 <div class="prb2" id="pr-banner"></div>
 <div class="topbar">
-  <div class="appname">Workout Tracker<span class="sess-dot" id="sess-dot" title="Sesija aktivna"></span></div>
+  <div class="appname">Workout Tracker<span class="sess-dot" id="sess-dot" title="Trening je aktiven"></span><span class="save-status-v15" id="save-status-v15" role="status" aria-live="polite">Shranjeno</span></div>
   <div class="topbtns">
-    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">☀ Light</button>
-    <button class="icon-btn" onclick="importData()">⬆ Import</button>
-    <button class="icon-btn" onclick="exportData()">⬇ Export</button>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">☀ Svetla</button>
+    <button class="icon-btn" onclick="importData()">⬆ Uvoz</button>
+    <button class="icon-btn" onclick="exportData()">⬇ Izvoz</button>
   </div>
 </div>
-<div class="nav">
-  <div class="nt active" data-nav="workout" onclick="showPage('workout')"><div class="nt-i">🏋️</div>Trening</div>
-  <div class="nt" data-nav="progress" onclick="showProgressPage('gymlog')"><div class="nt-i">📈</div>Napredek</div>
-  <div class="nt" data-nav="tools" onclick="showPage('tools')"><div class="nt-i">⚙️</div>Nastavitve</div>
+<div class="nav" aria-label="Glavna navigacija">
+  <button type="button" class="nt active" data-nav="workout" onclick="showPage('workout')"><span class="nt-i" aria-hidden="true">🏋️</span><span>Trening</span></button>
+  <button type="button" class="nt" data-nav="progress" onclick="showProgressPage('gymlog')"><span class="nt-i" aria-hidden="true">📈</span><span>Napredek</span></button>
+  <button type="button" class="nt" data-nav="tools" onclick="showPage('tools')"><span class="nt-i" aria-hidden="true">⚙️</span><span>Nastavitve</span></button>
 </div>
 
 <!-- BACKUP REMINDER BANNER -->
@@ -49,26 +49,27 @@
   </div>
   <div class="stb">
     <div class="sd" id="st-d">00:00:00</div>
-    <button class="sbt" id="st-b" onclick="toggleSess()">Start session</button>
-    <button class="sbt" id="gym-mode-btn" onclick="toggleGymMode()">Gym mode</button>
+    <button class="sbt" id="st-b" onclick="toggleSess()">Začni trening</button>
+    <button class="sbt" id="gym-mode-btn" onclick="toggleGymMode()">Fokus</button>
+    <button class="sbt undo-set-v15" id="undo-set-v15" onclick="undoLastSetV15()" disabled title="Razveljavi zadnji zabeleženi set">↶ Zadnji set</button>
     <div style="font-size:11px;color:var(--text3);flex:1;text-align:right;line-height:1.5;" id="st-s"></div>
   </div>
   <div style="text-align:right;font-size:9px;color:var(--text3);margin:-8px 0 6px;" id="app-ver"></div>
   <div class="tabs-wrap">
   <div class="sl" style="margin-top:.25rem;">Teden</div>
   <div class="wtabs">
-    <div class="wt active" onclick="setWeek(0)">Teden 1<br>Težko</div>
-    <div class="wt" onclick="setWeek(1)">Teden 2<br>Težko</div>
-    <div class="wt" onclick="setWeek(2)">Teden 3<br>Zmerno</div>
-    <div class="wt deload" onclick="setWeek(3)">Teden 4<br>Deload</div>
+    <button type="button" class="wt active" onclick="setWeek(0)">Teden 1<br>Težko</button>
+    <button type="button" class="wt" onclick="setWeek(1)">Teden 2<br>Težko</button>
+    <button type="button" class="wt" onclick="setWeek(2)">Teden 3<br>Zmerno</button>
+    <button type="button" class="wt deload" onclick="setWeek(3)">Teden 4<br>Deload</button>
   </div>
   <div class="sl" style="margin-top:.5rem;">Dan</div>
   <div class="dtabs">
-    <div class="dt active" onclick="showDay(0)"><div class="dt-n">Dan 1</div><div class="dt-l">Push A</div></div>
-    <div class="dt" onclick="showDay(1)"><div class="dt-n">Dan 2</div><div class="dt-l">Pull A</div></div>
-    <div class="dt" onclick="showDay(2)"><div class="dt-n">Dan 3</div><div class="dt-l">Noge</div></div>
-    <div class="dt" onclick="showDay(3)"><div class="dt-n">Dan 4</div><div class="dt-l">Push B</div></div>
-    <div class="dt" onclick="showDay(4)"><div class="dt-n">Dan 5</div><div class="dt-l">Pull B</div></div>
+    <button type="button" class="dt active" onclick="showDay(0)"><span class="dt-n">Dan 1</span><span class="dt-l">Push A</span></button>
+    <button type="button" class="dt" onclick="showDay(1)"><span class="dt-n">Dan 2</span><span class="dt-l">Pull A</span></button>
+    <button type="button" class="dt" onclick="showDay(2)"><span class="dt-n">Dan 3</span><span class="dt-l">Noge</span></button>
+    <button type="button" class="dt" onclick="showDay(3)"><span class="dt-n">Dan 4</span><span class="dt-l">Push B</span></button>
+    <button type="button" class="dt" onclick="showDay(4)"><span class="dt-n">Dan 5</span><span class="dt-l">Pull B</span></button>
   </div>
   </div>
   <div id="day-content"></div>
@@ -358,13 +359,13 @@
 <div class="note-pop" id="onboarding-pop">
   <div class="note-pop-card onboarding-card">
     <div class="onboarding-icon">🏋️</div>
-    <h3>Workout Tracker 6</h3>
+    <h3>Workout Tracker 1.0.48</h3>
     <p>Najprej izberi program. Podatki se shranjujejo na tej napravi, zato redno prenesi JSON backup.</p>
     <div class="onboarding-options">
       <button class="onboarding-option" onclick="finishOnboarding('cut')"><strong>Cut</strong><span>5-dnevni PPL · ohranjanje moči</span></button>
       <button class="onboarding-option" onclick="finishOnboarding('bulk')"><strong>Bulk</strong><span>5/3/1 BBB · moč in masa</span></button>
     </div>
-    <div class="onboarding-note">Na začetnem zaslonu bo vedno prikazan predlagani naslednji trening. Gym mode pokaže samo aktivno vajo.</div>
+    <div class="onboarding-note">Na začetnem zaslonu bo vedno prikazan predlagani naslednji trening. Fokus pokaže samo aktivno vajo.</div>
   </div>
 </div>
 

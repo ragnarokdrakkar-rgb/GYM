@@ -1,24 +1,40 @@
 let cw=0,cd=0,TM={},stInt=null,stStart=null,stRun=false,bwChart=null,strengthChart=null,swOpen={},activeLift=0,sessStart=null,restMode='train';
 
 function ls(k){try{return JSON.parse(localStorage.getItem(k)||'{}');}catch{return {};}}
-function lss(k,v){
-  try{localStorage.setItem(k,JSON.stringify(v));return true;}
-  catch(e){
-    // Kritično: shranjevanje ni uspelo (poln localStorage ali zasebni način)
+function safeSetRaw(k,v){
+  try{
+    if(typeof window.markSaveStateV15==='function')window.markSaveStateV15('saving');
+    localStorage.setItem(k,String(v));
+    if(typeof window.markSaveStateV15==='function')window.markSaveStateV15('saved');
+    return true;
+  }catch(e){
+    if(typeof window.markSaveStateV15==='function')window.markSaveStateV15('error');
     if(!window._lssWarned){
       window._lssWarned=true;
       try{
         const msg=(e&&e.name==='QuotaExceededError')
-          ? '⚠️ POMNILNIK POLN! Podatki se NE shranjujejo. Nujno: Tools → Export backup, nato počisti stare podatke.'
-          : '⚠️ Shranjevanje ne deluje (zasebni način?). Podatki bodo izgubljeni ob zaprtju!';
+          ? '⚠️ POMNILNIK JE POLN! Podatki se ne shranjujejo. Takoj odpri Nastavitve → Izvoz.'
+          : '⚠️ Shranjevanje ne deluje. Podatki se lahko izgubijo ob zaprtju aplikacije.';
         if(typeof toast==='function')toast(msg,'err');
         else alert(msg);
       }catch(_){}
-      // Reset opozorila čez 30s, da lahko spet opozori
       setTimeout(()=>{window._lssWarned=false;},30000);
     }
     return false;
   }
+}
+function safeRemoveRaw(k){
+  try{
+    localStorage.removeItem(k);
+    if(typeof window.markSaveStateV15==='function')window.markSaveStateV15('saved');
+    return true;
+  }catch(e){
+    if(typeof window.markSaveStateV15==='function')window.markSaveStateV15('error');
+    return false;
+  }
+}
+function lss(k,v){
+  return safeSetRaw(k,JSON.stringify(v));
 }
 function lsa(k){try{return JSON.parse(localStorage.getItem(k)||'[]');}catch{return [];}}
 function getSets(){return ls(LS.sets);}function saveSets(d){lss(LS.sets,d);}

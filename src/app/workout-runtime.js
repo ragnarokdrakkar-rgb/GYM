@@ -52,9 +52,10 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     const dropMark=isDrop?'<span class="set-type drop">D</span>':'';
     const kgStep=getKgStep();
     const repsStep=getRepsStep();
-    const kgInputHtml=`<div class="stp-wrap"><button class="stp-btn" onclick="stepKg('${exKey}',${si},${di},${ei},${cn},-${kgStep},${isBarbell?1:0})">−</button><input class="wi" type="number" inputmode="decimal" placeholder="kg" value="${s.kg}" min="0" step="${kgStep}" onchange="sv('${exKey}',${si},'kg',this.value,${di},${ei},${cn},${isBarbell?1:0})"><button class="stp-btn" onclick="stepKg('${exKey}',${si},${di},${ei},${cn},${kgStep},${isBarbell?1:0})">+</button></div>`;
-    const repsInputHtml=`<div class="stp-wrap"><button class="stp-btn" onclick="stepReps('${exKey}',${si},${di},${ei},${cn},-${repsStep})">−</button><input class="ri" type="number" inputmode="numeric" placeholder="pon" value="${s.reps}" min="0" step="${repsStep}" onchange="sv('${exKey}',${si},'reps',this.value,${di},${ei},${cn},0)"><button class="stp-btn" onclick="stepReps('${exKey}',${si},${di},${ei},${cn},${repsStep})">+</button></div>`;
-    return `<tr id="row-${exKey}-${si}" class="${isDrop?'is-drop':''}${isNextSet?' next-set':''}"><td class="sn">${si+1}${dropMark}</td><td class="kg-cell">${kgInputHtml}${plMini}</td><td>${repsInputHtml}</td><td class="vc${vol>0?' hv':''}">${vol>0?vol+'kg':''}</td><td class="oc">${orm?orm+'kg':''}</td><td><button class="lb${s.done?' done':''}" onclick="tgSet('${exKey}',${si},${di},${ei},${cn})" oncontextmenu="event.preventDefault();toggleDrop('${exKey}',${si},${di},${ei},${cn})">${s.done?'✓':'Log'}</button></td></tr>`;
+    const setNo=si+1;
+    const kgInputHtml=`<div class="stp-wrap"><button class="stp-btn" aria-label="Zmanjšaj težo v setu ${setNo}" onclick="stepKg('${exKey}',${si},${di},${ei},${cn},-${kgStep},${isBarbell?1:0})">−</button><input class="wi" aria-label="Teža v kilogramih, set ${setNo}" type="number" inputmode="decimal" placeholder="kg" value="${safeHtml(s.kg)}" min="0" step="${kgStep}" onchange="sv('${exKey}',${si},'kg',this.value,${di},${ei},${cn},${isBarbell?1:0})"><button class="stp-btn" aria-label="Povečaj težo v setu ${setNo}" onclick="stepKg('${exKey}',${si},${di},${ei},${cn},${kgStep},${isBarbell?1:0})">+</button></div>`;
+    const repsInputHtml=`<div class="stp-wrap"><button class="stp-btn" aria-label="Zmanjšaj ponovitve v setu ${setNo}" onclick="stepReps('${exKey}',${si},${di},${ei},${cn},-${repsStep})">−</button><input class="ri" aria-label="Ponovitve, set ${setNo}" type="number" inputmode="numeric" placeholder="pon" value="${safeHtml(s.reps)}" min="0" step="${repsStep}" onchange="sv('${exKey}',${si},'reps',this.value,${di},${ei},${cn},0)"><button class="stp-btn" aria-label="Povečaj ponovitve v setu ${setNo}" onclick="stepReps('${exKey}',${si},${di},${ei},${cn},${repsStep})">+</button></div>`;
+    return `<tr id="row-${exKey}-${si}" class="${isDrop?'is-drop':''}${isNextSet?' next-set':''}"><td class="sn">${setNo}${dropMark}</td><td class="kg-cell">${kgInputHtml}${plMini}</td><td>${repsInputHtml}</td><td class="vc${vol>0?' hv':''}">${vol>0?vol+'kg':''}</td><td class="oc">${orm?orm+'kg':''}</td><td><button class="lb${s.done?' done':''}" aria-label="${s.done?'Razveljavi':'Zabeleži'} set ${setNo}" onclick="tgSet('${exKey}',${si},${di},${ei},${cn})" oncontextmenu="event.preventDefault();toggleDrop('${exKey}',${si},${di},${ei},${cn})">${s.done?'✓':'Zapiši'}</button></td></tr>`;
   }).join('');
   const baseN=wk.dl?3:(e.m?wk.sM:wk.sA);
   const extra=getExtraSets(exKey);
@@ -96,7 +97,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     <div class="ex-menu" id="exm-${exKey}">${(!isExtra&&isSwapped)?`<button class="ex-menu-item" onclick="clearSwap('${exKey}','${(e.n0||e.n).replace(/'/g,"\\'")}')">↺ Original vaja</button>`:''}<button class="ex-menu-item" onclick="moveExUp(${di},${ei})">↑ Premakni gor</button><button class="ex-menu-item" onclick="moveExDown(${di},${ei})">↓ Premakni dol</button>${isExtra?`<button class="ex-menu-item danger" onclick="removeExtraByName(${di},'${e.n.replace(/'/g,"\\'")}')">× Odstrani vajo</button>`:`<button class="ex-menu-item danger" onclick="removeExForWeek('${exKey}')">🗑 Odstrani za ta teden</button>`}</div>
     <div class="sw-panel" id="sw-${exKey}">
       <input class="sw-custom-in" type="text" placeholder="🔍 Išči vajo (npr. squat, biceps)..." id="swsr-${exKey}" oninput="filterSwapDB('${exKey}','${(e.n0||e.n).replace(/'/g,"\\'")}',this.value)" style="width:100%;margin-bottom:8px;">
-      <div id="swdb-${exKey}" style="max-height:280px;overflow-y:auto;">${renderSwapDBList(exKey,(e.n0||e.n),'')}</div>
+      <div id="swdb-${exKey}" class="sw-lazy-v15" data-loaded="0" style="max-height:280px;overflow-y:auto;"><div class="sw-lazy-note-v15">Seznam se naloži ob odprtju.</div></div>
       <div class="sw-custom-row">
         <input class="sw-custom-in" type="text" placeholder="Ali vpiši svojo..." id="swci-${exKey}">
         <button class="sw-custom-btn" onclick="useCustomSwap('${exKey}','${(e.n0||e.n).replace(/'/g,"\\'")}')">Uporabi</button>
@@ -264,7 +265,19 @@ function removeSet(exKey,di,ei,cn){
   if(card){const tmp=document.createElement('div');tmp.innerHTML=renderEx(PROG.days[di].ex[ei],ei,di,wk,cn);card.replaceWith(tmp.firstChild);}
 }
 
-function toggleSwap(key){const p=document.getElementById('sw-'+key);if(p){swOpen[key]=!swOpen[key];p.classList.toggle('open',swOpen[key]);}}
+function toggleSwap(key){
+  const p=document.getElementById('sw-'+key);if(!p)return;
+  swOpen[key]=!swOpen[key];p.classList.toggle('open',swOpen[key]);
+  if(!swOpen[key])return;
+  const list=document.getElementById('swdb-'+key);
+  if(!list||list.dataset.loaded==='1')return;
+  const m=String(key).match(/^c\d+w\d+d(\d+)e(\d+)$/);
+  const di=m?Number(m[1]):cd,ei=m?Number(m[2]):0;
+  const item=buildDayExList(di)?.[ei];
+  const original=item?.n0||item?.n||currentExerciseName(di,ei,key)||'Vaja';
+  list.innerHTML=renderSwapDBList(key,original,'');
+  list.dataset.loaded='1';
+}
 function getExSwaps(){try{return JSON.parse(localStorage.getItem('wt_exswap')||'{}');}catch{return {};}}
 function saveExSwaps(s){localStorage.setItem('wt_exswap',JSON.stringify(s));}
 // Swap je vezan na DAN + ORIGINALNO IME vaje (stabilno ob premikanju). Velja od tedna nastanka NAPREJ.
@@ -1027,7 +1040,7 @@ function tgSet(key,si,di,ei,cn){
   if(_cn){all[key][si].exName=_cn;all[key][si].exerciseId=exStableId(_cn);}
   saveSets(all);
   const btns=document.querySelectorAll(`#ec-${key} .lb`);
-  if(btns[si]){btns[si].classList.toggle('done',all[key][si].done);btns[si].textContent=all[key][si].done?'✓':'Log';}
+  if(btns[si]){btns[si].classList.toggle('done',all[key][si].done);btns[si].textContent=all[key][si].done?'✓':'Zapiši';btns[si].setAttribute('aria-label',(all[key][si].done?'Razveljavi':'Zabeleži')+' set '+(si+1));}
   if(all[key][si].done){
     // Drop set ne sproži timer-ja (gre takoj naprej)
     if(!all[key][si].drop){
@@ -1303,16 +1316,16 @@ async function toggleSess(){
   if(!stRun){
     if('Notification' in window&&Notification.permission==='default'){try{Notification.requestPermission();}catch(e){}}
     sessStart=new Date();stStart=Date.now();stRun=true;activeSessionContext={startMs:stStart,startISO:sessStart.toISOString(),dayIdx:cd,weekIdx:cw,cycle:getCyc().num,profile:getActiveProfile()};
-    localStorage.setItem(LS_SESS,JSON.stringify(activeSessionContext));
+    safeSetRaw(LS_SESS,JSON.stringify(activeSessionContext));
     if(dot)dot.classList.add('on');document.getElementById('st-b').textContent='Zaključi';document.getElementById('st-b').classList.add('active');document.getElementById('st-s').textContent=`${sessStart.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'})} · ${DAY_NAMES[activeSessionContext.dayIdx]}`;
     clearInterval(stInt);stInt=setInterval(tickSessionClock,1000);tickSessionClock();renderTodayCard();return;
   }
   const ctx=activeSessionContext||JSON.parse(localStorage.getItem(LS_SESS)||'{}');
-  if(!await uiConfirm(`Zaključi ${DAY_NAMES[ctx.dayIdx??cd]} session?`,'Zaključi'))return;
+  if(!await uiConfirm(`Zaključi trening ${DAY_NAMES[ctx.dayIdx??cd]}?`,'Zaključi'))return;
   clearInterval(stInt);stRun=false;localStorage.removeItem(LS_SESS);if(dot)dot.classList.remove('on');
   const end=new Date(),dur=Math.floor((end-sessStart)/1000),durMin=Math.max(0,Math.floor(dur/60)),record=buildImmutableSessionRecord(sessStart,end,durMin,ctx),sessions=getSessions();sessions.unshift(record);saveSessions(sessions);
-  document.getElementById('st-b').textContent='Start session';document.getElementById('st-b').classList.remove('active');document.getElementById('st-d').textContent='00:00:00';document.getElementById('st-s').textContent=`Zadnji: ${durMin}min · ${record.dayName}`;
-  sessStart=null;activeSessionContext=null;await autoBackupToIDB();setGymMode(false);renderTodayCard();toast('✓ Session shranjen + lokalni snapshot','ok');
+  document.getElementById('st-b').textContent='Začni trening';document.getElementById('st-b').classList.remove('active');document.getElementById('st-d').textContent='00:00:00';document.getElementById('st-s').textContent=`Zadnji: ${durMin}min · ${record.dayName}`;
+  sessStart=null;activeSessionContext=null;await autoBackupToIDB();setGymMode(false);renderTodayCard();toast('✓ Trening shranjen + lokalni snapshot','ok');
 }
 function restoreSession(){
   const raw=localStorage.getItem(LS_SESS);if(!raw)return;

@@ -27,13 +27,13 @@ function renderPainBox(key,name,di,ei,cn){
   const level=getPain(key);
   const cls=level>=5?'danger':level>=3?'warn':'';
   const opts=Array.from({length:11},(_,i)=>`<option value="${i}" ${i===level?'selected':''}>${i}</option>`).join('');
-  return `<div class="pain-box ${cls}" id="pain-${key}"><span>🩹 Bolečina</span><select onchange="setExPain('${key}',this.value,${di},${ei},${cn})">${opts}</select><span class="pain-msg">${safeHtml(painMessage(level,name))}</span></div>`;
+  return `<div class="pain-box ${cls}" id="pain-${key}"><span>🩹 Bolečina</span><select aria-label="Stopnja bolečine za ${safeHtml(name)}" onchange="setExPain('${key}',this.value,${di},${ei},${cn})">${opts}</select><span class="pain-msg">${safeHtml(painMessage(level,name))}</span></div>`;
 }
 function getGymMode(){return localStorage.getItem('wt_gym_mode')==='1';}
 function setGymMode(on){
-  localStorage.setItem('wt_gym_mode',on?'1':'0');
+  safeSetRaw('wt_gym_mode',on?'1':'0');
   document.documentElement.classList.toggle('gym-mode',!!on);document.body.classList.toggle('gym-mode',!!on);
-  const b=document.getElementById('gym-mode-btn');if(b){b.classList.toggle('gym-on',!!on);b.textContent=on?'Izhod iz fokusa':'Gym mode';}
+  const b=document.getElementById('gym-mode-btn');if(b){b.classList.toggle('gym-on',!!on);b.textContent=on?'Izhod':'Fokus';}
   refreshGymTarget();
 }
 function toggleGymMode(){setGymMode(!getGymMode());}
@@ -52,7 +52,7 @@ function findNextPendingExerciseKey(){
   return '';
 }
 function setGymFocus(key,scroll=true){
-  if(!key)return;localStorage.setItem('wt_active_ex',key);
+  if(!key)return;safeSetRaw('wt_active_ex',key);
   document.querySelectorAll('.exc.active-ex').forEach(x=>x.classList.remove('active-ex'));
   const c=document.getElementById('ec-'+key);if(c)c.classList.add('active-ex');
   updateGymFocusBar(key);
@@ -76,7 +76,7 @@ function refreshGymTarget(){
   if(next)setGymFocus(next,false);else{localStorage.removeItem('wt_active_ex');document.querySelectorAll('.exc.active-ex').forEach(x=>x.classList.remove('active-ex'));updateGymFocusBar('');}
   const gt=document.getElementById('gym-target');
   if(gt){
-    if(!getGymMode())gt.textContent='Gym mode pokaže samo aktivno vajo, večje kontrole in naslednji set.';
+    if(!getGymMode())gt.textContent='Fokus pokaže samo aktivno vajo, večje kontrole in naslednji set.';
     else if(next){const m=String(next).match(/d(\d+)e(\d+)$/),nm=m?currentExerciseName(+m[1],+m[2],next):'Naslednja vaja';gt.innerHTML=`🎯 Aktivno: <strong>${safeHtml(nm)}</strong>`;}
     else gt.textContent='Vse vaje za ta dan so zaključene.';
   }
@@ -143,7 +143,7 @@ function startTodayWorkout(){
 }
 function maybeShowOnboarding(){if(!localStorage.getItem('wt_onboarding_done'))document.getElementById('onboarding-pop')?.classList.add('on');}
 function finishOnboarding(profile){
-  localStorage.setItem('wt_onboarding_done','1');document.getElementById('onboarding-pop')?.classList.remove('on');
+  safeSetRaw('wt_onboarding_done','1');document.getElementById('onboarding-pop')?.classList.remove('on');
   if(profile&&profile!==getActiveProfile()){setActiveProfile(profile);PROG=profile==='bulk'?PROG_BULK:PROG_CUT;cw=0;cd=0;ensureDayLists();showDay(0);}
   if(profile==='bulk')toast('Bulk izbran — v Nastavitvah vnesi svoje 1RM-je.','ok');else toast('Program pripravljen. Začni prvi trening.','ok');
 }

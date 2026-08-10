@@ -2,8 +2,8 @@ function toggleTheme(){
   const html=document.documentElement,isDark=html.getAttribute('data-theme')==='dark';
   const next=isDark?'light':'dark';
   html.setAttribute('data-theme',next);
-  document.getElementById('theme-btn').textContent=next==='dark'?'☀ Light':'🌙 Dark';
-  localStorage.setItem(LS.theme,next);
+  document.getElementById('theme-btn').textContent=next==='dark'?'☀ Svetla':'🌙 Temna';
+  safeSetRaw(LS.theme,next);
   applyAllColors();
   if(bwChart)renderBW();if(strengthChart)renderStrengthChart();
 }
@@ -37,7 +37,7 @@ function applyAllColors(){
   });
 }
 function setColorFamily(k,hex){
-  const stored=getStoredColors();stored[k]=hex;localStorage.setItem('wt_colors',JSON.stringify(stored));
+  const stored=getStoredColors();stored[k]=hex;safeSetRaw('wt_colors',JSON.stringify(stored));
   applyAllColors();
 }
 function resetColors(){
@@ -75,7 +75,7 @@ function applyColorPreset(key){
   const p=COLOR_PRESETS[key];if(!p)return;
   const stored=getStoredColors();
   Object.keys(p.c).forEach(k=>stored[k]=p.c[k]);
-  localStorage.setItem('wt_colors',JSON.stringify(stored));
+  safeSetRaw('wt_colors',JSON.stringify(stored));
   applyAllColors();
   renderColorPickersInto();
   toast('✓ Tema: '+p.n,'ok');
@@ -90,10 +90,10 @@ function renderColorPresets(){
 function initTheme(){
   let t=localStorage.getItem(LS.theme)||'dark';
   // Migracija stare verzije, ki je shranila JSON niz z narekovaji.
-  if(t==='"dark"'||t==='"light"'){try{t=JSON.parse(t);}catch(e){t='dark';}localStorage.setItem(LS.theme,t);}
+  if(t==='"dark"'||t==='"light"'){try{t=JSON.parse(t);}catch(e){t='dark';}safeSetRaw(LS.theme,t);}
   if(t!=='dark'&&t!=='light')t='dark';
   document.documentElement.setAttribute('data-theme',t);
-  const btn=document.getElementById('theme-btn');if(btn)btn.textContent=t==='dark'?'☀ Light':'🌙 Dark';
+  const btn=document.getElementById('theme-btn');if(btn)btn.textContent=t==='dark'?'☀ Svetla':'🌙 Temna';
 }
 
 function calcPlatesFor(targetKg){
@@ -136,7 +136,7 @@ function showPage(p){
   document.querySelectorAll('.nt').forEach(e=>e.classList.remove('active'));
   const nav=document.querySelector(`.nt[data-nav="${isProgress?'progress':p==='tools'?'tools':'workout'}"]`);if(nav)nav.classList.add('active');
   if(isProgress)setProgressNavActive(p);
-  localStorage.setItem('wt_last_page',p);
+  safeSetRaw('wt_last_page',p);
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
   if(p==='body')renderMeas();
