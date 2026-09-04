@@ -23,6 +23,7 @@ try{
   }
 }catch(e){console.warn('DL rename migracija:',e);}
 try{ensureDayLists();}catch(e){console.warn('ensureDayLists:',e);}
+try{initProfileUI();}catch(e){console.warn('phase init:',e);}
 showDay(_initDay);
 try{initP1();}catch(e){console.warn('P1 init failed',e);}
 // Obnovi morebiten aktivni session in rest timer

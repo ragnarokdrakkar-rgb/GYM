@@ -8,6 +8,8 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const sets=all[exKey],prs=getPRs(),prk=`pr${di}${ei}`,cpr=prs[prk]||0;
   const displayName=e.n; // kanoničen seznam že nosi prikazano ime
   const isSwapped=e.n0?(e.n!==e.n0):false;
+  const use531=e.progMode==='531';
+  const lift531=e.lift531||infer531LiftV16(displayName);
   // Prev cycle hint
   let ph='';
   if(cn>1&&!isSwapped){const pp=getPeakForExercise(cn-1,di,ei);if(pp>0)ph=`<div class="ph">Prejšnji cikel peak: ${pp}kg</div>`;}
@@ -20,7 +22,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   }
   // Week suggestion
   let sugHtml='';
-  if(e.m&&cw>0){
+  if(e.m&&cw>0&&!use531){
     const sug=getWeek1Weight(cn,di,ei);
     if(sug>0){
       const sugKg=Math.round(sug*WEEK_PCTS[cw]/2.5)*2.5;
@@ -60,19 +62,15 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const baseN=wk.dl?3:(e.m?wk.sM:wk.sA);
   const extra=getExtraSets(exKey);
   const swHasData=SWAPS_DB[e.n];
-  // 5/3/1 prescription box (samo bulk profil)
+  // 5/3/1 je prostovoljna nastavitev posamezne vaje, ne Bulk profil.
   let p531Html='';
-  if(PROG.is531&&e.fl){
-    const presc=get531Prescription(e.fl,cw);
+  if(use531&&lift531){
+    const presc=get531Prescription(lift531,cw);
     if(presc){
-      p531Html=`<div class="p531-box"><div class="p531-title">📋 5/3/1 — ${PROG.weeks[cw].label} teden</div>${presc.map((s,i)=>`<div class="p531-row"><span>Set ${i+1}</span><span class="p531-pct">${s.pct}%</span><strong>${s.kg}kg</strong><span>× ${s.reps}</span></div>`).join('')}<div class="p531-note">Zadnji set "+" = naredi MAX ponovitev (vsaj predpisano).</div></div>`;
+      const weekLabel=W531[cw]?.reps?.join('/')||`Teden ${cw+1}`;
+      p531Html=`<div class="p531-box"><div class="p531-title">5/3/1 · ${weekLabel}</div>${presc.map((s,i)=>`<div class="p531-row"><span>Set ${i+1}</span><span class="p531-pct">${s.pct}%</span><strong>${s.kg}kg</strong><span>× ${s.reps}</span></div>`).join('')}<div class="p531-note">Zadnji set z znakom +: naredi največ kakovostnih ponovitev, brez izgube tehnike.</div></div>`;
     } else {
-      p531Html=`<div class="p531-box p531-warn">⚠ Vnesi 1RM za ${e.fl} — Tools → Profil ali preklopi na Bulk.</div>`;
-    }
-  } else if(PROG.is531&&e.bbb){
-    const bbb=getBBBPrescription(e.bbb,e.bbbSets,e.bbbReps);
-    if(bbb){
-      p531Html=`<div class="p531-box bbb"><div class="p531-title">💪 BBB — volumen</div><div class="p531-row"><strong>${bbb.sets}×${bbb.reps}</strong><span>@ <strong>${bbb.kg}kg</strong> (~50% TM)</span></div></div>`;
+      p531Html=`<div class="p531-box p531-warn">Za izračun 5/3/1 v Nastavitvah vnesi 1RM za ${safeHtml(lift531)}. Vaja in drugi podatki ostanejo nespremenjeni.</div>`;
     }
   }
   // Preveri če je vaja že v celoti zaključena (samo ob render-u — collapse stanje)

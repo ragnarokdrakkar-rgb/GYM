@@ -8,8 +8,44 @@ function save531TMs(t){localStorage.setItem('wt_531tm',JSON.stringify(t));}
 function get531CycleOffset(){return parseInt(localStorage.getItem('wt_531offset')||'0');}
 function set531CycleOffset(n){localStorage.setItem('wt_531offset',String(n));}
 
-// PROG je aktivni program glede na profil
-let PROG = getActiveProfile()==='bulk' ? PROG_BULK : PROG_CUT;
+// Cut/Bulk je faza, ne drug seznam vaj. Program ostane uporabnikov, faza pa
+// določa tedenske cilje. 5/3/1 se vklopi samo na posamezni vaji v builderju.
+const PHASE_PLANS_V16={
+  cut:{
+    label:'Cut',eyebrow:'OHRANJANJE',summary:'Manj utrujenosti, jasen fokus na ohranjanju moči.',
+    weeks:PROG_CUT.weeks.map(w=>({...w}))
+  },
+  bulk:{
+    label:'Bulk',eyebrow:'RAST',summary:'Več delovnih serij in prostora za postopno napredovanje.',
+    weeks:[
+      {reps:'6–10',rpe:'RPE 7–8',sM:4,sA:3,pill:'bl',rb:'rh',dl:false,label:'Osnova'},
+      {reps:'8–12',rpe:'RPE 8',sM:4,sA:4,pill:'gr',rb:'rm',dl:false,label:'Volumen'},
+      {reps:'6–10',rpe:'RPE 8–9',sM:5,sA:4,pill:'am',rb:'rh',dl:false,label:'Napredek'},
+      {reps:'8–10',rpe:'RPE 6',sM:3,sA:3,pill:'gr',rb:'rl',dl:true,label:'Deload'}
+    ]
+  }
+};
+function cloneProgramV16(value){return JSON.parse(JSON.stringify(value));}
+function buildPhaseProgramV16(profile=getActiveProfile()){
+  const phase=profile==='bulk'?'bulk':'cut';
+  const base=cloneProgramV16(PROG_CUT);
+  base.phase=phase;base.is531=false;base.weeks=cloneProgramV16(PHASE_PLANS_V16[phase].weeks);
+  return base;
+}
+function infer531LiftV16(name){
+  const n=String(name||'').toLowerCase();
+  if(/deadlift/.test(n))return 'deadlift';
+  if(/squat/.test(n))return 'squat';
+  if(/overhead|\bohp\b|military/.test(n))return 'ohp';
+  if(/bench/.test(n))return 'bench';
+  return '';
+}
+function programUses531V16(){
+  const all=typeof getDayLists==='function'?getDayLists():null;
+  return !!(all&&Object.values(all).some(list=>Array.isArray(list)&&list.some(e=>e?.progMode==='531')));
+}
+
+let PROG=buildPhaseProgramV16();
 
 // Trenutni Training Max za dvig (z upoštevanjem progresije ciklov)
 function getCurrentTM(lift){
@@ -36,46 +72,40 @@ function getBBBPrescription(lift,sets,reps){
 }
 
 // === PREKLOP PROFILA ===
-function switchProfile(p){
-  if(stRun||localStorage.getItem(LS_SESS)){toast('Najprej zaključi aktivno sesijo. Profil med treningom je zaklenjen.','err');return;}
+async function switchProfile(p){
+  p=p==='bulk'?'bulk':'cut';
+  if(stRun||localStorage.getItem(LS_SESS)){toast('Najprej zaključi aktivno sesijo. Faza med treningom je zaklenjena.','err');return false;}
   const cur=getActiveProfile();
-  if(p===cur){toast('Že aktiven: '+(p==='bulk'?'Bulk':'Cut'),'ok');return;}
-  if(p==='bulk'){
-    const tms=get531TMs();
-    const has=['bench','squat','deadlift','ohp'].every(l=>tms[l]);
-    if(!has){
-      setActiveProfile('bulk');
-      PROG=PROG_BULK;
-      initProfileUI();
-      toast('Bulk aktiven — vnesi 1RM-je spodaj','ok');
-      // Odpri TM editor in scroll
-      const ed=document.getElementById('tm-editor');if(ed)ed.style.display='block';
-      return;
-    }
-  }
+  if(p===cur){toast('Faza '+(p==='bulk'?'Bulk':'Cut')+' je že aktivna.','ok');return false;}
+  const accepted=await uiConfirm(
+    `Preklopim na ${p==='bulk'?'Bulk':'Cut'}?\n\n`+
+    'Tvoje izbrane vaje, njihov vrstni red in zgodovina ostanejo enaki. Spremenijo se samo tedenski cilji setov, ponovitev in RPE.'
+  );
+  if(!accepted)return false;
   setActiveProfile(p);
-  PROG = p==='bulk'?PROG_BULK:PROG_CUT;
-  // Reset day/week na varno
-  cw=0;cd=0;
-  localStorage.setItem('wt_last_week','0');localStorage.setItem('wt_last_day','0');
+  PROG=buildPhaseProgramV16(p);
   initProfileUI();
-  toast('✓ Preklopljeno na '+(p==='bulk'?'Bulk (5/3/1)':'Cut'),'ok');
+  toast('Faza '+(p==='bulk'?'Bulk':'Cut')+' je aktivna. Vaje so ostale enake.','ok');
+  return true;
 }
 
 function initProfileUI(){
   const prof=getActiveProfile();
+  const phase=PHASE_PLANS_V16[prof]||PHASE_PLANS_V16.cut;
+  document.documentElement.dataset.phase=prof;
+  document.body?.setAttribute('data-phase',prof);
   const status=document.getElementById('profile-status');
-  if(status)status.innerHTML=prof==='bulk'?'Aktivno: <span style="color:var(--green-text);">Bulk — 5/3/1 BBB</span>':'Aktivno: <span style="color:var(--blue-text);">Cut — 5-dnevni PPL</span>';
+  if(status)status.innerHTML=`<strong>${phase.label}</strong><span>${phase.summary}</span>`;
   const cutBtn=document.getElementById('prof-cut-btn');
   const bulkBtn=document.getElementById('prof-bulk-btn');
   if(cutBtn&&bulkBtn){
-    const active='background:var(--green-bg);border-color:var(--green);color:var(--green-text);';
-    const inactive='background:var(--bg3);';
-    cutBtn.style.cssText=prof==='cut'?active:inactive;
-    bulkBtn.style.cssText=prof==='bulk'?active:inactive;
+    cutBtn.classList.toggle('active',prof==='cut');
+    bulkBtn.classList.toggle('active',prof==='bulk');
+    cutBtn.setAttribute('aria-pressed',prof==='cut'?'true':'false');
+    bulkBtn.setAttribute('aria-pressed',prof==='bulk'?'true':'false');
   }
   const ed=document.getElementById('tm-editor');
-  if(ed)ed.style.display=prof==='bulk'?'block':'none';
+  if(ed&&!programUses531V16())ed.classList.remove('open');
   // Napolni TM inpute
   const tms=get531TMs();
   ['bench','squat','deadlift','ohp'].forEach(l=>{
@@ -83,6 +113,32 @@ function initProfileUI(){
     if(inp&&tms[l])inp.value=tms[l];
   });
   render531Current();
+  renderPhaseHubV16();
+}
+
+function toggle531EditorV16(){
+  const editor=document.getElementById('tm-editor');if(!editor)return;
+  editor.classList.toggle('open');
+  document.getElementById('tm-editor-toggle')?.setAttribute('aria-expanded',editor.classList.contains('open')?'true':'false');
+}
+function renderPhaseHubV16(){
+  const hub=document.getElementById('phase-hub-v16');if(!hub)return;
+  const prof=getActiveProfile(),phase=PHASE_PLANS_V16[prof]||PHASE_PLANS_V16.cut;
+  hub.dataset.phase=prof;
+  hub.querySelectorAll('[data-phase-choice]').forEach(button=>{
+    const active=button.dataset.phaseChoice===prof;
+    button.classList.toggle('active',active);button.setAttribute('aria-pressed',active?'true':'false');
+  });
+  const eyebrow=hub.querySelector('[data-phase-eyebrow]');if(eyebrow)eyebrow.textContent=phase.eyebrow;
+  const title=hub.querySelector('[data-phase-title]');if(title)title.textContent=phase.label+' faza';
+  const text=hub.querySelector('[data-phase-summary]');if(text)text.textContent=phase.summary;
+  const mode=hub.querySelector('[data-phase-mode]');if(mode)mode.textContent=programUses531V16()?'5/3/1 na izbranih vajah':'Pametna progresija';
+  const cutLabels=['Moč','Kontrola','Volumen','Deload'];
+  document.querySelectorAll('.wt').forEach((button,index)=>{
+    const plan=phase.weeks[index],label=prof==='bulk'?(plan?.label||`Teden ${index+1}`):cutLabels[index];
+    button.innerHTML=`Teden ${index+1}<br>${label}`;
+    button.classList.toggle('deload',!!plan?.dl);
+  });
 }
 
 function save531FromInputs(){

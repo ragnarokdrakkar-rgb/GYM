@@ -41,6 +41,21 @@
 
 <!-- WORKOUT PAGE -->
 <div class="page active" id="page-workout">
+  <section class="phase-hub-v16" id="phase-hub-v16" aria-label="Faza treninga">
+    <div class="phase-switch-v16" role="group" aria-label="Izberi fazo">
+      <button type="button" data-phase-choice="cut" onclick="switchProfile('cut')">Cut</button>
+      <button type="button" data-phase-choice="bulk" onclick="switchProfile('bulk')">Bulk</button>
+    </div>
+    <div class="phase-copy-v16">
+      <div class="phase-eyebrow-v16" data-phase-eyebrow>OHRANJANJE</div>
+      <div class="phase-title-v16" data-phase-title>Cut faza</div>
+      <div class="phase-summary-v16" data-phase-summary>Manj utrujenosti, jasen fokus na ohranjanju moči.</div>
+    </div>
+    <div class="phase-facts-v16">
+      <span>Vaje: <strong>ostanejo enake</strong></span>
+      <span>Progresija: <strong data-phase-mode>Pametna progresija</strong></span>
+    </div>
+  </section>
   <div class="today-card" id="today-card"></div>
   <div class="gym-focusbar" id="gym-focusbar">
     <button class="gym-focus-btn" onclick="moveGymFocus(-1)" aria-label="Prejšnja vaja">‹</button>
@@ -359,11 +374,11 @@
 <div class="note-pop" id="onboarding-pop">
   <div class="note-pop-card onboarding-card">
     <div class="onboarding-icon">🏋️</div>
-    <h3>Workout Tracker 1.0.48</h3>
-    <p>Najprej izberi program. Podatki se shranjujejo na tej napravi, zato redno prenesi JSON backup.</p>
+    <h3>Workout Tracker 1.0.49</h3>
+    <p>Najprej izberi fazo. Svoj seznam vaj nato urediš samo enkrat in ostane enak tudi ob preklopu faze.</p>
     <div class="onboarding-options">
-      <button class="onboarding-option" onclick="finishOnboarding('cut')"><strong>Cut</strong><span>5-dnevni PPL · ohranjanje moči</span></button>
-      <button class="onboarding-option" onclick="finishOnboarding('bulk')"><strong>Bulk</strong><span>5/3/1 BBB · moč in masa</span></button>
+      <button class="onboarding-option cut" onclick="finishOnboarding('cut')"><strong>Cut</strong><span>Ohranjanje moči · manj utrujenosti</span><small>Izbrane vaje ostanejo tvoje</small></button>
+      <button class="onboarding-option bulk" onclick="finishOnboarding('bulk')"><strong>Bulk</strong><span>Rast mišic · več delovnih serij</span><small>Izbrane vaje ostanejo tvoje</small></button>
     </div>
     <div class="onboarding-note">Na začetnem zaslonu bo vedno prikazan predlagani naslednji trening. Fokus pokaže samo aktivno vajo.</div>
   </div>
@@ -451,16 +466,17 @@
     <div id="color-pickers"></div>
   </div>
   <div class="card">
-    <div class="ct">🔄 Program profil</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.4;">Preklopi med <strong>Cut</strong> (trenutni 5-dnevni PPL, ohranjanje) in <strong>Bulk</strong> (5/3/1 Boring But Big — moč + masa). Podatki obeh ostanejo ločeni.</div>
-    <div id="profile-status" style="font-size:13px;font-weight:600;margin-bottom:.75rem;"></div>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-      <button class="sb" id="prof-cut-btn" onclick="switchProfile('cut')">Cut (ohranjanje)</button>
-      <button class="sb" id="prof-bulk-btn" onclick="switchProfile('bulk')" style="background:var(--bg3);">Bulk (5/3/1)</button>
+    <div class="ct">Faza treninga</div>
+    <div class="phase-settings-copy-v16">Cut in Bulk sta zdaj jasna cilja istega programa. Ob preklopu se prilagodijo seti, ponovitve in RPE; <strong>vaje, vrstni red in zgodovina se ne spremenijo.</strong></div>
+    <div id="profile-status" class="profile-status-v16"></div>
+    <div class="phase-settings-switch-v16">
+      <button class="sb" id="prof-cut-btn" onclick="switchProfile('cut')">Cut</button>
+      <button class="sb" id="prof-bulk-btn" onclick="switchProfile('bulk')">Bulk</button>
     </div>
-    <div id="tm-editor" style="display:none;margin-top:1rem;">
+    <button type="button" class="advanced-toggle-v16" id="tm-editor-toggle" aria-expanded="false" onclick="toggle531EditorV16()"><span>Napredno: 5/3/1</span><small>Vklopiš ga samo na izbrani vaji v Program builderju</small></button>
+    <div id="tm-editor" class="tm-editor-v16">
       <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem;font-weight:500;">Training Max-i (90% tvojega 1RM):</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Vnesi svoj <strong>pravi 1RM</strong> — app sam izračuna TM (90%). Vse 5/3/1 teže računajo iz tega.</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Vnesi pravi 1RM samo za dvige, kjer si v builderju izbral 5/3/1. Bulk tega ne vklopi samodejno.</div>
       <div class="tm-grid">
         <div class="tm-row"><span>Bench 1RM</span><input type="number" id="tm-bench" placeholder="kg" step="2.5"></div>
         <div class="tm-row"><span>Squat 1RM</span><input type="number" id="tm-squat" placeholder="kg" step="2.5"></div>

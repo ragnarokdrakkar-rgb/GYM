@@ -1,4 +1,4 @@
-# Workout Tracker 1.0.48 — namestitev na GitHub Pages
+# Workout Tracker 1.0.49 — namestitev na GitHub Pages
 
 ## Datoteke v tem paketu
 
@@ -26,7 +26,7 @@ Lokalni IndexedDB snapshoti niso zunanji backup. Ob brisanju podatkov strani ali
    - `sw.js`
    - `.nojekyll`
 5. Ko GitHub opozori, da datoteki že obstajata, je to pravilno: novi datoteki ju morata zamenjati.
-6. V polje za commit napiši na primer: `Workout Tracker 1.0.48`.
+6. V polje za commit napiši na primer: `Workout Tracker 1.0.49`.
 7. Izberi commit neposredno v `main` in potrdi **Commit changes**.
 8. Ne briši obstoječih:
    - `manifest.json`
@@ -48,7 +48,7 @@ Lokalni IndexedDB snapshoti niso zunanji backup. Ob brisanju podatkov strani ali
 
 1. Na GitHubu odpri **Actions** in počakaj, da je Pages deployment zelen.
 2. Odpri javni URL aplikacije v običajnem brskalniku.
-3. Preveri, da je v aplikaciji prikazana različica `1.0.48`.
+3. Preveri, da je v aplikaciji prikazana različica `1.0.49`.
 4. Če je še vedno prikazana stara različica:
    - popolnoma zapri aplikacijo oziroma zavihek;
    - ponovno odpri URL;

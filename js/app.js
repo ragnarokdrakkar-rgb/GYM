@@ -192,10 +192,55 @@ function dedupeByDisplayName(list,di,c,w){
     return true;
   });
 }
-// ====== V4 JEDRO: EN SEZNAM VAJ NA DAN (edini vir resnice), stabilni ID-ji ======
-function _dlKey(){return 'wt_daylist_'+getActiveProfile();}
+// ====== V16 JEDRO: EN SKUPEN SEZNAM VAJ, NEODVISEN OD CUT/BULK FAZE ======
+const SHARED_DAYLIST_KEY_V16='wt_daylist_shared_v16';
+const DAYLIST_MIGRATION_KEY_V16='wt_daylist_migration_v16';
+function _dlKey(){return SHARED_DAYLIST_KEY_V16;}
 function _newExId(n){const slug=(n||'ex').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,24);return slug+'-'+Math.random().toString(36).slice(2,7);}
-function getDayLists(){try{return JSON.parse(localStorage.getItem(_dlKey())||'null');}catch{return null;}}
+function parseDayListsV16(key){try{const value=JSON.parse(localStorage.getItem(key)||'null');return value&&typeof value==='object'&&!Array.isArray(value)?value:null;}catch{return null;}}
+function dayListCustomizationScoreV16(all,template){
+  if(!all)return -1;
+  let score=0;
+  const days=template?.days||[];
+  Object.keys(all).forEach(k=>{
+    const di=Number(k),list=Array.isArray(all[k])?all[k]:[],base=days[di]?.ex||[];
+    score+=Math.abs(list.length-base.length)*3;
+    list.forEach((item,i)=>{
+      if(String(item?.n0||item?.n||'')!==String(base[i]?.n||''))score+=2;
+      if(item?.extra||item?.programDisabled||item?.targetSets||item?.targetReps||item?.targetRpe||item?.progMode&&item.progMode!=='auto'||Array.isArray(item?.sw)&&item.sw.length)score+=2;
+    });
+  });
+  return score;
+}
+function dayListSetAlignmentScoreV16(all){
+  if(!all)return -1;
+  let score=0,sets={};
+  try{sets=JSON.parse(localStorage.getItem('wt_s6')||'{}');}catch(e){}
+  Object.entries(sets).forEach(([key,rows])=>{
+    const match=key.match(/^c\d+w\d+d(\d+)e(\d+)$/);if(!match||!Array.isArray(rows))return;
+    const item=all[Number(match[1])]?.[Number(match[2])];if(!item)return;
+    const names=new Set([item.n0,item.n,...(Array.isArray(item.sw)?item.sw.map(s=>s?.n):[])].filter(Boolean).map(n=>String(n).toLowerCase()));
+    rows.forEach(row=>{if(!row?.exName)return;score+=names.has(String(row.exName).toLowerCase())?3:-2;});
+  });
+  return score;
+}
+function migrateSharedDayListsV16(){
+  const shared=parseDayListsV16(SHARED_DAYLIST_KEY_V16);if(shared)return shared;
+  const cut=parseDayListsV16('wt_daylist_cut'),bulk=parseDayListsV16('wt_daylist_bulk');
+  if(!cut&&!bulk)return null;
+  const cutScore=dayListCustomizationScoreV16(cut,PROG_CUT);
+  const bulkScore=dayListCustomizationScoreV16(bulk,PROG_BULK);
+  const cutAlignment=dayListSetAlignmentScoreV16(cut),bulkAlignment=dayListSetAlignmentScoreV16(bulk);
+  // Ob izenačenju ima Cut prednost: stare izdaje so Bulk pogosto samodejno
+  // napolnile z BBB vajami, čeprav jih uporabnik ni izbral.
+  const source=bulk&&(bulkAlignment>cutAlignment||(bulkAlignment===cutAlignment&&bulkScore>cutScore))?'bulk':'cut';
+  const selected=source==='bulk'?bulk:(cut||bulk);
+  if(!selected)return null;
+  safeSetRaw(SHARED_DAYLIST_KEY_V16,JSON.stringify(selected));
+  safeSetRaw(DAYLIST_MIGRATION_KEY_V16,JSON.stringify({version:1,date:new Date().toISOString(),source,cutScore,bulkScore,cutAlignment,bulkAlignment,legacyPreserved:true}));
+  return selected;
+}
+function getDayLists(){return parseDayListsV16(_dlKey())||migrateSharedDayListsV16();}
 function saveDayLists(all){return safeSetRaw(_dlKey(),JSON.stringify(all));}
 // Prikazano ime vaje za (cikel,teden) — upošteva zgodovino preimenovanj (sw: [{n,c,w},...])
 function dispNameForItem(it,c,w){
@@ -239,7 +284,9 @@ function ensureDayLists(){
     mixed=dedupeByDisplayName(mixed,di,c,cw);
     mixed=applyExOrderByName(di,mixed);
     all[di]=mixed.map(e=>{
-      const it={id:_newExId(e.n),n0:e.n,m:!!e.m,r:e.r||90,rl:e.rl||'90s',d:e.d||'',tip:e.tip||'',extra:!!e.extra};
+      const it={id:_newExId(e.n),n0:e.n,m:!!e.m,r:e.r||90,rl:e.rl||'90s',d:e.d||'',tip:e.tip||'',extra:!!e.extra,progMode:e.progMode||'auto'};
+      if(e.targetSets)it.targetSets=e.targetSets;if(e.targetReps)it.targetReps=e.targetReps;if(e.targetRpe)it.targetRpe=e.targetRpe;
+      if(e.fl){it.progMode='531';it.lift531=e.fl;}
       const sw=swaps['d'+di+'|'+e.n];
       if(sw)it.sw=[typeof sw==='string'?{n:sw,c:1,w:0}:sw];
       return it;
@@ -360,8 +407,44 @@ function save531TMs(t){localStorage.setItem('wt_531tm',JSON.stringify(t));}
 function get531CycleOffset(){return parseInt(localStorage.getItem('wt_531offset')||'0');}
 function set531CycleOffset(n){localStorage.setItem('wt_531offset',String(n));}
 
-// PROG je aktivni program glede na profil
-let PROG = getActiveProfile()==='bulk' ? PROG_BULK : PROG_CUT;
+// Cut/Bulk je faza, ne drug seznam vaj. Program ostane uporabnikov, faza pa
+// določa tedenske cilje. 5/3/1 se vklopi samo na posamezni vaji v builderju.
+const PHASE_PLANS_V16={
+  cut:{
+    label:'Cut',eyebrow:'OHRANJANJE',summary:'Manj utrujenosti, jasen fokus na ohranjanju moči.',
+    weeks:PROG_CUT.weeks.map(w=>({...w}))
+  },
+  bulk:{
+    label:'Bulk',eyebrow:'RAST',summary:'Več delovnih serij in prostora za postopno napredovanje.',
+    weeks:[
+      {reps:'6–10',rpe:'RPE 7–8',sM:4,sA:3,pill:'bl',rb:'rh',dl:false,label:'Osnova'},
+      {reps:'8–12',rpe:'RPE 8',sM:4,sA:4,pill:'gr',rb:'rm',dl:false,label:'Volumen'},
+      {reps:'6–10',rpe:'RPE 8–9',sM:5,sA:4,pill:'am',rb:'rh',dl:false,label:'Napredek'},
+      {reps:'8–10',rpe:'RPE 6',sM:3,sA:3,pill:'gr',rb:'rl',dl:true,label:'Deload'}
+    ]
+  }
+};
+function cloneProgramV16(value){return JSON.parse(JSON.stringify(value));}
+function buildPhaseProgramV16(profile=getActiveProfile()){
+  const phase=profile==='bulk'?'bulk':'cut';
+  const base=cloneProgramV16(PROG_CUT);
+  base.phase=phase;base.is531=false;base.weeks=cloneProgramV16(PHASE_PLANS_V16[phase].weeks);
+  return base;
+}
+function infer531LiftV16(name){
+  const n=String(name||'').toLowerCase();
+  if(/deadlift/.test(n))return 'deadlift';
+  if(/squat/.test(n))return 'squat';
+  if(/overhead|\bohp\b|military/.test(n))return 'ohp';
+  if(/bench/.test(n))return 'bench';
+  return '';
+}
+function programUses531V16(){
+  const all=typeof getDayLists==='function'?getDayLists():null;
+  return !!(all&&Object.values(all).some(list=>Array.isArray(list)&&list.some(e=>e?.progMode==='531')));
+}
+
+let PROG=buildPhaseProgramV16();
 
 // Trenutni Training Max za dvig (z upoštevanjem progresije ciklov)
 function getCurrentTM(lift){
@@ -388,46 +471,40 @@ function getBBBPrescription(lift,sets,reps){
 }
 
 // === PREKLOP PROFILA ===
-function switchProfile(p){
-  if(stRun||localStorage.getItem(LS_SESS)){toast('Najprej zaključi aktivno sesijo. Profil med treningom je zaklenjen.','err');return;}
+async function switchProfile(p){
+  p=p==='bulk'?'bulk':'cut';
+  if(stRun||localStorage.getItem(LS_SESS)){toast('Najprej zaključi aktivno sesijo. Faza med treningom je zaklenjena.','err');return false;}
   const cur=getActiveProfile();
-  if(p===cur){toast('Že aktiven: '+(p==='bulk'?'Bulk':'Cut'),'ok');return;}
-  if(p==='bulk'){
-    const tms=get531TMs();
-    const has=['bench','squat','deadlift','ohp'].every(l=>tms[l]);
-    if(!has){
-      setActiveProfile('bulk');
-      PROG=PROG_BULK;
-      initProfileUI();
-      toast('Bulk aktiven — vnesi 1RM-je spodaj','ok');
-      // Odpri TM editor in scroll
-      const ed=document.getElementById('tm-editor');if(ed)ed.style.display='block';
-      return;
-    }
-  }
+  if(p===cur){toast('Faza '+(p==='bulk'?'Bulk':'Cut')+' je že aktivna.','ok');return false;}
+  const accepted=await uiConfirm(
+    `Preklopim na ${p==='bulk'?'Bulk':'Cut'}?\n\n`+
+    'Tvoje izbrane vaje, njihov vrstni red in zgodovina ostanejo enaki. Spremenijo se samo tedenski cilji setov, ponovitev in RPE.'
+  );
+  if(!accepted)return false;
   setActiveProfile(p);
-  PROG = p==='bulk'?PROG_BULK:PROG_CUT;
-  // Reset day/week na varno
-  cw=0;cd=0;
-  localStorage.setItem('wt_last_week','0');localStorage.setItem('wt_last_day','0');
+  PROG=buildPhaseProgramV16(p);
   initProfileUI();
-  toast('✓ Preklopljeno na '+(p==='bulk'?'Bulk (5/3/1)':'Cut'),'ok');
+  toast('Faza '+(p==='bulk'?'Bulk':'Cut')+' je aktivna. Vaje so ostale enake.','ok');
+  return true;
 }
 
 function initProfileUI(){
   const prof=getActiveProfile();
+  const phase=PHASE_PLANS_V16[prof]||PHASE_PLANS_V16.cut;
+  document.documentElement.dataset.phase=prof;
+  document.body?.setAttribute('data-phase',prof);
   const status=document.getElementById('profile-status');
-  if(status)status.innerHTML=prof==='bulk'?'Aktivno: <span style="color:var(--green-text);">Bulk — 5/3/1 BBB</span>':'Aktivno: <span style="color:var(--blue-text);">Cut — 5-dnevni PPL</span>';
+  if(status)status.innerHTML=`<strong>${phase.label}</strong><span>${phase.summary}</span>`;
   const cutBtn=document.getElementById('prof-cut-btn');
   const bulkBtn=document.getElementById('prof-bulk-btn');
   if(cutBtn&&bulkBtn){
-    const active='background:var(--green-bg);border-color:var(--green);color:var(--green-text);';
-    const inactive='background:var(--bg3);';
-    cutBtn.style.cssText=prof==='cut'?active:inactive;
-    bulkBtn.style.cssText=prof==='bulk'?active:inactive;
+    cutBtn.classList.toggle('active',prof==='cut');
+    bulkBtn.classList.toggle('active',prof==='bulk');
+    cutBtn.setAttribute('aria-pressed',prof==='cut'?'true':'false');
+    bulkBtn.setAttribute('aria-pressed',prof==='bulk'?'true':'false');
   }
   const ed=document.getElementById('tm-editor');
-  if(ed)ed.style.display=prof==='bulk'?'block':'none';
+  if(ed&&!programUses531V16())ed.classList.remove('open');
   // Napolni TM inpute
   const tms=get531TMs();
   ['bench','squat','deadlift','ohp'].forEach(l=>{
@@ -435,6 +512,32 @@ function initProfileUI(){
     if(inp&&tms[l])inp.value=tms[l];
   });
   render531Current();
+  renderPhaseHubV16();
+}
+
+function toggle531EditorV16(){
+  const editor=document.getElementById('tm-editor');if(!editor)return;
+  editor.classList.toggle('open');
+  document.getElementById('tm-editor-toggle')?.setAttribute('aria-expanded',editor.classList.contains('open')?'true':'false');
+}
+function renderPhaseHubV16(){
+  const hub=document.getElementById('phase-hub-v16');if(!hub)return;
+  const prof=getActiveProfile(),phase=PHASE_PLANS_V16[prof]||PHASE_PLANS_V16.cut;
+  hub.dataset.phase=prof;
+  hub.querySelectorAll('[data-phase-choice]').forEach(button=>{
+    const active=button.dataset.phaseChoice===prof;
+    button.classList.toggle('active',active);button.setAttribute('aria-pressed',active?'true':'false');
+  });
+  const eyebrow=hub.querySelector('[data-phase-eyebrow]');if(eyebrow)eyebrow.textContent=phase.eyebrow;
+  const title=hub.querySelector('[data-phase-title]');if(title)title.textContent=phase.label+' faza';
+  const text=hub.querySelector('[data-phase-summary]');if(text)text.textContent=phase.summary;
+  const mode=hub.querySelector('[data-phase-mode]');if(mode)mode.textContent=programUses531V16()?'5/3/1 na izbranih vajah':'Pametna progresija';
+  const cutLabels=['Moč','Kontrola','Volumen','Deload'];
+  document.querySelectorAll('.wt').forEach((button,index)=>{
+    const plan=phase.weeks[index],label=prof==='bulk'?(plan?.label||`Teden ${index+1}`):cutLabels[index];
+    button.innerHTML=`Teden ${index+1}<br>${label}`;
+    button.classList.toggle('deload',!!plan?.dl);
+  });
 }
 
 function save531FromInputs(){
@@ -990,7 +1093,8 @@ function renderTodayCard(){
   const suggested=getSuggestedDayIndex(),last=getLastSessionForDay(cd),main=getMainSuggestionForDay(cd),isSuggested=suggested===cd;
   const lastTxt=last?`Zadnjič ${last.date}: ${last.durationMin||'?'} min`:'Ta trening še nima session zgodovine';
   const mainTxt=main&&main.kg?`${main.name}: izhodišče ${main.kg} kg`:main?main.name:'';
-  el.innerHTML=`<div class="today-card-grid"><div><div class="today-eyebrow">${isSuggested?'Predlagan naslednji trening':'Izbran trening'}</div><div class="today-title">${safeHtml(PROG.days[cd].title)} · Teden ${cw+1}</div><div class="today-meta">${safeHtml(lastTxt)}${mainTxt?'<br>'+safeHtml(mainTxt):''}</div></div><button class="today-action" onclick="startTodayWorkout()">${stRun?'Nadaljuj':'Začni trening'}</button></div><div class="today-secondary"><span>Cikel ${getCyc().num} · ${getActiveProfile()==='bulk'?'Bulk 5/3/1':'Cut PPL'}</span>${!isSuggested?`<button class="sb" onclick="openSuggestedWorkout(${suggested})" style="padding:4px 9px;">Predlog: ${safeHtml(DAY_NAMES[suggested])}</button>`:''}</div>`;
+  const phase=getActiveProfile()==='bulk'?'Bulk · rast':'Cut · ohranjanje';
+  el.innerHTML=`<div class="today-card-grid"><div><div class="today-eyebrow">${isSuggested?'Predlagan naslednji trening':'Izbran trening'}</div><div class="today-title">${safeHtml(PROG.days[cd].title)} · Teden ${cw+1}</div><div class="today-meta">${safeHtml(lastTxt)}${mainTxt?'<br>'+safeHtml(mainTxt):''}</div></div><button class="today-action" onclick="startTodayWorkout()">${stRun?'Nadaljuj':'Začni trening'}</button></div><div class="today-secondary"><span>Cikel ${getCyc().num} · ${phase}</span>${!isSuggested?`<button class="sb" onclick="openSuggestedWorkout(${suggested})" style="padding:4px 9px;">Predlog: ${safeHtml(DAY_NAMES[suggested])}</button>`:''}</div>`;
 }
 function openSuggestedWorkout(di){showDay(di);renderTodayCard();}
 function startTodayWorkout(){
@@ -999,8 +1103,8 @@ function startTodayWorkout(){
 function maybeShowOnboarding(){if(!localStorage.getItem('wt_onboarding_done'))document.getElementById('onboarding-pop')?.classList.add('on');}
 function finishOnboarding(profile){
   safeSetRaw('wt_onboarding_done','1');document.getElementById('onboarding-pop')?.classList.remove('on');
-  if(profile&&profile!==getActiveProfile()){setActiveProfile(profile);PROG=profile==='bulk'?PROG_BULK:PROG_CUT;cw=0;cd=0;ensureDayLists();showDay(0);}
-  if(profile==='bulk')toast('Bulk izbran — v Nastavitvah vnesi svoje 1RM-je.','ok');else toast('Program pripravljen. Začni prvi trening.','ok');
+  if(profile){setActiveProfile(profile==='bulk'?'bulk':'cut');PROG=buildPhaseProgramV16(profile);ensureDayLists();applyProgramStateV6(profile);initProfileUI();showDay(cd);}
+  toast((profile==='bulk'?'Bulk':'Cut')+' faza je pripravljena. Vaje lahko kadarkoli urediš v builderju.','ok');
 }
 function initP1(){setGymMode(getGymMode());migrateSetExerciseIds();renderTodayCard();}
 function migrateSetExerciseIds(){
@@ -1038,7 +1142,7 @@ function mergeSessions(current,incoming){
   const map=new Map();[...(current||[]),...(incoming||[])].forEach(x=>{if(!x||typeof x!=='object')return;const k=x.id||[x.date,x.dayName,x.startISO||x.startTime,x.durationMin].join('|');map.set(k,x);});
   return [...map.values()].sort((a,b)=>String(b.startISO||b.date||'').localeCompare(String(a.startISO||a.date||'')));
 }
-const MANAGED_LOCAL_KEYS=[...Object.values(LS),'wt_sugs6','wt_bwgoal','wt_alarm6','wt_collars_kg','wt_exswap','wt_extra_ex','wt_hidden_ex','wt_daylist_cut','wt_daylist_bulk','wt_ex_ordernames','wt_rep_prs','wt_phases','wt_profile','wt_531tm','wt_531offset','wt_goals','wt_daylog','wt_custom_ex','wt_kg_step','wt_reps_step','wt_colors','wt_custom_rest','wt_compact','wt_gym_mode','wt_active_ex','wt_active_timer'];
+const MANAGED_LOCAL_KEYS=[...Object.values(LS),'wt_sugs6','wt_bwgoal','wt_alarm6','wt_collars_kg','wt_exswap','wt_extra_ex','wt_hidden_ex','wt_daylist_cut','wt_daylist_bulk','wt_daylist_shared_v16','wt_daylist_migration_v16','wt_program_meta_shared_v16','wt_ex_ordernames','wt_rep_prs','wt_phases','wt_profile','wt_531tm','wt_531offset','wt_goals','wt_daylog','wt_custom_ex','wt_kg_step','wt_reps_step','wt_colors','wt_custom_rest','wt_compact','wt_gym_mode','wt_active_ex','wt_active_timer'];
 function clearManagedData(){MANAGED_LOCAL_KEYS.forEach(k=>localStorage.removeItem(k));}
 async function restoreBackupObjectP1(rawBackup,opts={}){
   const checked=validateBackupP1(rawBackup);if(!checked.ok)throw new Error(checked.msg);
@@ -1053,12 +1157,12 @@ async function restoreBackupObjectP1(rawBackup,opts={}){
   let importedTheme=backup.theme;if(importedTheme==='"dark"'||importedTheme==='"light"'){try{importedTheme=JSON.parse(importedTheme);}catch(e){}}if(importedTheme==='dark'||importedTheme==='light')localStorage.setItem(LS.theme,importedTheme);
   if(backup.alarm)saveAlarmSettings(backup.alarm);if(backup.collars!==undefined)setCollars(backup.collars);
   setRaw('wt_exswap',backup.swaps,mode==='merge');setRaw('wt_extra_ex',backup.extra_ex,mode==='merge');setRaw('wt_hidden_ex',backup.hidden_ex,mode==='merge');setRaw('wt_ex_ordernames',backup.ex_ordernames,mode==='merge');setRaw('wt_rep_prs',backup.rep_prs,mode==='merge');
-  if(backup.daylists){if(backup.daylists.cut)setRaw('wt_daylist_cut',backup.daylists.cut);if(backup.daylists.bulk)setRaw('wt_daylist_bulk',backup.daylists.bulk);}
+  if(backup.daylists){if(backup.daylists.cut)setRaw('wt_daylist_cut',backup.daylists.cut);if(backup.daylists.bulk)setRaw('wt_daylist_bulk',backup.daylists.bulk);if(backup.daylists.shared)setRaw('wt_daylist_shared_v16',backup.daylists.shared);}
   if(backup.phases)setRaw('wt_phases',backup.phases);if(backup.profile)setRaw('wt_profile',backup.profile);if(backup.tm531)setRaw('wt_531tm',backup.tm531);if(backup.offset531!==undefined)setRaw('wt_531offset',String(backup.offset531));if(backup.goals)setRaw('wt_goals',backup.goals);if(backup.daylog)setRaw('wt_daylog',backup.daylog,mode==='merge');if(backup.custom_ex)setRaw(CUST_KEY,backup.custom_ex);if(backup.kg_step)setRaw('wt_kg_step',String(backup.kg_step));if(backup.reps_step)setRaw('wt_reps_step',String(backup.reps_step));if(backup.sugs)setRaw('wt_sugs6',backup.sugs);if(backup.colors)setRaw('wt_colors',backup.colors);if(backup.custom_rest)setRaw('wt_custom_rest',backup.custom_rest);if(backup.compact!==undefined)setRaw('wt_compact',backup.compact?'1':'0');if(backup.gym_mode!==undefined)setRaw('wt_gym_mode',backup.gym_mode?'1':'0');
   if(opts.photos&&Array.isArray(backup.photos)&&backup.photos.length>0&&await uiConfirm(`Backup vsebuje ${backup.photos.length} fotografij. ${mode==='replace'?'Zamenjam':'Dodam'} tudi fotografije?`)){
     const db=await openPhotoDB();if(mode==='replace')await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).clear();tx.oncomplete=res;});for(const p of backup.photos){if(p&&p.blob)await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).add({date:p.date||new Date().toISOString(),blob:p.blob});tx.oncomplete=res;});}
   }
-  PROG=getActiveProfile()==='bulk'?PROG_BULK:PROG_CUT;try{ensureDayLists();}catch(e){}initTheme();applyAllColors();initBWGoal();cw=0;cd=0;localStorage.setItem('wt_last_week','0');localStorage.setItem('wt_last_day','0');localStorage.removeItem('wt_active_ex');localStorage.removeItem('wt_active_timer');document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));showPage('workout');showDay(0);initP1();
+  PROG=buildPhaseProgramV16(getActiveProfile());try{ensureDayLists();}catch(e){}initTheme();applyAllColors();initBWGoal();cw=0;cd=0;localStorage.setItem('wt_last_week','0');localStorage.setItem('wt_last_day','0');localStorage.removeItem('wt_active_ex');localStorage.removeItem('wt_active_timer');document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));showPage('workout');showDay(0);initP1();
 }
 
 /* =========================
@@ -1066,7 +1170,7 @@ async function restoreBackupObjectP1(rawBackup,opts={}){
    ========================= */
 const V6_KEYS={
   settings:'wt_v6_settings',restLog:'wt_rest_log_v6',draft:'wt_session_draft_v6',
-  metaCut:'wt_program_meta_cut',metaBulk:'wt_program_meta_bulk',lastExternal:'wt_last_external_backup_v6'
+  metaCut:'wt_program_meta_cut',metaBulk:'wt_program_meta_bulk',metaShared:'wt_program_meta_shared_v16',lastExternal:'wt_last_external_backup_v6'
 };
 const V6_DEFAULTS={progression:true,smartRest:true,restWarning:true,rpeUp:8.5,rpeDown:9.5,completionUp:90,painStop:4};
 function getV6Settings(){try{return {...V6_DEFAULTS,...JSON.parse(localStorage.getItem(V6_KEYS.settings)||'{}')};}catch{return {...V6_DEFAULTS};}}
@@ -1086,13 +1190,23 @@ function renderV6Settings(){const s=getV6Settings();
 }
 
 /* ---------- Program metadata and active days ---------- */
-function programMetaKeyV6(profile){return profile==='bulk'?V6_KEYS.metaBulk:V6_KEYS.metaCut;}
-function defaultProgramMetaV6(profile){const base=profile==='bulk'?PROG_BULK:PROG_CUT;return {version:1,days:base.days.map((d,i)=>({name:['Push A','Pull A','Noge','Push B','Pull B'][i]||`Dan ${i+1}`,title:d.title,sub:d.sub||'',active:true}))};}
-function getProgramMetaV6(profile=getActiveProfile()){const def=defaultProgramMetaV6(profile);try{const raw=JSON.parse(localStorage.getItem(programMetaKeyV6(profile))||'null');if(!raw||!Array.isArray(raw.days))return def;return {version:1,days:raw.days.map((d,i)=>({...def.days[i],...d}))};}catch{return def;}}
-function saveProgramMetaV6(meta,profile=getActiveProfile()){localStorage.setItem(programMetaKeyV6(profile),JSON.stringify(meta));}
+function programMetaKeyV6(){return V6_KEYS.metaShared;}
+function defaultProgramMetaV6(){const base=PROG_CUT;return {version:2,shared:true,days:base.days.map((d,i)=>({name:['Push A','Pull A','Noge','Push B','Pull B'][i]||`Dan ${i+1}`,title:d.title,sub:d.sub||'',active:true}))};}
+function migrateProgramMetaV16(){
+  try{const shared=JSON.parse(localStorage.getItem(V6_KEYS.metaShared)||'null');if(shared&&Array.isArray(shared.days))return shared;}catch(e){}
+  try{migrateSharedDayListsV16();}catch(e){}
+  let source='cut';try{source=JSON.parse(localStorage.getItem(DAYLIST_MIGRATION_KEY_V16)||'null')?.source||'cut';}catch(e){}
+  let legacy=null;
+  try{legacy=JSON.parse(localStorage.getItem(source==='bulk'?V6_KEYS.metaBulk:V6_KEYS.metaCut)||'null');}catch(e){}
+  if(!legacy){try{legacy=JSON.parse(localStorage.getItem(source==='bulk'?V6_KEYS.metaCut:V6_KEYS.metaBulk)||'null');}catch(e){}}
+  if(legacy&&Array.isArray(legacy.days)){legacy={...legacy,version:2,shared:true};localStorage.setItem(V6_KEYS.metaShared,JSON.stringify(legacy));return legacy;}
+  return null;
+}
+function getProgramMetaV6(){const def=defaultProgramMetaV6(),raw=migrateProgramMetaV16();if(!raw||!Array.isArray(raw.days))return def;return {version:2,shared:true,days:raw.days.map((d,i)=>({...def.days[i],...d}))};}
+function saveProgramMetaV6(meta){localStorage.setItem(V6_KEYS.metaShared,JSON.stringify({...meta,version:2,shared:true}));}
 function activeDayIndicesV6(){const m=getProgramMetaV6();return m.days.map((d,i)=>d.active===false?null:i).filter(i=>i!==null);}
 function applyProgramStateV6(profile=getActiveProfile()){
-  const base=profile==='bulk'?PROG_BULK:PROG_CUT,meta=getProgramMetaV6(profile);
+  const base=buildPhaseProgramV16(profile),meta=getProgramMetaV6();
   while(base.days.length<meta.days.length)base.days.push({title:`Dan ${base.days.length+1}`,sub:'',tags:[],ex:[]});
   meta.days.forEach((m,i)=>{if(!base.days[i])base.days[i]={title:m.title||`Dan ${i+1}`,sub:m.sub||'',tags:[],ex:[]};base.days[i].title=m.title||m.name||`Dan ${i+1}`;base.days[i].sub=m.sub||'';base.days[i].active=m.active!==false;if(!Array.isArray(base.days[i].tags))base.days[i].tags=[];if(!Array.isArray(base.days[i].ex))base.days[i].ex=[];});
   PROG=base;DAY_NAMES.length=meta.days.length;meta.days.forEach((m,i)=>DAY_NAMES[i]=m.name||`Dan ${i+1}`);
@@ -1107,12 +1221,13 @@ getSuggestedDayIndex=function(){const active=activeDayIndicesV6();if(!active.len
 let v6BuilderDay=0;
 async function openProgramBuilderV6(){if(stRun){toast('Program med aktivno sesijo ostane zaklenjen.','err');return;}await autoBackupToIDB();applyProgramStateV6();ensureDayLists();v6BuilderDay=activeDayIndicesV6()[0]??0;document.getElementById('v6-builder-pop').classList.add('on');renderProgramBuilderV6();}
 function closeProgramBuilderV6(){document.getElementById('v6-builder-pop').classList.remove('on');applyProgramStateV6();renderDayTabsV6();showDay(activeDayIndicesV6().includes(cd)?cd:(activeDayIndicesV6()[0]||0));}
-function renderProgramBuilderV6(){applyProgramStateV6();ensureDayLists();const meta=getProgramMetaV6(),prof=getActiveProfile();document.getElementById('v6-builder-profile').textContent=prof==='bulk'?'Bulk':'Cut';const days=document.getElementById('v6-builder-days');days.innerHTML=meta.days.map((d,i)=>`<button class="v6-builder-day${i===v6BuilderDay?' active':''}${d.active===false?' off':''}" onclick="v6BuilderDay=${i};renderProgramBuilderV6()">${safeHtml(d.name||`Dan ${i+1}`)}${d.active===false?' · off':''}</button>`).join('');renderProgramBuilderDayV6(v6BuilderDay);}
+function renderProgramBuilderV6(){applyProgramStateV6();ensureDayLists();const meta=getProgramMetaV6(),prof=getActiveProfile();document.getElementById('v6-builder-profile').textContent=`Skupni program · ${prof==='bulk'?'Bulk':'Cut'} faza`;const days=document.getElementById('v6-builder-days');days.innerHTML=meta.days.map((d,i)=>`<button class="v6-builder-day${i===v6BuilderDay?' active':''}${d.active===false?' off':''}" onclick="v6BuilderDay=${i};renderProgramBuilderV6()">${safeHtml(d.name||`Dan ${i+1}`)}${d.active===false?' · off':''}</button>`).join('');renderProgramBuilderDayV6(v6BuilderDay);}
 function renderProgramBuilderDayV6(di){const meta=getProgramMetaV6(),d=meta.days[di];if(!d)return;const all=getDayLists()||{},list=all[di]||[],opts=[...new Set([...EXERCISE_DB.map(x=>x.n),...getCustomExercises().map(x=>x.n)])].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${safeHtml(n)}"></option>`).join('');
   const exHtml=list.map((it,i)=>{const nm=dispNameForItem(it,getCyc().num,cw),off=!!it.programDisabled;return `<div class="v6-ex-edit${off?' off':''}"><div class="v6-ex-edit-head"><div class="v6-ex-edit-name">${safeHtml(nm)}</div><button class="v6-mini-btn" onclick="moveBuilderExerciseV6(${di},${i},-1)">↑</button><button class="v6-mini-btn" onclick="moveBuilderExerciseV6(${di},${i},1)">↓</button><button class="v6-mini-btn" onclick="toggleBuilderExerciseV6(${di},${i})">${off?'↺':'×'}</button></div><div class="v6-builder-grid">
     <div class="v6-builder-field full"><label>Ime vaje</label><input value="${safeHtml(nm)}" onchange="updateBuilderExerciseV6(${di},${i},'name',this.value)"></div>
     <div class="v6-builder-field"><label>Vloga</label><select onchange="updateBuilderExerciseV6(${di},${i},'main',this.value)"><option value="0" ${!it.m?'selected':''}>Pomožna</option><option value="1" ${it.m?'selected':''}>Glavna</option></select></div>
-    <div class="v6-builder-field"><label>Način progresije</label><select onchange="updateBuilderExerciseV6(${di},${i},'progMode',this.value)"><option value="auto" ${(it.progMode||'auto')==='auto'?'selected':''}>Pametno</option><option value="linear" ${it.progMode==='linear'?'selected':''}>Linearno</option><option value="double" ${it.progMode==='double'?'selected':''}>Double progression</option><option value="hold" ${it.progMode==='hold'?'selected':''}>Brez sprememb</option></select></div>
+    <div class="v6-builder-field"><label>Način progresije</label><select onchange="updateBuilderExerciseV6(${di},${i},'progMode',this.value)"><option value="auto" ${(it.progMode||'auto')==='auto'?'selected':''}>Pametno</option><option value="linear" ${it.progMode==='linear'?'selected':''}>Linearno</option><option value="double" ${it.progMode==='double'?'selected':''}>Double progression</option><option value="531" ${it.progMode==='531'?'selected':''}>5/3/1 (opcijsko)</option><option value="hold" ${it.progMode==='hold'?'selected':''}>Brez sprememb</option></select></div>
+    ${it.progMode==='531'?`<div class="v6-builder-field"><label>5/3/1 dvig</label><select onchange="updateBuilderExerciseV6(${di},${i},'lift531',this.value)"><option value="bench" ${(it.lift531||infer531LiftV16(nm))==='bench'?'selected':''}>Bench</option><option value="squat" ${(it.lift531||infer531LiftV16(nm))==='squat'?'selected':''}>Squat</option><option value="deadlift" ${(it.lift531||infer531LiftV16(nm))==='deadlift'?'selected':''}>Deadlift</option><option value="ohp" ${(it.lift531||infer531LiftV16(nm))==='ohp'?'selected':''}>OHP</option></select></div>`:''}
     <div class="v6-builder-field"><label>Ciljni seti</label><input type="number" min="1" max="12" value="${it.targetSets||''}" placeholder="program" onchange="updateBuilderExerciseV6(${di},${i},'targetSets',this.value)"></div>
     <div class="v6-builder-field"><label>Ciljne ponovitve</label><input value="${safeHtml(it.targetReps||'')}" placeholder="npr. 6–8" onchange="updateBuilderExerciseV6(${di},${i},'targetReps',this.value)"></div>
     <div class="v6-builder-field"><label>Ciljni RPE</label><input type="number" min="5" max="10" step="0.5" value="${it.targetRpe||''}" placeholder="8" onchange="updateBuilderExerciseV6(${di},${i},'targetRpe',this.value)"></div>
@@ -1125,7 +1240,7 @@ function renderProgramBuilderDayV6(di){const meta=getProgramMetaV6(),d=meta.days
 function updateProgramDayV6(di,field,value){const m=getProgramMetaV6();if(!m.days[di])return;if(field==='active')m.days[di].active=value==='1';else m.days[di][field]=plainImportedText(value,120);if(!m.days.some(d=>d.active!==false)){m.days[di].active=true;toast('Vsaj en dan mora ostati aktiven.','err');}saveProgramMetaV6(m);applyProgramStateV6();renderProgramBuilderV6();}
 async function addProgramDayV6(){const m=getProgramMetaV6();if(m.days.length>=7){toast('Največ 7 programskih dni.','err');return;}m.days.push({name:`Dan ${m.days.length+1}`,title:`Nov trening ${m.days.length+1}`,sub:'',active:true});saveProgramMetaV6(m);applyProgramStateV6();const all=getDayLists()||{};all[m.days.length-1]=[];saveDayLists(all);v6BuilderDay=m.days.length-1;renderProgramBuilderV6();}
 function updateBuilderExerciseV6(di,i,field,value){const all=getDayLists()||{},it=all[di]?.[i];if(!it)return;if(field==='name'){const n=plainImportedText(value,100);if(!n)return;const cur=dispNameForItem(it,getCyc().num,cw);if(n!==cur){it.sw=Array.isArray(it.sw)?it.sw.filter(s=>!(s.c===getCyc().num&&s.w===cw)):[];it.sw.push({n,c:getCyc().num,w:cw});}}
-  else if(field==='main')it.m=value==='1';else if(field==='targetSets')it.targetSets=value?Math.max(1,Math.min(12,parseInt(value)||1)):undefined;else if(field==='targetRpe')it.targetRpe=value?Math.max(5,Math.min(10,parseFloat(value)||8)):undefined;else if(field==='rest')it.r=Math.max(30,Math.min(600,parseInt(value)||90));else if(field==='increment')it.increment=value?Math.max(.25,Math.min(20,parseFloat(value)||2.5)):undefined;else if(field==='desc')it.d=plainImportedText(value,1000);else it[field]=plainImportedText(value,80);saveDayLists(all);renderProgramBuilderV6();}
+  else if(field==='main')it.m=value==='1';else if(field==='targetSets')it.targetSets=value?Math.max(1,Math.min(12,parseInt(value)||1)):undefined;else if(field==='targetRpe')it.targetRpe=value?Math.max(5,Math.min(10,parseFloat(value)||8)):undefined;else if(field==='rest')it.r=Math.max(30,Math.min(600,parseInt(value)||90));else if(field==='increment')it.increment=value?Math.max(.25,Math.min(20,parseFloat(value)||2.5)):undefined;else if(field==='desc')it.d=plainImportedText(value,1000);else if(field==='progMode'){it.progMode=['auto','linear','double','531','hold'].includes(value)?value:'auto';if(it.progMode==='531')it.lift531=it.lift531||infer531LiftV16(dispNameForItem(it,getCyc().num,cw))||'bench';else delete it.lift531;}else if(field==='lift531')it.lift531=['bench','squat','deadlift','ohp'].includes(value)?value:'bench';else it[field]=plainImportedText(value,80);saveDayLists(all);renderProgramBuilderV6();renderPhaseHubV16();}
 function moveBuilderExerciseV6(di,i,dir){const all=getDayLists()||{},arr=all[di]||[],j=i+dir;if(j<0||j>=arr.length)return;mutateDayList(di,l=>{[l[i],l[j]]=[l[j],l[i]];});renderProgramBuilderV6();}
 function toggleBuilderExerciseV6(di,i){const all=getDayLists()||{},it=all[di]?.[i];if(!it)return;it.programDisabled=!it.programDisabled;saveDayLists(all);renderProgramBuilderV6();}
 function addBuilderExerciseV6(di){const input=document.getElementById('v6-add-ex-name'),name=plainImportedText(input?.value.trim(),100);if(!name){toast('Vpiši ime vaje.','err');return;}const all=getDayLists()||{},arr=all[di]||[];if(arr.some(x=>dispNameForItem(x,getCyc().num,cw).toLowerCase()===name.toLowerCase())){toast('Vaja je že na tem dnevu.','err');return;}const db=EXERCISE_DB.find(x=>x.n===name),cu=getCustomExercises().find(x=>x.n===name);mutateDayList(di,l=>l.push({id:_newExId(name),n0:name,m:false,r:db?.c==='compound'||cu?.cat==='compound'?120:75,rl:'',d:db?.d||cu?.desc||'',tip:'',extra:true,progMode:'auto'}));renderProgramBuilderV6();}
@@ -1133,7 +1248,7 @@ async function duplicateProgramDayV6(di){const m=getProgramMetaV6();if(m.days.le
 
 /* target sets/reps from builder */
 const _nsfV5=nsf;
-nsf=function(di,ei,wk,exKey){const e=PROG.days[di]?.ex?.[ei];if(e&&e.targetSets){const base=wk?.dl?Math.min(3,e.targetSets):e.targetSets;return Math.max(1,base+getExtraSets(exKey));}return _nsfV5(di,ei,wk,exKey);};
+nsf=function(di,ei,wk,exKey){const e=PROG.days[di]?.ex?.[ei];if(e?.progMode==='531')return Math.max(1,3+getExtraSets(exKey));if(e&&e.targetSets){const base=wk?.dl?Math.min(3,e.targetSets):e.targetSets;return Math.max(1,base+getExtraSets(exKey));}return _nsfV5(di,ei,wk,exKey);};
 const _isExHiddenV5=isExHidden;
 isExHidden=function(exKey){const m=String(exKey).match(/^c\d+w\d+d(\d+)e(\d+)$/);if(m){const e=PROG.days[+m[1]]?.ex?.[+m[2]];if(e?.programDisabled)return true;}return _isExHiddenV5(exKey);};
 
@@ -1176,7 +1291,7 @@ function repeatPreviousSetV6(key,di,ei,cn){let all=getSets(),a=all[key]||[],si=n
 function copyWeightForwardV6(key,di,ei){const all=getSets(),a=all[key]||[],wk=PROG.weeks[cw],n=nsf(di,ei,wk,key),si=nextPendingSetIndexV6(key,di,ei),src=(si<n?a[si]?.kg:null)||[...a.slice(0,Math.min(si,n))].reverse().find(x=>x.kg)?.kg;if(!src){toast('Najprej vnesi težo.','err');return;}if(si>=n){toast('Vsi ciljni seti so že zaključeni.','ok');return;}for(let i=si;i<n;i++)if(!a[i]?.done){if(!a[i])a[i]={kg:'',reps:'',done:false};a[i].kg=src;}saveSets(all);showDay(di);toast(`↓ ${src} kg kopirano naprej`,'ok');}
 function focusNextSetV6(key,si){setTimeout(()=>{const row=document.getElementById(`row-${key}-${si+1}`);const inp=row?.querySelector('.wi,.ri');if(inp){inp.focus();inp.select?.();}},120);}
 const _renderExV5=renderEx;
-  renderEx=function(e,ei,di,wk,cn,isExtra){const wk2={...wk,reps:e.targetReps||wk.reps,rpe:e.targetRpe?`RPE ${e.targetRpe}`:wk.rpe};let html=_renderExV5(e,ei,di,wk2,cn,isExtra),key=sdk(cn,cw,di,ei),name=e.n;const prog=renderProgressionCardV6(di,ei,name),quick=`<div class="quick-log-v6"><input id="v6q-${key}" aria-label="Hitri vnos seta" placeholder="120x5@8" onkeydown="if(event.key==='Enter')quickLogSetV6('${key}',${di},${ei},${cn})"><button class="primary" onclick="quickLogSetV6('${key}',${di},${ei},${cn})">Zapiši set</button><button aria-label="Ponovi prejšnji set" onclick="repeatPreviousSetV6('${key}',${di},${ei},${cn})">↺ set</button><button aria-label="Kopiraj težo naprej" onclick="copyWeightForwardV6('${key}',${di},${ei})">↓ kg</button></div>`;html=html.replace('<table class="st">',prog+quick+'<table class="st">');html=html.replace(`<button class="txb" onclick="stopT('${key}')">X</button></div>`,`<button class="timer-v6-btn" aria-label="Skrajšaj čas za 30 sekund" onclick="adjustTimerV6(-30)">−30</button><button class="timer-v6-btn" aria-label="Premor ali nadaljevanje časovnika" onclick="pauseResumeTimerV6('${key}')" id="tp-${key}">Ⅱ</button><button class="timer-v6-btn" aria-label="Podaljšaj čas za 30 sekund" onclick="adjustTimerV6(30)">+30</button><button class="txb" aria-label="Ustavi časovnik" onclick="stopT('${key}')">X</button><span class="timer-v6-meta" id="tm-${key}"></span></div>`);return html;};
+  renderEx=function(e,ei,di,wk,cn,isExtra){const wk2={...wk,reps:e.targetReps||(e.progMode==='531'?'5/3/1':wk.reps),rpe:e.targetRpe?`RPE ${e.targetRpe}`:(e.progMode==='531'?'TM odstotki':wk.rpe)};let html=_renderExV5(e,ei,di,wk2,cn,isExtra),key=sdk(cn,cw,di,ei),name=e.n;const prog=renderProgressionCardV6(di,ei,name),quick=`<div class="quick-log-v6"><input id="v6q-${key}" aria-label="Hitri vnos seta" placeholder="120x5@8" onkeydown="if(event.key==='Enter')quickLogSetV6('${key}',${di},${ei},${cn})"><button class="primary" onclick="quickLogSetV6('${key}',${di},${ei},${cn})">Zapiši set</button><button aria-label="Ponovi prejšnji set" onclick="repeatPreviousSetV6('${key}',${di},${ei},${cn})">↺ set</button><button aria-label="Kopiraj težo naprej" onclick="copyWeightForwardV6('${key}',${di},${ei})">↓ kg</button></div>`;html=html.replace('<table class="st">',prog+quick+'<table class="st">');html=html.replace(`<button class="txb" onclick="stopT('${key}')">X</button></div>`,`<button class="timer-v6-btn" aria-label="Skrajšaj čas za 30 sekund" onclick="adjustTimerV6(-30)">−30</button><button class="timer-v6-btn" aria-label="Premor ali nadaljevanje časovnika" onclick="pauseResumeTimerV6('${key}')" id="tp-${key}">Ⅱ</button><button class="timer-v6-btn" aria-label="Podaljšaj čas za 30 sekund" onclick="adjustTimerV6(30)">+30</button><button class="txb" aria-label="Ustavi časovnik" onclick="stopT('${key}')">X</button><span class="timer-v6-meta" id="tm-${key}"></span></div>`);return html;};
 
 /* ---------- Smart rest timer ---------- */
 function smartRestFromMetaV6(meta){let sec=meta.defaultSec||90;if(!getV6Settings().smartRest)return sec;if(meta.drop)return 0;if(meta.warm)return 75;if(meta.category==='main')sec=Math.max(sec,180);else if(meta.category==='compound')sec=Math.max(sec,120);else sec=Math.max(60,Math.min(sec,105));if(meta.rpe>=9.5)sec+=60;else if(meta.rpe>=9)sec+=45;else if(meta.rpe>=8.5)sec+=30;if(meta.reps>=15&&meta.category==='isolation')sec=Math.max(45,sec-15);return Math.min(420,Math.round(sec/15)*15);}
@@ -1284,10 +1399,10 @@ openExHistory=function(di,ei){const key=sdk(getCyc().num,cw,di,ei),e=PROG.days[d
 
 /* ---------- Backup center ---------- */
 const _buildBackupJSONV5=buildBackupJSON;
-buildBackupJSON=async function(includePhotos){const b=JSON.parse(await _buildBackupJSONV5(includePhotos));b.version=6;b.schemaVersion=6;b.programMeta={cut:getProgramMetaV6('cut'),bulk:getProgramMetaV6('bulk')};b.v6settings=getV6Settings();b.restLog=getRestLogV6();b.lastExternal=localStorage.getItem(V6_KEYS.lastExternal)||null;return JSON.stringify(b);};
-validateBackupP1=function(backup){if(!backup||typeof backup!=='object'||Array.isArray(backup))return {ok:false,msg:'Datoteka ni veljaven JSON objekt.'};if(!backup.sets||typeof backup.sets!=='object'||Array.isArray(backup.sets))return {ok:false,msg:'Backup ne vsebuje sets podatkov.'};if(backup.sessions!==undefined&&!Array.isArray(backup.sessions))return {ok:false,msg:'sessions mora biti seznam.'};if(Number(backup.schemaVersion||backup.version||1)>6)return {ok:false,msg:'Backup je iz novejše verzije aplikacije.'};let rows=0;for(const [k,v] of Object.entries(backup.sets)){if(!/^c\d+w\d+d\d+e\d+$/.test(k)||!Array.isArray(v))return {ok:false,msg:'Pokvarjen ključ setov: '+k};rows+=v.length;if(rows>250000)return {ok:false,msg:'Nenormalno veliko setov.'};for(const set of v){if(!set||typeof set!=='object'||Array.isArray(set))return {ok:false,msg:'Neveljaven zapis seta.'};const kg=parseFloat(set.kg||0),reps=parseInt(set.reps||0);if(kg<0||kg>1500||reps<0||reps>1000)return {ok:false,msg:'Nerealne vrednosti kg ali ponovitev.'};}}return {ok:true,msg:'Struktura, ključi in meje vrednosti so veljavni.'};};
+buildBackupJSON=async function(includePhotos){const b=JSON.parse(await _buildBackupJSONV5(includePhotos));b.version=7;b.schemaVersion=7;b.daylists={...(b.daylists||{}),shared:getDayLists()};b.programMeta={shared:getProgramMetaV6(),cut:null,bulk:null};b.phase={active:getActiveProfile(),plansVersion:1};b.v6settings=getV6Settings();b.restLog=getRestLogV6();b.lastExternal=localStorage.getItem(V6_KEYS.lastExternal)||null;return JSON.stringify(b);};
+validateBackupP1=function(backup){if(!backup||typeof backup!=='object'||Array.isArray(backup))return {ok:false,msg:'Datoteka ni veljaven JSON objekt.'};if(!backup.sets||typeof backup.sets!=='object'||Array.isArray(backup.sets))return {ok:false,msg:'Backup ne vsebuje sets podatkov.'};if(backup.sessions!==undefined&&!Array.isArray(backup.sessions))return {ok:false,msg:'sessions mora biti seznam.'};if(Number(backup.schemaVersion||backup.version||1)>7)return {ok:false,msg:'Backup je iz novejše verzije aplikacije.'};if(backup.daylists?.shared!==undefined&&(!backup.daylists.shared||typeof backup.daylists.shared!=='object'||Array.isArray(backup.daylists.shared)))return {ok:false,msg:'Skupni program v backupu ni veljaven.'};let rows=0;for(const [k,v] of Object.entries(backup.sets)){if(!/^c\d+w\d+d\d+e\d+$/.test(k)||!Array.isArray(v))return {ok:false,msg:'Pokvarjen ključ setov: '+k};rows+=v.length;if(rows>250000)return {ok:false,msg:'Nenormalno veliko setov.'};for(const set of v){if(!set||typeof set!=='object'||Array.isArray(set))return {ok:false,msg:'Neveljaven zapis seta.'};const kg=parseFloat(set.kg||0),reps=parseInt(set.reps||0);if(kg<0||kg>1500||reps<0||reps>1000)return {ok:false,msg:'Nerealne vrednosti kg ali ponovitev.'};}}return {ok:true,msg:'Struktura, skupni program in meje vrednosti so veljavni.'};};
 const _restoreBackupV5=restoreBackupObjectP1;
-restoreBackupObjectP1=async function(backup,opts={}){if((opts.mode||'replace')==='replace')Object.values(V6_KEYS).forEach(k=>localStorage.removeItem(k));await _restoreBackupV5(backup,opts);if(backup.programMeta?.cut)localStorage.setItem(V6_KEYS.metaCut,JSON.stringify(backup.programMeta.cut));if(backup.programMeta?.bulk)localStorage.setItem(V6_KEYS.metaBulk,JSON.stringify(backup.programMeta.bulk));if(backup.v6settings)saveV6Settings(backup.v6settings);if(Array.isArray(backup.restLog))saveRestLogV6(backup.restLog);if(backup.lastExternal)localStorage.setItem(V6_KEYS.lastExternal,backup.lastExternal);applyProgramStateV6();ensureDayLists();renderDayTabsV6();renderV6Settings();showDay(activeDayIndicesV6()[0]||0);};
+restoreBackupObjectP1=async function(backup,opts={}){if((opts.mode||'replace')==='replace')Object.values(V6_KEYS).forEach(k=>localStorage.removeItem(k));await _restoreBackupV5(backup,opts);if(backup.daylists?.shared)localStorage.setItem(SHARED_DAYLIST_KEY_V16,JSON.stringify(backup.daylists.shared));if(backup.programMeta?.shared)localStorage.setItem(V6_KEYS.metaShared,JSON.stringify(backup.programMeta.shared));else if(backup.programMeta?.cut)localStorage.setItem(V6_KEYS.metaShared,JSON.stringify(backup.programMeta.cut));else if(backup.programMeta?.bulk)localStorage.setItem(V6_KEYS.metaShared,JSON.stringify(backup.programMeta.bulk));if(backup.phase?.active)setActiveProfile(backup.phase.active);if(backup.v6settings)saveV6Settings(backup.v6settings);if(Array.isArray(backup.restLog))saveRestLogV6(backup.restLog);if(backup.lastExternal)localStorage.setItem(V6_KEYS.lastExternal,backup.lastExternal);applyProgramStateV6();ensureDayLists();renderDayTabsV6();renderV6Settings();initProfileUI();showDay(activeDayIndicesV6()[0]||0);};
 function backupStatsV6(b){return {sessions:Array.isArray(b.sessions)?b.sessions.length:0,setKeys:b.sets?Object.keys(b.sets).length:0,setRows:b.sets?Object.values(b.sets).reduce((a,x)=>a+(Array.isArray(x)?x.length:0),0):0,bw:b.bw?Object.keys(b.bw).length:0,rest:Array.isArray(b.restLog)?b.restLog.length:0};}
 function currentBackupStatsV6(){return backupStatsV6({sessions:getSessions(),sets:getSets(),bw:getBW(),restLog:getRestLogV6()});}
 renderBackupList=async function(){const el=document.getElementById('backup-list');if(!el)return;const list=await getAllBackups();renderBackupStatusV6();if(!list.length){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:.5rem;">Ni lokalnih snapshotov.</div>';return;}el.innerHTML=list.map(b=>{let stats={sessions:'?',setRows:'?'};try{stats=backupStatsV6(JSON.parse(b.blob));}catch(e){}const d=new Date(b.date),date=d.toLocaleDateString('sl-SI')+' '+d.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});return `<div class="bk-item"><div class="bk-item-l"><div class="bk-item-date">${date}</div><div class="bk-item-meta">${b.sizeKB||'?'}KB · ${stats.sessions} sessionov · ${stats.setRows} setov · ${safeHtml(b.label)}</div></div><div class="bk-item-r"><button class="bk-item-btn" onclick="previewBackupV6(${b.id})">🔎</button><button class="bk-item-btn" onclick="downloadBackupFromIDB(${b.id})">⬇</button><button class="bk-item-btn del" onclick="delBackupConfirm(${b.id})">×</button></div></div>`;}).join('');};
@@ -1300,11 +1415,13 @@ const _exportDataV5=exportData;exportData=async function(){const now=new Date().
 /* ---------- Self tests ---------- */
 async function runSelfTestsV6(silent=false){const el=document.getElementById('v6-test-results'),status=document.getElementById('v6-test-status');if(el&&!silent)el.innerHTML='<div style="font-size:11px;color:var(--text3);">Preverjam…</div>';if(status){status.textContent='preverjam…';status.className='v6-chip';}const tests=[];const test=async(name,fn)=>{try{const ok=await fn();if(ok===false)throw new Error('pogoj ni izpolnjen');tests.push({name,ok:true,msg:'OK'});}catch(e){tests.push({name,ok:false,msg:e.message||String(e)});}};
   await test('Session uporablja zaklenjen kontekst',()=>{const active=activeDayIndicesV6()[0]||0,r=buildImmutableSessionRecord(new Date('2026-01-01T10:00:00'),new Date('2026-01-01T11:00:00'),60,{cycle:99,weekIdx:0,dayIdx:active,profile:getActiveProfile()});return r.cycle===99&&r.dayIdx===active;});
-  await test('Backup shema 6 je veljavna',async()=>validateBackupP1(JSON.parse(await buildBackupJSON(false))).ok);
+  await test('Backup shema 7 je veljavna',async()=>validateBackupP1(JSON.parse(await buildBackupJSON(false))).ok);
   await test('Progresija poveča dobro izvedbo',()=>evaluateProgressionV6([{topKg:100,e1rm:117,completion:1,avgRpe:8,maxRpe:8,pain:0,sets:[{reps:5}]},{topKg:100,e1rm:116,completion:1,avgRpe:8,pain:0,sets:[{reps:5}]}],{increment:2.5,name:'Bench',exercise:{m:true}}).action==='increase');
   await test('Bolečina blokira povečanje',()=>evaluateProgressionV6([{topKg:100,e1rm:117,completion:1,avgRpe:7,maxRpe:7,pain:6,sets:[{reps:5}]}],{increment:2.5,name:'Bench',exercise:{m:true}}).action==='reduce');
   await test('Pametni timer podaljša težak glavni set',()=>smartRestFromMetaV6({defaultSec:120,category:'main',rpe:9.5,reps:3})>=240);
   await test('Program ima aktiven dan',()=>activeDayIndicesV6().length>0);
+  await test('Cut in Bulk uporabljata isti seznam vaj',()=>_dlKey()==='wt_daylist_shared_v16');
+  await test('5/3/1 je opcijski način vaje',()=>buildPhaseProgramV16('bulk').is531===false);
   await test('Quick parser sprejme 120x5@8',()=>{const p=parseQuickSetV6('120x5@8');return p&&p.kg===120&&p.reps===5&&p.rpe===8;});
   await test('AI modul ni prisoten',()=>!document.getElementById('ai-chat')&&!localStorage.getItem('wt_ai_key'));
   const passed=tests.filter(x=>x.ok).length,allOk=passed===tests.length;if(el)el.innerHTML=tests.map(t=>`<div class="v6-test-row ${t.ok?'pass':'fail'}"><span>${safeHtml(t.name)}</span><span>${t.ok?'✓':'✗ '+safeHtml(t.msg)}</span></div>`).join('')+`<div style="font-size:11px;margin-top:.6rem;color:${allOk?'var(--green-text)':'var(--red-text)'};">${passed}/${tests.length} testov uspešnih</div>`;if(status){status.textContent=`${passed}/${tests.length} ${allOk?'OK':'napaka'}`;status.className='v6-chip '+(allOk?'good':'bad');}localStorage.setItem('wt_v6_last_test',JSON.stringify({date:new Date().toISOString(),pass:passed,total:tests.length}));return {passed,total:tests.length,ok:allOk};}
@@ -1312,7 +1429,7 @@ async function runSelfTestsV6(silent=false){const el=document.getElementById('v6
 /* ---------- Wrappers for page/profile/day ---------- */
 const _showDayV5=showDay;showDay=function(idx){applyProgramStateV6();const active=activeDayIndicesV6();if(!active.includes(idx))idx=active[0]??0;const r=_showDayV5(idx);renderDayTabsV6();return r;};
 const _showPageV5=showPage;showPage=function(p){const r=_showPageV5(p);if(p==='tools'){renderV6Settings();renderBackupStatusV6();renderBackupList();}if(p==='gymlog')renderStagnationAlertsV6();return r;};
-const _switchProfileV5=switchProfile;switchProfile=function(p){const r=_switchProfileV5(p);applyProgramStateV6(p);ensureDayLists();renderDayTabsV6();if(!stRun)showDay(activeDayIndicesV6()[0]||0);return r;};
+const _switchProfileV5=switchProfile;switchProfile=async function(p){const changed=await _switchProfileV5(p);if(changed===false)return false;applyProgramStateV6(p);ensureDayLists();renderDayTabsV6();if(!stRun)showDay(activeDayIndicesV6().includes(cd)?cd:(activeDayIndicesV6()[0]||0));renderTodayCard();renderPhaseHubV16();return true;};
 const _clearAllV5=clearAll;clearAll=async function(){const r=await _clearAllV5();Object.values(V6_KEYS).forEach(k=>localStorage.removeItem(k));return r;};
 
 /* Apply profile customizations before normal V5 init runs. */
@@ -4435,7 +4552,7 @@ applyProgramStateV6();
     }
 
     const badge=document.getElementById('v6-builder-profile');
-    if(badge)badge.textContent=profile==='bulk'?'Bulk':'Cut';
+    if(badge)badge.textContent=`Skupni program · ${profile==='bulk'?'Bulk':'Cut'} faza`;
 
     const days=document.getElementById('v6-builder-days');
 
@@ -5459,6 +5576,8 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const sets=all[exKey],prs=getPRs(),prk=`pr${di}${ei}`,cpr=prs[prk]||0;
   const displayName=e.n; // kanoničen seznam že nosi prikazano ime
   const isSwapped=e.n0?(e.n!==e.n0):false;
+  const use531=e.progMode==='531';
+  const lift531=e.lift531||infer531LiftV16(displayName);
   // Prev cycle hint
   let ph='';
   if(cn>1&&!isSwapped){const pp=getPeakForExercise(cn-1,di,ei);if(pp>0)ph=`<div class="ph">Prejšnji cikel peak: ${pp}kg</div>`;}
@@ -5471,7 +5590,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   }
   // Week suggestion
   let sugHtml='';
-  if(e.m&&cw>0){
+  if(e.m&&cw>0&&!use531){
     const sug=getWeek1Weight(cn,di,ei);
     if(sug>0){
       const sugKg=Math.round(sug*WEEK_PCTS[cw]/2.5)*2.5;
@@ -5511,19 +5630,15 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const baseN=wk.dl?3:(e.m?wk.sM:wk.sA);
   const extra=getExtraSets(exKey);
   const swHasData=SWAPS_DB[e.n];
-  // 5/3/1 prescription box (samo bulk profil)
+  // 5/3/1 je prostovoljna nastavitev posamezne vaje, ne Bulk profil.
   let p531Html='';
-  if(PROG.is531&&e.fl){
-    const presc=get531Prescription(e.fl,cw);
+  if(use531&&lift531){
+    const presc=get531Prescription(lift531,cw);
     if(presc){
-      p531Html=`<div class="p531-box"><div class="p531-title">📋 5/3/1 — ${PROG.weeks[cw].label} teden</div>${presc.map((s,i)=>`<div class="p531-row"><span>Set ${i+1}</span><span class="p531-pct">${s.pct}%</span><strong>${s.kg}kg</strong><span>× ${s.reps}</span></div>`).join('')}<div class="p531-note">Zadnji set "+" = naredi MAX ponovitev (vsaj predpisano).</div></div>`;
+      const weekLabel=W531[cw]?.reps?.join('/')||`Teden ${cw+1}`;
+      p531Html=`<div class="p531-box"><div class="p531-title">5/3/1 · ${weekLabel}</div>${presc.map((s,i)=>`<div class="p531-row"><span>Set ${i+1}</span><span class="p531-pct">${s.pct}%</span><strong>${s.kg}kg</strong><span>× ${s.reps}</span></div>`).join('')}<div class="p531-note">Zadnji set z znakom +: naredi največ kakovostnih ponovitev, brez izgube tehnike.</div></div>`;
     } else {
-      p531Html=`<div class="p531-box p531-warn">⚠ Vnesi 1RM za ${e.fl} — Tools → Profil ali preklopi na Bulk.</div>`;
-    }
-  } else if(PROG.is531&&e.bbb){
-    const bbb=getBBBPrescription(e.bbb,e.bbbSets,e.bbbReps);
-    if(bbb){
-      p531Html=`<div class="p531-box bbb"><div class="p531-title">💪 BBB — volumen</div><div class="p531-row"><strong>${bbb.sets}×${bbb.reps}</strong><span>@ <strong>${bbb.kg}kg</strong> (~50% TM)</span></div></div>`;
+      p531Html=`<div class="p531-box p531-warn">Za izračun 5/3/1 v Nastavitvah vnesi 1RM za ${safeHtml(lift531)}. Vaja in drugi podatki ostanejo nespremenjeni.</div>`;
     }
   }
   // Preveri če je vaja že v celoti zaključena (samo ob render-u — collapse stanje)
@@ -7492,7 +7607,7 @@ async function exportData(){
     sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}'),
     extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
     hidden_ex:JSON.parse(localStorage.getItem('wt_hidden_ex')||'{}'),
-    daylists:{cut:JSON.parse(localStorage.getItem('wt_daylist_cut')||'null'),bulk:JSON.parse(localStorage.getItem('wt_daylist_bulk')||'null')},
+    daylists:{shared:JSON.parse(localStorage.getItem('wt_daylist_shared_v16')||'null'),cut:JSON.parse(localStorage.getItem('wt_daylist_cut')||'null'),bulk:JSON.parse(localStorage.getItem('wt_daylist_bulk')||'null')},
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
     rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
     phases:JSON.parse(localStorage.getItem('wt_phases')||'[]'),
@@ -8383,7 +8498,7 @@ async function buildBackupJSON(includePhotos){
     sugs:JSON.parse(localStorage.getItem('wt_sugs6')||'{}'),
     extra_ex:JSON.parse(localStorage.getItem('wt_extra_ex')||'{}'),
     hidden_ex:JSON.parse(localStorage.getItem('wt_hidden_ex')||'{}'),
-    daylists:{cut:JSON.parse(localStorage.getItem('wt_daylist_cut')||'null'),bulk:JSON.parse(localStorage.getItem('wt_daylist_bulk')||'null')},
+    daylists:{shared:JSON.parse(localStorage.getItem('wt_daylist_shared_v16')||'null'),cut:JSON.parse(localStorage.getItem('wt_daylist_cut')||'null'),bulk:JSON.parse(localStorage.getItem('wt_daylist_bulk')||'null')},
     ex_ordernames:JSON.parse(localStorage.getItem('wt_ex_ordernames')||'{}'),
     rep_prs:JSON.parse(localStorage.getItem('wt_rep_prs')||'{}'),
     phases:JSON.parse(localStorage.getItem('wt_phases')||'[]'),
@@ -8553,6 +8668,7 @@ try{
   }
 }catch(e){console.warn('DL rename migracija:',e);}
 try{ensureDayLists();}catch(e){console.warn('ensureDayLists:',e);}
+try{initProfileUI();}catch(e){console.warn('phase init:',e);}
 showDay(_initDay);
 try{initP1();}catch(e){console.warn('P1 init failed',e);}
 // Obnovi morebiten aktivni session in rest timer
