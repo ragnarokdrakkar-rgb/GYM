@@ -122,23 +122,17 @@ function toggle531EditorV16(){
   document.getElementById('tm-editor-toggle')?.setAttribute('aria-expanded',editor.classList.contains('open')?'true':'false');
 }
 function renderPhaseHubV16(){
-  const hub=document.getElementById('phase-hub-v16');if(!hub)return;
   const prof=getActiveProfile(),phase=PHASE_PLANS_V16[prof]||PHASE_PLANS_V16.cut;
-  hub.dataset.phase=prof;
-  hub.querySelectorAll('[data-phase-choice]').forEach(button=>{
-    const active=button.dataset.phaseChoice===prof;
-    button.classList.toggle('active',active);button.setAttribute('aria-pressed',active?'true':'false');
-  });
-  const eyebrow=hub.querySelector('[data-phase-eyebrow]');if(eyebrow)eyebrow.textContent=phase.eyebrow;
-  const title=hub.querySelector('[data-phase-title]');if(title)title.textContent=phase.label+' faza';
-  const text=hub.querySelector('[data-phase-summary]');if(text)text.textContent=phase.summary;
-  const mode=hub.querySelector('[data-phase-mode]');if(mode)mode.textContent=programUses531V16()?'5/3/1 na izbranih vajah':'Pametna progresija';
   const cutLabels=['Moč','Kontrola','Volumen','Deload'];
   document.querySelectorAll('.wt').forEach((button,index)=>{
     const plan=phase.weeks[index],label=prof==='bulk'?(plan?.label||`Teden ${index+1}`):cutLabels[index];
     button.innerHTML=`Teden ${index+1}<br>${label}`;
     button.classList.toggle('deload',!!plan?.dl);
   });
+  // Veliki phase hub je bil odstranjen iz trening zaslona. Ta veja ostaja samo
+  // zaradi združljivosti s starejšim HTML-jem in nikoli ne upravlja izbire faze.
+  const hub=document.getElementById('phase-hub-v16');if(!hub)return;
+  hub.dataset.phase=prof;
 }
 
 function save531FromInputs(){

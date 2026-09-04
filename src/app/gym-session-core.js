@@ -135,8 +135,9 @@ function renderTodayCard(){
   const suggested=getSuggestedDayIndex(),last=getLastSessionForDay(cd),main=getMainSuggestionForDay(cd),isSuggested=suggested===cd;
   const lastTxt=last?`Zadnjič ${last.date}: ${last.durationMin||'?'} min`:'Ta trening še nima session zgodovine';
   const mainTxt=main&&main.kg?`${main.name}: izhodišče ${main.kg} kg`:main?main.name:'';
-  const phase=getActiveProfile()==='bulk'?'Bulk · rast':'Cut · ohranjanje';
-  el.innerHTML=`<div class="today-card-grid"><div><div class="today-eyebrow">${isSuggested?'Predlagan naslednji trening':'Izbran trening'}</div><div class="today-title">${safeHtml(PROG.days[cd].title)} · Teden ${cw+1}</div><div class="today-meta">${safeHtml(lastTxt)}${mainTxt?'<br>'+safeHtml(mainTxt):''}</div></div><button class="today-action" onclick="startTodayWorkout()">${stRun?'Nadaljuj':'Začni trening'}</button></div><div class="today-secondary"><span>Cikel ${getCyc().num} · ${phase}</span>${!isSuggested?`<button class="sb" onclick="openSuggestedWorkout(${suggested})" style="padding:4px 9px;">Predlog: ${safeHtml(DAY_NAMES[suggested])}</button>`:''}</div>`;
+  const profile=getActiveProfile()==='bulk'?'bulk':'cut';
+  const phase=profile==='bulk'?'Bulk':'Cut';
+  el.innerHTML=`<div class="today-rail-v17"><span class="today-live-v17">${isSuggested?'Naslednji trening':'Izbran trening'}</span><span class="phase-chip-v17 ${profile}" title="Fazo spremeniš v Nastavitvah">${phase}</span></div><div class="today-card-grid"><div class="today-copy-v17"><div class="today-eyebrow">Cikel ${getCyc().num} · Teden ${cw+1}</div><div class="today-title">${safeHtml(PROG.days[cd].title)}</div><div class="today-meta"><span>${safeHtml(lastTxt)}</span>${mainTxt?`<span>${safeHtml(mainTxt)}</span>`:''}</div></div><button class="today-action" onclick="startTodayWorkout()"><span>${stRun?'Nadaljuj':'Začni'}</span><small>${stRun?'aktivni trening':'trening zdaj'}</small><b aria-hidden="true">→</b></button></div>${!isSuggested?`<div class="today-secondary"><span>Predlagan je ${safeHtml(DAY_NAMES[suggested])}</span><button class="sb" onclick="openSuggestedWorkout(${suggested})">Odpri predlog →</button></div>`:''}`;
 }
 function openSuggestedWorkout(di){showDay(di);renderTodayCard();}
 function startTodayWorkout(){

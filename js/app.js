@@ -2,7 +2,7 @@ function toggleTheme(){
   const html=document.documentElement,isDark=html.getAttribute('data-theme')==='dark';
   const next=isDark?'light':'dark';
   html.setAttribute('data-theme',next);
-  document.getElementById('theme-btn').textContent=next==='dark'?'☀ Svetla':'🌙 Temna';
+  document.getElementById('theme-btn').textContent=next==='dark'?'☀ Svetla':'● Temna';
   safeSetRaw(LS.theme,next);
   applyAllColors();
   if(bwChart)renderBW();if(strengthChart)renderStrengthChart();
@@ -15,7 +15,7 @@ const COLOR_FAMILIES=[
   {k:'purple',n:'Posebno (drop seti, značke)'},
   {k:'red',n:'Opozorila / brisanje'},
 ];
-const COLOR_DEFAULTS={green:'#1d9e75',blue:'#378add',amber:'#ef9f27',purple:'#7f77dd',red:'#e24b4a'};
+const COLOR_DEFAULTS={green:'#ff4b23',blue:'#ff7a00',amber:'#ffb000',purple:'#ff334f',red:'#ff2d20'};
 function _h2r(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
 function _r2h(a){return '#'+a.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');}
 function _mix(a,b,t){return a.map((v,i)=>v+(b[i]-v)*t);}
@@ -63,7 +63,7 @@ function applyAccent(){applyAllColors();}
 
 // === Hitre barvne teme (presети) ===
 const COLOR_PRESETS={
-  default:{n:'Privzeto',c:{green:'#1d9e75',blue:'#378add',amber:'#ef9f27',purple:'#7f77dd',red:'#e24b4a'}},
+  default:{n:'Forge',c:{green:'#ff4b23',blue:'#ff7a00',amber:'#ffb000',purple:'#ff334f',red:'#ff2d20'}},
   fire:{n:'Ognjena',c:{green:'#ff5330',blue:'#ff9500',amber:'#ffb020',purple:'#ff2d55',red:'#ff3b30'}},
   ice:{n:'Ledena',c:{green:'#22a7ff',blue:'#00d4ff',amber:'#38bdf8',purple:'#6c8cff',red:'#ff5566'}},
   neon:{n:'Neon',c:{green:'#00e676',blue:'#00e5ff',amber:'#ffea00',purple:'#e040fb',red:'#ff1744'}},
@@ -93,7 +93,7 @@ function initTheme(){
   if(t==='"dark"'||t==='"light"'){try{t=JSON.parse(t);}catch(e){t='dark';}safeSetRaw(LS.theme,t);}
   if(t!=='dark'&&t!=='light')t='dark';
   document.documentElement.setAttribute('data-theme',t);
-  const btn=document.getElementById('theme-btn');if(btn)btn.textContent=t==='dark'?'☀ Svetla':'🌙 Temna';
+  const btn=document.getElementById('theme-btn');if(btn)btn.textContent=t==='dark'?'☀ Svetla':'● Temna';
 }
 
 function calcPlatesFor(targetKg){
@@ -521,23 +521,17 @@ function toggle531EditorV16(){
   document.getElementById('tm-editor-toggle')?.setAttribute('aria-expanded',editor.classList.contains('open')?'true':'false');
 }
 function renderPhaseHubV16(){
-  const hub=document.getElementById('phase-hub-v16');if(!hub)return;
   const prof=getActiveProfile(),phase=PHASE_PLANS_V16[prof]||PHASE_PLANS_V16.cut;
-  hub.dataset.phase=prof;
-  hub.querySelectorAll('[data-phase-choice]').forEach(button=>{
-    const active=button.dataset.phaseChoice===prof;
-    button.classList.toggle('active',active);button.setAttribute('aria-pressed',active?'true':'false');
-  });
-  const eyebrow=hub.querySelector('[data-phase-eyebrow]');if(eyebrow)eyebrow.textContent=phase.eyebrow;
-  const title=hub.querySelector('[data-phase-title]');if(title)title.textContent=phase.label+' faza';
-  const text=hub.querySelector('[data-phase-summary]');if(text)text.textContent=phase.summary;
-  const mode=hub.querySelector('[data-phase-mode]');if(mode)mode.textContent=programUses531V16()?'5/3/1 na izbranih vajah':'Pametna progresija';
   const cutLabels=['Moč','Kontrola','Volumen','Deload'];
   document.querySelectorAll('.wt').forEach((button,index)=>{
     const plan=phase.weeks[index],label=prof==='bulk'?(plan?.label||`Teden ${index+1}`):cutLabels[index];
     button.innerHTML=`Teden ${index+1}<br>${label}`;
     button.classList.toggle('deload',!!plan?.dl);
   });
+  // Veliki phase hub je bil odstranjen iz trening zaslona. Ta veja ostaja samo
+  // zaradi združljivosti s starejšim HTML-jem in nikoli ne upravlja izbire faze.
+  const hub=document.getElementById('phase-hub-v16');if(!hub)return;
+  hub.dataset.phase=prof;
 }
 
 function save531FromInputs(){
@@ -690,7 +684,7 @@ function showDay(idx){
   const done=visIdx.filter(i=>allDone(idx,i)).length;
   const nk=`notes-c${cyc.num}w${cw}d${idx}`;
   const nv=getNotes()[nk]||'';
-  let html=`<div class="day-title">${safeHtml(d.title)}</div><div class="day-sub">${safeHtml(d.sub)}</div><div class="tags">${d.tags.map(t=>`<span class="tag ${t.p?'tag-p':'tag-s'}">${safeHtml(t.t)}</span>`).join('')}</div><div class="gym-target" id="gym-target">Fokus: najprej začni trening, nato zabeleži naslednji set.</div>`;
+  let html=`<section class="day-command-v17"><div class="day-heading-v17"><div><span class="day-kicker-v17">Dan ${idx+1} · ${getActiveProfile()==='bulk'?'Bulk':'Cut'}</span><div class="day-title">${safeHtml(d.title)}</div><div class="day-sub">${safeHtml(d.sub)}</div></div><div class="day-progress-v17"><strong>${done}/${visIdx.length}</strong><span>vaj končanih</span></div></div><div class="tags">${d.tags.map(t=>`<span class="tag ${t.p?'tag-p':'tag-s'}">${safeHtml(t.t)}</span>`).join('')}</div></section><div class="gym-target" id="gym-target">Fokus: najprej začni trening, nato zabeleži naslednji set.</div>`;
   if(wk.dl){html+=`<div class="dbox">Deload teden — 60–65% teže iz tedna 1. Ustavi 4–5 pon. pred odpovedjo. Maks 3 serije.</div>`;}
   else{html+=`<div class="pg"><div class="pc"><div class="pn">${visIdx.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
   html+=allEx.map((e,i)=>{
@@ -1093,8 +1087,9 @@ function renderTodayCard(){
   const suggested=getSuggestedDayIndex(),last=getLastSessionForDay(cd),main=getMainSuggestionForDay(cd),isSuggested=suggested===cd;
   const lastTxt=last?`Zadnjič ${last.date}: ${last.durationMin||'?'} min`:'Ta trening še nima session zgodovine';
   const mainTxt=main&&main.kg?`${main.name}: izhodišče ${main.kg} kg`:main?main.name:'';
-  const phase=getActiveProfile()==='bulk'?'Bulk · rast':'Cut · ohranjanje';
-  el.innerHTML=`<div class="today-card-grid"><div><div class="today-eyebrow">${isSuggested?'Predlagan naslednji trening':'Izbran trening'}</div><div class="today-title">${safeHtml(PROG.days[cd].title)} · Teden ${cw+1}</div><div class="today-meta">${safeHtml(lastTxt)}${mainTxt?'<br>'+safeHtml(mainTxt):''}</div></div><button class="today-action" onclick="startTodayWorkout()">${stRun?'Nadaljuj':'Začni trening'}</button></div><div class="today-secondary"><span>Cikel ${getCyc().num} · ${phase}</span>${!isSuggested?`<button class="sb" onclick="openSuggestedWorkout(${suggested})" style="padding:4px 9px;">Predlog: ${safeHtml(DAY_NAMES[suggested])}</button>`:''}</div>`;
+  const profile=getActiveProfile()==='bulk'?'bulk':'cut';
+  const phase=profile==='bulk'?'Bulk':'Cut';
+  el.innerHTML=`<div class="today-rail-v17"><span class="today-live-v17">${isSuggested?'Naslednji trening':'Izbran trening'}</span><span class="phase-chip-v17 ${profile}" title="Fazo spremeniš v Nastavitvah">${phase}</span></div><div class="today-card-grid"><div class="today-copy-v17"><div class="today-eyebrow">Cikel ${getCyc().num} · Teden ${cw+1}</div><div class="today-title">${safeHtml(PROG.days[cd].title)}</div><div class="today-meta"><span>${safeHtml(lastTxt)}</span>${mainTxt?`<span>${safeHtml(mainTxt)}</span>`:''}</div></div><button class="today-action" onclick="startTodayWorkout()"><span>${stRun?'Nadaljuj':'Začni'}</span><small>${stRun?'aktivni trening':'trening zdaj'}</small><b aria-hidden="true">→</b></button></div>${!isSuggested?`<div class="today-secondary"><span>Predlagan je ${safeHtml(DAY_NAMES[suggested])}</span><button class="sb" onclick="openSuggestedWorkout(${suggested})">Odpri predlog →</button></div>`:''}`;
 }
 function openSuggestedWorkout(di){showDay(di);renderTodayCard();}
 function startTodayWorkout(){
@@ -5654,7 +5649,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const activeCls=(typeof isActiveGymEx==='function'&&isActiveGymEx(exKey))?' active-ex':'';
   return `<div class="exc${isPR?' pr-card':''}${collapsed?' col-done':''}${activeCls}" id="ec-${exKey}">
     <div class="ex-top">
-      <div class="ex-name-wrap"><div class="ex-name" id="exn-${exKey}">${safeHtml(displayName)}</div><button class="info-btn" onclick="toggleExInfo('${exKey}')" title="Opis vaje">ⓘ</button><button class="hist-btn" onclick="openExHistory(${di},${ei})" title="Zgodovina vaje">📊</button></div>
+      <div class="exercise-order-v17" aria-hidden="true">${String(ei+1).padStart(2,'0')}</div><div class="ex-name-wrap"><div><div class="exercise-type-v17">${e.m?'Glavni dvig':isExtra?'Dodatna vaja':'Delovna vaja'}</div><div class="ex-name" id="exn-${exKey}">${safeHtml(displayName)}</div></div><div class="exercise-quick-v17"><button class="info-btn" onclick="toggleExInfo('${exKey}')" title="Opis vaje">i</button><button class="hist-btn" onclick="openExHistory(${di},${ei})" title="Zgodovina vaje">↗</button></div></div>
       <div class="sp ${wk.pill}">${n} × ${wk.reps}</div>
     </div>
     ${summaryHtml}
@@ -5673,8 +5668,9 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     ${p531Html}
     <div id="wu-dyn-${exKey}"></div>
     <div class="ex-d">${safeHtml(e.d||'')}</div>${e.tip?`<div class="ex-tip">${safeHtml(e.tip)}</div>`:''}${painHtml}
-    <table class="st"><thead><tr><th>S</th><th>Teža</th><th>Pon</th><th>Vol</th><th>1RM</th><th></th></tr></thead><tbody id="rows-${exKey}">${rows}</tbody></table>
-    ${tv>0?`<div class="vol-total" style="font-size:11px;color:var(--green-text);margin-top:4px;text-align:right;">Skupaj: ${Math.round(tv).toLocaleString()} kg</div>`:''}
+    <div class="set-header-v17"><span>Delovne serije</span><span>KG / PON / RPE</span></div>
+    <div class="set-grid-v17"><table class="st"><thead><tr><th>S</th><th>Teža</th><th>Pon</th><th>Vol</th><th>1RM</th><th></th></tr></thead><tbody id="rows-${exKey}">${rows}</tbody></table></div>
+    ${tv>0?`<div class="vol-total">Skupni volumen <strong>${Math.round(tv).toLocaleString()} kg</strong></div>`:''}
     <div class="set-ctrl">
       <button class="set-ctrl-btn add" onclick="addSet('${exKey}',${di},${ei},${cn})">+</button>
       <span class="set-count-label">${n} serij${extra>0?` (+${extra})`:extra<0?` (${extra})`:''}</span>

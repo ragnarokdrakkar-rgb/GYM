@@ -24,7 +24,7 @@ function showDay(idx){
   const done=visIdx.filter(i=>allDone(idx,i)).length;
   const nk=`notes-c${cyc.num}w${cw}d${idx}`;
   const nv=getNotes()[nk]||'';
-  let html=`<div class="day-title">${safeHtml(d.title)}</div><div class="day-sub">${safeHtml(d.sub)}</div><div class="tags">${d.tags.map(t=>`<span class="tag ${t.p?'tag-p':'tag-s'}">${safeHtml(t.t)}</span>`).join('')}</div><div class="gym-target" id="gym-target">Fokus: najprej začni trening, nato zabeleži naslednji set.</div>`;
+  let html=`<section class="day-command-v17"><div class="day-heading-v17"><div><span class="day-kicker-v17">Dan ${idx+1} · ${getActiveProfile()==='bulk'?'Bulk':'Cut'}</span><div class="day-title">${safeHtml(d.title)}</div><div class="day-sub">${safeHtml(d.sub)}</div></div><div class="day-progress-v17"><strong>${done}/${visIdx.length}</strong><span>vaj končanih</span></div></div><div class="tags">${d.tags.map(t=>`<span class="tag ${t.p?'tag-p':'tag-s'}">${safeHtml(t.t)}</span>`).join('')}</div></section><div class="gym-target" id="gym-target">Fokus: najprej začni trening, nato zabeleži naslednji set.</div>`;
   if(wk.dl){html+=`<div class="dbox">Deload teden — 60–65% teže iz tedna 1. Ustavi 4–5 pon. pred odpovedjo. Maks 3 serije.</div>`;}
   else{html+=`<div class="pg"><div class="pc"><div class="pn">${visIdx.length}</div><div class="pl-label">vaj</div></div><div class="pc"><div class="pn" id="ex-done">${done}</div><div class="pl-label">opravljenih</div></div><div class="pc"><div class="pn">${wk.reps}</div><div class="pl-label">ponovitve</div></div><div class="pc"><div class="pn">${wk.rpe}</div><div class="pl-label">intenzivnost</div></div></div>`;}
   html+=allEx.map((e,i)=>{

@@ -2,7 +2,7 @@ function toggleTheme(){
   const html=document.documentElement,isDark=html.getAttribute('data-theme')==='dark';
   const next=isDark?'light':'dark';
   html.setAttribute('data-theme',next);
-  document.getElementById('theme-btn').textContent=next==='dark'?'☀ Svetla':'🌙 Temna';
+  document.getElementById('theme-btn').textContent=next==='dark'?'☀ Svetla':'● Temna';
   safeSetRaw(LS.theme,next);
   applyAllColors();
   if(bwChart)renderBW();if(strengthChart)renderStrengthChart();
@@ -15,7 +15,7 @@ const COLOR_FAMILIES=[
   {k:'purple',n:'Posebno (drop seti, značke)'},
   {k:'red',n:'Opozorila / brisanje'},
 ];
-const COLOR_DEFAULTS={green:'#1d9e75',blue:'#378add',amber:'#ef9f27',purple:'#7f77dd',red:'#e24b4a'};
+const COLOR_DEFAULTS={green:'#ff4b23',blue:'#ff7a00',amber:'#ffb000',purple:'#ff334f',red:'#ff2d20'};
 function _h2r(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
 function _r2h(a){return '#'+a.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');}
 function _mix(a,b,t){return a.map((v,i)=>v+(b[i]-v)*t);}
@@ -63,7 +63,7 @@ function applyAccent(){applyAllColors();}
 
 // === Hitre barvne teme (presети) ===
 const COLOR_PRESETS={
-  default:{n:'Privzeto',c:{green:'#1d9e75',blue:'#378add',amber:'#ef9f27',purple:'#7f77dd',red:'#e24b4a'}},
+  default:{n:'Forge',c:{green:'#ff4b23',blue:'#ff7a00',amber:'#ffb000',purple:'#ff334f',red:'#ff2d20'}},
   fire:{n:'Ognjena',c:{green:'#ff5330',blue:'#ff9500',amber:'#ffb020',purple:'#ff2d55',red:'#ff3b30'}},
   ice:{n:'Ledena',c:{green:'#22a7ff',blue:'#00d4ff',amber:'#38bdf8',purple:'#6c8cff',red:'#ff5566'}},
   neon:{n:'Neon',c:{green:'#00e676',blue:'#00e5ff',amber:'#ffea00',purple:'#e040fb',red:'#ff1744'}},
@@ -93,7 +93,7 @@ function initTheme(){
   if(t==='"dark"'||t==='"light"'){try{t=JSON.parse(t);}catch(e){t='dark';}safeSetRaw(LS.theme,t);}
   if(t!=='dark'&&t!=='light')t='dark';
   document.documentElement.setAttribute('data-theme',t);
-  const btn=document.getElementById('theme-btn');if(btn)btn.textContent=t==='dark'?'☀ Svetla':'🌙 Temna';
+  const btn=document.getElementById('theme-btn');if(btn)btn.textContent=t==='dark'?'☀ Svetla':'● Temna';
 }
 
 function calcPlatesFor(targetKg){

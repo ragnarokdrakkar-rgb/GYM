@@ -41,12 +41,14 @@ test('Bulk is a phase and 5/3/1 is opt-in per exercise',()=>{
   assert.doesNotMatch(html,/Bulk \(5\/3\/1\)|5\/3\/1 BBB · moč in masa/);
 });
 
-test('phase UI explains that exercises remain unchanged',()=>{
-  assert.match(html,/id="phase-hub-v16"/);
-  assert.match(html,/Vaje: <strong>ostanejo enake<\/strong>/);
+test('phase selection lives only in settings and exercises remain unchanged',()=>{
+  assert.doesNotMatch(html,/id="phase-hub-v16"/);
+  assert.equal((html.match(/onclick="switchProfile\('/g)||[]).length,2);
+  assert.match(html,/id="prof-cut-btn"/);
+  assert.match(html,/id="prof-bulk-btn"/);
   assert.match(html,/vaje, vrstni red in zgodovina se ne spremenijo/);
-  assert.match(css,/V16 CRISP UI \+ LOČENA CUT\/BULK FAZA/);
-  assert.match(css,/:root\[data-phase="bulk"\]/);
+  assert.match(css,/V17 FORGE UI/);
+  assert.match(css,/Cut\/Bulk lives here only/);
 });
 
 test('backup schema 7 contains shared roster and shared program metadata',()=>{

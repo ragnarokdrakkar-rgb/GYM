@@ -7,7 +7,7 @@ const path=require('node:path');
 const childProcess=require('node:child_process');
 
 const root=path.resolve(__dirname,'..');
-const version='1.0.49';
+const version='1.0.50';
 
 function read(relativePath){
   return fs.readFileSync(path.join(root,relativePath),'utf8');
@@ -70,6 +70,20 @@ test('primary navigation, week and day controls are semantic buttons',()=>{
   assert.match(html,/<button type="button" class="nt active"/);
   assert.match(html,/<button type="button" class="wt active"/);
   assert.match(html,/<button type="button" class="dt active"/);
+});
+
+test('Forge UI changes hierarchy, not only color tokens',()=>{
+  const html=read('index.html');
+  const css=read('css/app.css');
+  const runtime=read('src/app/workout-runtime.js');
+  assert.match(html,/class="brand-mark-v17"/);
+  assert.match(html,/class="session-clock-v17"/);
+  assert.match(html,/class="page-heading-v17/);
+  assert.match(runtime,/class="exercise-order-v17"/);
+  assert.match(runtime,/class="set-grid-v17"/);
+  assert.match(css,/V17 FORGE UI/);
+  assert.match(css,/--bg:#070707/);
+  assert.match(css,/--green:#ff4b23/);
 });
 
 test('exercise swap catalog is lazy-rendered',()=>{

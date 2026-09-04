@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Workout">
-<meta name="theme-color" content="#1d9e75">
+<meta name="theme-color" content="#090909">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
@@ -17,14 +17,20 @@
 <body>
 <div id="toast-el"></div>
 <div class="prb2" id="pr-banner"></div>
-<div class="topbar">
-  <div class="appname">Workout Tracker<span class="sess-dot" id="sess-dot" title="Trening je aktiven"></span><span class="save-status-v15" id="save-status-v15" role="status" aria-live="polite">Shranjeno</span></div>
-  <div class="topbtns">
-    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">☀ Svetla</button>
-    <button class="icon-btn" onclick="importData()">⬆ Uvoz</button>
-    <button class="icon-btn" onclick="exportData()">⬇ Izvoz</button>
+<header class="topbar">
+  <div class="brand-v17">
+    <div class="brand-mark-v17" aria-hidden="true"><span>W</span><span>T</span></div>
+    <div class="brand-copy-v17">
+      <div class="appname">Workout Tracker<span class="sess-dot" id="sess-dot" title="Trening je aktiven"></span><span class="save-status-v15" id="save-status-v15" role="status" aria-live="polite">Shranjeno</span></div>
+      <div class="brand-tagline-v17">Train · Log · Evolve</div>
+    </div>
   </div>
-</div>
+  <div class="topbtns">
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" aria-label="Preklopi videz">◐ Tema</button>
+    <button class="icon-btn" onclick="importData()" aria-label="Uvozi podatke">↑ Uvoz</button>
+    <button class="icon-btn" onclick="exportData()" aria-label="Izvozi podatke">↓ Izvoz</button>
+  </div>
+</header>
 <div class="nav" aria-label="Glavna navigacija">
   <button type="button" class="nt active" data-nav="workout" onclick="showPage('workout')"><span class="nt-i" aria-hidden="true">🏋️</span><span>Trening</span></button>
   <button type="button" class="nt" data-nav="progress" onclick="showProgressPage('gymlog')"><span class="nt-i" aria-hidden="true">📈</span><span>Napredek</span></button>
@@ -41,33 +47,20 @@
 
 <!-- WORKOUT PAGE -->
 <div class="page active" id="page-workout">
-  <section class="phase-hub-v16" id="phase-hub-v16" aria-label="Faza treninga">
-    <div class="phase-switch-v16" role="group" aria-label="Izberi fazo">
-      <button type="button" data-phase-choice="cut" onclick="switchProfile('cut')">Cut</button>
-      <button type="button" data-phase-choice="bulk" onclick="switchProfile('bulk')">Bulk</button>
-    </div>
-    <div class="phase-copy-v16">
-      <div class="phase-eyebrow-v16" data-phase-eyebrow>OHRANJANJE</div>
-      <div class="phase-title-v16" data-phase-title>Cut faza</div>
-      <div class="phase-summary-v16" data-phase-summary>Manj utrujenosti, jasen fokus na ohranjanju moči.</div>
-    </div>
-    <div class="phase-facts-v16">
-      <span>Vaje: <strong>ostanejo enake</strong></span>
-      <span>Progresija: <strong data-phase-mode>Pametna progresija</strong></span>
-    </div>
-  </section>
   <div class="today-card" id="today-card"></div>
   <div class="gym-focusbar" id="gym-focusbar">
     <button class="gym-focus-btn" onclick="moveGymFocus(-1)" aria-label="Prejšnja vaja">‹</button>
     <div class="gym-focus-main"><div class="gym-focus-name" id="gym-focus-name">Aktivna vaja</div><div class="gym-focus-meta" id="gym-focus-meta"></div></div>
     <button class="gym-focus-btn" onclick="moveGymFocus(1)" aria-label="Naslednja vaja">›</button>
   </div>
-  <div class="stb">
-    <div class="sd" id="st-d">00:00:00</div>
-    <button class="sbt" id="st-b" onclick="toggleSess()">Začni trening</button>
-    <button class="sbt" id="gym-mode-btn" onclick="toggleGymMode()">Fokus</button>
-    <button class="sbt undo-set-v15" id="undo-set-v15" onclick="undoLastSetV15()" disabled title="Razveljavi zadnji zabeleženi set">↶ Zadnji set</button>
-    <div style="font-size:11px;color:var(--text3);flex:1;text-align:right;line-height:1.5;" id="st-s"></div>
+  <div class="stb" aria-label="Nadzorna vrstica treninga">
+    <div class="session-clock-v17"><span>Session</span><div class="sd" id="st-d">00:00:00</div></div>
+    <div class="session-actions-v17">
+      <button class="sbt session-primary-v17" id="st-b" onclick="toggleSess()">Začni trening</button>
+      <button class="sbt" id="gym-mode-btn" onclick="toggleGymMode()">Fokus</button>
+      <button class="sbt undo-set-v15" id="undo-set-v15" onclick="undoLastSetV15()" disabled title="Razveljavi zadnji zabeleženi set">↶ Zadnji set</button>
+    </div>
+    <div class="session-state-v17" id="st-s"></div>
   </div>
   <div style="text-align:right;font-size:9px;color:var(--text3);margin:-8px 0 6px;" id="app-ver"></div>
   <div class="tabs-wrap">
@@ -99,6 +92,7 @@
     <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
     <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
   </div>
+  <div class="page-heading-v17"><span>Performance</span><h1>Cikli</h1><p>Pregled progresije in naslednjih odločitev.</p></div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
       <div>
@@ -140,6 +134,7 @@
     <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
     <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
   </div>
+  <div class="page-heading-v17"><span>Analytics</span><h1>Napredek</h1><p>Trendi, konsistenca in zgodovina treningov.</p></div>
   <!-- Weekly Summary -->
   <div class="card" id="summary-card">
     <div class="ct">📊 Tedenski povzetek</div>
@@ -202,6 +197,7 @@
     <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
     <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
   </div>
+  <div class="page-heading-v17"><span>Body data</span><h1>Telesna teža</h1><p>Jasen trend brez ugibanja.</p></div>
   <div class="card">
     <div class="ct">⚖️ Telesna teža</div>
     <div style="display:flex;gap:8px;margin-bottom:.75rem;">
@@ -249,6 +245,7 @@
     <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
     <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
   </div>
+  <div class="page-heading-v17"><span>Body data</span><h1>Telesne mere</h1><p>Spremljaj spremembe skozi čas.</p></div>
   <div class="card">
     <div class="ct">📏 Telesne mere</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;">Enkrat mesečno, zjutraj. Vse v cm.</div>
@@ -268,6 +265,7 @@
     <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
     <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
   </div>
+  <div class="page-heading-v17"><span>Strength lab</span><h1>Moč</h1><p>e1RM, volumen in razmerja moči.</p></div>
   <div class="card">
     <div class="ct">📈 e1RM napredek</div>
     <div id="e1rm-lift-chips" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.5rem;"></div>
@@ -374,7 +372,7 @@
 <div class="note-pop" id="onboarding-pop">
   <div class="note-pop-card onboarding-card">
     <div class="onboarding-icon">🏋️</div>
-    <h3>Workout Tracker 1.0.49</h3>
+    <h3>Workout Tracker 1.0.50</h3>
     <p>Najprej izberi fazo. Svoj seznam vaj nato urediš samo enkrat in ostane enak tudi ob preklopu faze.</p>
     <div class="onboarding-options">
       <button class="onboarding-option cut" onclick="finishOnboarding('cut')"><strong>Cut</strong><span>Ohranjanje moči · manj utrujenosti</span><small>Izbrane vaje ostanejo tvoje</small></button>
@@ -433,6 +431,7 @@
 
 <!-- TOOLS PAGE -->
 <div class="page" id="page-tools">
+  <div class="page-heading-v17 tools-heading-v17"><span>Control room</span><h1>Nastavitve</h1><p>Program, faza, podatki in vedenje aplikacije.</p></div>
   <div class="card">
     <div class="v6-card-title"><div class="ct" style="margin:0;">🧱 Program builder</div><span class="v6-chip">brez brisanja zgodovine</span></div>
     <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:.75rem;">Uredi dneve, vrstni red, ciljne sete, ponovitve, RPE, počitek in način progresije. Odstranitev pomeni deaktivacijo; stari podatki ostanejo.</div>
@@ -470,8 +469,8 @@
     <div class="phase-settings-copy-v16">Cut in Bulk sta zdaj jasna cilja istega programa. Ob preklopu se prilagodijo seti, ponovitve in RPE; <strong>vaje, vrstni red in zgodovina se ne spremenijo.</strong></div>
     <div id="profile-status" class="profile-status-v16"></div>
     <div class="phase-settings-switch-v16">
-      <button class="sb" id="prof-cut-btn" onclick="switchProfile('cut')">Cut</button>
-      <button class="sb" id="prof-bulk-btn" onclick="switchProfile('bulk')">Bulk</button>
+      <button class="sb" id="prof-cut-btn" onclick="switchProfile('cut')"><span>Cut</span><small>Ohrani moč</small></button>
+      <button class="sb" id="prof-bulk-btn" onclick="switchProfile('bulk')"><span>Bulk</span><small>Gradi volumen</small></button>
     </div>
     <button type="button" class="advanced-toggle-v16" id="tm-editor-toggle" aria-expanded="false" onclick="toggle531EditorV16()"><span>Napredno: 5/3/1</span><small>Vklopiš ga samo na izbrani vaji v Program builderju</small></button>
     <div id="tm-editor" class="tm-editor-v16">

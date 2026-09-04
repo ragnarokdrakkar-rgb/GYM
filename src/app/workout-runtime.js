@@ -86,7 +86,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const activeCls=(typeof isActiveGymEx==='function'&&isActiveGymEx(exKey))?' active-ex':'';
   return `<div class="exc${isPR?' pr-card':''}${collapsed?' col-done':''}${activeCls}" id="ec-${exKey}">
     <div class="ex-top">
-      <div class="ex-name-wrap"><div class="ex-name" id="exn-${exKey}">${safeHtml(displayName)}</div><button class="info-btn" onclick="toggleExInfo('${exKey}')" title="Opis vaje">ⓘ</button><button class="hist-btn" onclick="openExHistory(${di},${ei})" title="Zgodovina vaje">📊</button></div>
+      <div class="exercise-order-v17" aria-hidden="true">${String(ei+1).padStart(2,'0')}</div><div class="ex-name-wrap"><div><div class="exercise-type-v17">${e.m?'Glavni dvig':isExtra?'Dodatna vaja':'Delovna vaja'}</div><div class="ex-name" id="exn-${exKey}">${safeHtml(displayName)}</div></div><div class="exercise-quick-v17"><button class="info-btn" onclick="toggleExInfo('${exKey}')" title="Opis vaje">i</button><button class="hist-btn" onclick="openExHistory(${di},${ei})" title="Zgodovina vaje">↗</button></div></div>
       <div class="sp ${wk.pill}">${n} × ${wk.reps}</div>
     </div>
     ${summaryHtml}
@@ -105,8 +105,9 @@ function renderEx(e,ei,di,wk,cn,isExtra){
     ${p531Html}
     <div id="wu-dyn-${exKey}"></div>
     <div class="ex-d">${safeHtml(e.d||'')}</div>${e.tip?`<div class="ex-tip">${safeHtml(e.tip)}</div>`:''}${painHtml}
-    <table class="st"><thead><tr><th>S</th><th>Teža</th><th>Pon</th><th>Vol</th><th>1RM</th><th></th></tr></thead><tbody id="rows-${exKey}">${rows}</tbody></table>
-    ${tv>0?`<div class="vol-total" style="font-size:11px;color:var(--green-text);margin-top:4px;text-align:right;">Skupaj: ${Math.round(tv).toLocaleString()} kg</div>`:''}
+    <div class="set-header-v17"><span>Delovne serije</span><span>KG / PON / RPE</span></div>
+    <div class="set-grid-v17"><table class="st"><thead><tr><th>S</th><th>Teža</th><th>Pon</th><th>Vol</th><th>1RM</th><th></th></tr></thead><tbody id="rows-${exKey}">${rows}</tbody></table></div>
+    ${tv>0?`<div class="vol-total">Skupni volumen <strong>${Math.round(tv).toLocaleString()} kg</strong></div>`:''}
     <div class="set-ctrl">
       <button class="set-ctrl-btn add" onclick="addSet('${exKey}',${di},${ei},${cn})">+</button>
       <span class="set-count-label">${n} serij${extra>0?` (+${extra})`:extra<0?` (${extra})`:''}</span>
