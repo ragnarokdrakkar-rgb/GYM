@@ -59,7 +59,8 @@
   const appPlugin = getPlugin('App');
   const haptics = getPlugin('Haptics');
 
-  if (!window.__WT_ANDROID_APP__ || !localNotifications) {
+  if (!window.__WT_ANDROID_APP__) return;
+  if (!localNotifications) {
     console.warn(
       'Native rest notifications niso aktivne: Android plugin ni na voljo.'
     );
@@ -286,6 +287,8 @@
       1,
       Math.floor(Number(seconds) || 0)
     );
+    // Permission dialogs must not restart the duration after they close.
+    const deadlineMs = Date.now() + safeSeconds * 1000;
 
     const myGeneration = scheduleGeneration + 1;
     scheduleGeneration = myGeneration;
@@ -323,7 +326,7 @@
     }
 
     const fireAt = new Date(
-      Date.now() + safeSeconds * 1000
+      Math.max(Date.now() + 100, deadlineMs)
     );
 
     const result = await localNotifications.schedule({

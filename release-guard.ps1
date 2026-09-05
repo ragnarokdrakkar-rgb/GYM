@@ -228,6 +228,8 @@ function Invoke-SourceGuard {
     $SoundFile = Join-Path $ProjectRoot 'android\app\src\main\res\raw\workout_rest.wav'
 
     $InjectionRelativePaths = @(
+        'js\core\backup.js',
+        'js\app-ui.js',
         'js\app-update.js',
         'js\rest-native-notifications.js',
         'js\ui-safe-v1.js',
@@ -545,6 +547,8 @@ function Invoke-AndroidGuard {
     }
 
     $RequiredScriptSources = @(
+        'js/core/backup.js',
+        'js/app-ui.js',
         'js/app.js',
         'js/app-update.js',
         'js/rest-native-notifications.js',
@@ -587,6 +591,9 @@ function Invoke-AndroidGuard {
     }
 
     $CopyPairs = @(
+        @{ Source = 'js\core\backup.js'; Www = 'js\core\backup.js' },
+        @{ Source = 'js\core\state-storage.js'; Www = 'js\core\state-storage.js' },
+        @{ Source = 'js\app-ui.js'; Www = 'js\app-ui.js' },
         @{ Source = 'js\app.js'; Www = 'js\app.js' },
         @{ Source = 'js\app-update.js'; Www = 'js\app-update.js' },
         @{ Source = 'js\rest-native-notifications.js'; Www = 'js\rest-native-notifications.js' },

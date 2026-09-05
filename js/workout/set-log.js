@@ -1,6 +1,10 @@
 (function () {
   'use strict';
 
+  // Redline's compact logger already records kg/reps/manual RPE in one action.
+  // Do not add the legacy second logger in Android focus mode.
+  if (document.getElementById('page-program')) return;
+
   if (window.WTSetLog && window.WTSetLog.version) return;
 
   const VERSION = '1.0.0';

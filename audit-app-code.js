@@ -32,11 +32,13 @@ const sourcePaths = [
 const runtimeSupportPaths = [
   'js/core/bootstrap.js',
   'js/core/state-storage.js',
+  'js/core/backup.js',
   'js/data/exercise-swaps.js',
   'js/data/programs.js'
 ];
 
 const injectionPaths = [
+  'js/app-ui.js',
   'js/app-update.js',
   'js/rest-native-notifications.js',
   'js/ui-safe-v1.js',

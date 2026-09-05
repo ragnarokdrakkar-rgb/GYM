@@ -134,8 +134,10 @@ function showPage(p){
   page.classList.add('active');
   const isProgress=['cycle','gymlog','bodyweight','body','stats'].includes(p);
   document.querySelectorAll('.nt').forEach(e=>e.classList.remove('active'));
-  const nav=document.querySelector(`.nt[data-nav="${isProgress?'progress':p==='tools'?'tools':'workout'}"]`);if(nav)nav.classList.add('active');
+  const nav=document.querySelector(`.nt[data-nav="${isProgress?'progress':p==='tools'?'tools':p==='program'?'program':'workout'}"]`);if(nav)nav.classList.add('active');
   if(isProgress)setProgressNavActive(p);
+  document.body.dataset.page=p;
+  if(p==='program'&&typeof renderProgramPageV18==='function')renderProgramPageV18();
   safeSetRaw('wt_last_page',p);
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();

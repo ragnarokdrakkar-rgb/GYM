@@ -1,12 +1,13 @@
 {
   "name": "workouttrackerandroid",
-  "version": "1.0.50",
+  "version": "1.1.0",
   "description": "",
   "main": "sw.js",
   "scripts": {
     "build:bundle": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File build-app-bundle.ps1 -Quiet",
     "audit": "node audit-app-code.js --strict --ci",
-    "test": "node --test tests/release-regression.test.js tests/phase-program-separation.test.js && node audit-app-code.js --strict --ci"
+    "test": "node --test tests/*.test.js && node audit-app-code.js --strict --ci",
+    "preview": "node tools/preview-server.cjs"
   },
   "repository": {
     "type": "git",

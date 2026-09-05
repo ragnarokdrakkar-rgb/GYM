@@ -7,7 +7,7 @@ const PROG_CUT={
   ],
   days:[
     {title:"Push A — prsa",sub:"Prsa · ramena · tricepsi",tags:[{t:"Prsa",p:1},{t:"Ramena",p:0},{t:"Tricepsi",p:0}],ex:[
-      {n:"Barbell bench press",m:1,r:REST_T.main,rl:"3 min",d:"Polni razpon, kontroliran spust, eksplozivni dvig. Top set RPE 9.",tip:""},
+      {n:"Barbell bench press",m:1,r:REST_T.main,rl:"3 min",d:"Kontrolirana izvedba. Napor prilagodi današnjemu ciljnemu RPE; ne sili do odpovedi.",tip:""},
       {n:"Incline dumbbell press",m:0,r:REST_T.acc,rl:"90s",d:"30–45° naklon. Polni razteg na dnu.",tip:""},
       {n:"Cable chest fly",m:0,r:REST_T.iso,rl:"60s",d:"Izolacija. Lahka teža, močan stisk.",tip:""},
       {n:"Seated DB shoulder press",m:0,r:REST_T.acc,rl:"90s",d:"Polni razpon nad glavo.",tip:""},
@@ -23,9 +23,9 @@ const PROG_CUT={
       {n:"Hammer curl",m:0,r:REST_T.iso,rl:"60s",d:"Nevtralni prijem, debelina rok.",tip:""},
     ]},
     {title:"Noge — celo spodnje telo",sub:"Kvadricepsi · hamstringi · gluteusi · mečni",tags:[{t:"Kvadricepsi",p:1},{t:"Hamstringi",p:1},{t:"Gluteusi",p:0},{t:"Mečni",p:0}],ex:[
-      {n:"Barbell squat",m:1,r:REST_T.main,rl:"3 min",d:"Kolk pod koleni. Trd trup. 120–140kg med rezanjem.",tip:""},
+      {n:"Barbell squat",m:1,r:REST_T.main,rl:"3 min",d:"Stabilen trup in nadzorovan razpon. Breme prilagodi svoji izvedbi in ciljnemu naporu.",tip:""},
       {n:"Romanian deadlift",m:1,r:REST_T.main,rl:"3 min",d:"Hamstringi in gluteusi. Čuti razteg, ne upogibaj spodnjega hrbta.",tip:""},
-      {n:"Leg press",m:0,r:REST_T.acc,rl:"90s",d:"Višje stopalo za gluteuse. Teži kolikor gre.",tip:""},
+      {n:"Leg press",m:0,r:REST_T.acc,rl:"90s",d:"Nadzorovan razpon brez dvigovanja medenice. Upoštevaj ciljne ponovitve in RPE.",tip:""},
       {n:"Leg curl — seated",m:0,r:REST_T.iso,rl:"60s",d:"Polni razpon. Počasen 3s spust.",tip:""},
       {n:"Leg extension",m:0,r:REST_T.iso,rl:"60s",d:"Izolacija kvadricepsov. Stisni 1s zgoraj.",tip:""},
       {n:"Standing calf raise",m:0,r:REST_T.lat,rl:"45s",d:"Polni razteg na dnu, zadrži 1s zgoraj.",tip:""},
@@ -35,7 +35,7 @@ const PROG_CUT={
       {n:"Dumbbell bench press",m:0,r:REST_T.acc,rl:"90s",d:"Večji razpon kot palica. Globok razteg.",tip:""},
       {n:"Arnold press",m:0,r:REST_T.acc,rl:"90s",d:"Vse tri glave deltoida. Zavrti dlani.",tip:""},
       {n:"Cable lateral raise",m:0,r:REST_T.lat,rl:"45s",d:"Kabel ohranja pritisk spodaj.",tip:""},
-      {n:"Weighted dips",m:0,r:REST_T.acc,rl:"90s",d:"Nagnjen naprej, komolci navzven. Dodaj 20–30kg.",tip:""},
+      {n:"Weighted dips",m:0,r:REST_T.acc,rl:"90s",d:"Nadzorovana izvedba v nebolečem razponu. Dodatno breme izberi glede na cilj ponovitev in napora.",tip:""},
       {n:"Overhead tricep extension",m:0,r:REST_T.iso,rl:"60s",d:"Samo dolga glava raztegnjena nad glavo.",tip:""},
     ]},
     {title:"Pull B — hrbet + noge",sub:"Hrbet · noge · bicepsi",tags:[{t:"Hrbet",p:1},{t:"Kvadricepsi",p:1},{t:"Bicepsi",p:0}],ex:[

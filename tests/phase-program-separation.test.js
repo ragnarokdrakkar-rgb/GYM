@@ -55,5 +55,6 @@ test('backup schema 7 contains shared roster and shared program metadata',()=>{
   assert.match(core,/b\.version=7;b\.schemaVersion=7/);
   assert.match(core,/shared:getDayLists\(\)/);
   assert.match(core,/programMeta=\{shared:getProgramMetaV6\(\)/);
-  assert.match(core,/Number\(backup\.schemaVersion\|\|backup\.version\|\|1\)>7/);
+  assert.match(read('js/core/backup.js'),/version>7/);
+  assert.match(core,/validateBackupP1=validateBackupV18/);
 });

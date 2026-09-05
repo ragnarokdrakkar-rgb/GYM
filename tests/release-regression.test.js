@@ -7,7 +7,7 @@ const path=require('node:path');
 const childProcess=require('node:child_process');
 
 const root=path.resolve(__dirname,'..');
-const version='1.0.50';
+const version='1.1.0';
 
 function read(relativePath){
   return fs.readFileSync(path.join(root,relativePath),'utf8');
@@ -48,6 +48,10 @@ test('all shipped JavaScript files pass syntax validation',()=>{
     'js/app.js',
     'js/core/bootstrap.js',
     'js/core/state-storage.js',
+    'js/core/backup.js',
+    'js/app-ui.js',
+    'js/app-update.js',
+    'js/rest-native-notifications.js',
     'js/data/exercise-swaps.js',
     'js/data/programs.js',
     'sw.js'
@@ -133,5 +137,6 @@ test('critical storage writes use the guarded storage layer',()=>{
   assert.match(storage,/function safeRemoveRaw\(/);
   assert.match(storage,/return safeSetRaw\(k,JSON\.stringify\(v\)\);/);
   assert.match(model,/function saveDayLists\(all\)\{return safeSetRaw/);
-  assert.match(runtime,/safeSetRaw\(LS_SESS,JSON\.stringify\(activeSessionContext\)\)/);
+  assert.match(runtime,/commitStorageBatch\(changes\)/);
+  assert.match(runtime,/\[LS_SESS,JSON\.stringify\(next\)\]/);
 });

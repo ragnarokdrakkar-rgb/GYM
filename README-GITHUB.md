@@ -1,72 +1,50 @@
-# Workout Tracker 1.0.50 — namestitev na GitHub Pages
+# Workout Tracker 1.1.0 — Redline
 
-## Datoteke v tem paketu
+Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
-- `index.html` — nova različica aplikacije.
-- `sw.js` — service worker za posodobitve, offline fallback in obvestilo timerja.
-- `.nojekyll` — GitHub Pages naj datoteke objavi neposredno, brez Jekyll obdelave.
+## Posodobitev na telefonu
 
-Paket namenoma ne vsebuje `manifest.json`, `icon-192.png` in `icon-512.png`, ker jih moraš obdržati iz obstoječega repozitorija. `index.html` se nanje še vedno sklicuje.
+1. Pred nadgradnjo izvozi JSON kopijo v Nastavitvah in jo shrani zunaj aplikacije.
+2. Na [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest) prenesi `Workout-Tracker-v1.1.0.apk`.
+3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-## Preden karkoli zamenjaš
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode je 59. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
 
-1. V stari aplikaciji izberi **Nastavitve → Izvoz**.
-2. Shrani JSON backup na telefon ali računalnik.
-3. V GitHub repozitoriju po želji prenesi tudi star `index.html` kot dodatno kopijo.
+## Novo v 1.1.0
 
-Lokalni IndexedDB snapshoti niso zunanji backup. Ob brisanju podatkov strani ali odstranitvi aplikacije se lahko izgubijo.
+- Črna/rdeča/oranžna postavitev s štirimi zavihki: Trening, Program, Napredek, Nastavitve.
+- Cut/Bulk samo v Nastavitvah. Preklop ohrani vaje, vrstni red, ročne cilje in zgodovino; 5/3/1 ostaja izbira posamezne vaje.
+- En vnos seta: kg, ponovitve, ročni RPE. Pregled in popravki opravljenih setov se odprejo posebej.
+- Fokus z eno vajo, odmor, razlaga predloga bremena in povzetek zaključenega treninga.
+- Strožja progresija: za povečanje so potrebni vsi delovni seti, dosežen cilj ponovitev in RPE. Lastna teža in asistenca ne dobita samodejnega predloga dodatnih kg.
+- Neposredno urejanje osnovnega TM brez ponavljajoče pretvorbe na 90 %.
+- Vidna napaka shranjevanja do uspešnega ponovnega poskusa. Neuspešen zaključek ohrani aktivni trening.
+- Validacija kopije pred uvozom, obnovitveni dnevnik zapisov in združevanje s prednostjo trenutnih konfliktnih zapisov.
+- Nova izvedba istega dne ima svoj ID in sete. Prejšnji zaključeni zapis ter obnovitveni osnutek ostaneta ohranjena.
 
-## Posodobitev obstoječega GitHub repozitorija prek brskalnika
+## Razvoj in preverjanje
 
-1. Odpri svoj GitHub repozitorij.
-2. Preveri, da si na branchu, iz katerega GitHub Pages objavlja stran — običajno `main`.
-3. Klikni **Add file → Upload files**.
-4. Iz tega paketa naloži:
-   - `index.html`
-   - `sw.js`
-   - `.nojekyll`
-5. Ko GitHub opozori, da datoteki že obstajata, je to pravilno: novi datoteki ju morata zamenjati.
-6. V polje za commit napiši na primer: `Workout Tracker 1.0.50`.
-7. Izberi commit neposredno v `main` in potrdi **Commit changes**.
-8. Ne briši obstoječih:
-   - `manifest.json`
-   - `icon-192.png`
-   - `icon-512.png`
+```powershell
+npm ci
+npm run build:bundle
+npm test
+npm run preview
+```
 
-## Prva nastavitev GitHub Pages
+`src/app/` vsebuje izvorne module; `js/app.js` je sestavljen runtime. Po spremembi modulov vedno sestavi bundle. Predogled posluša samo na `127.0.0.1:4173` in ne streže podpisnih datotek ali metapodatkov repozitorija.
 
-Če Pages še ni vključen:
+Za lokalno podpisano sestavo v konfiguriranem Windows okolju:
 
-1. V repozitoriju odpri **Settings → Pages**.
-2. Pri **Build and deployment** izberi **Deploy from a branch**.
-3. Izberi branch `main` in mapo `/(root)`.
-4. Klikni **Save**.
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/build-candidate.ps1
+```
 
-`index.html` mora biti v korenu izbrane objavne mape, ne v dodatni podmapi.
+Skripta izvede teste, oba Release Guard pregleda, pripravo spletnih datotek, Capacitor copy in offline Gradle release build. Ne objavlja na GitHub. Zahteva obstoječi Android SDK/JDK, Gradle predpomnilnik in podpisne nastavitve.
 
-## Po objavi
+## Omejitve
 
-1. Na GitHubu odpri **Actions** in počakaj, da je Pages deployment zelen.
-2. Odpri javni URL aplikacije v običajnem brskalniku.
-3. Preveri, da je v aplikaciji prikazana različica `1.0.50`.
-4. Če je še vedno prikazana stara različica:
-   - popolnoma zapri aplikacijo oziroma zavihek;
-   - ponovno odpri URL;
-   - če to ne pomaga, v nastavitvah brskalnika izbriši podatke samo za to GitHub Pages stran in jo ponovno odpri;
-   - pri nameščeni PWA je v skrajnem primeru potrebna odstranitev in ponovna namestitev.
-
-Pred brisanjem podatkov strani vedno naredi JSON export, saj to izbriše lokalne trening podatke.
-
-## Hiter funkcionalni pregled po posodobitvi
-
-- Spodaj so samo trije zavihki: **Trening**, **Napredek**, **Nastavitve**.
-- AI modul in Google Sheets modul nista več prisotna.
-- Na strani Trening je kartica današnjega treninga.
-- Fokus pokaže eno aktivno vajo in omogoča prejšnjo/naslednjo vajo.
-- Med aktivno sesijo ni mogoče zamenjati tedna, dneva ali profila.
-- Uvoz ponudi **Združi** ali **Zamenjaj vse**.
-- Po koncu treninga se ustvari lokalni snapshot.
-
-## Pomembna omejitev obvestil timerja
-
-Obvestilo ob koncu odmora je odvisno od dovoljenj in pravil Androida/brskalnika. Nobena navadna spletna PWA ne more zagotoviti, da bo service worker ostal živ ves čas, zato naj bo vidni timer še vedno glavni vir resnice.
+- Lokalni IndexedDB snapshot ni zunanji backup. Izvoz shrani tudi zunaj aplikacije.
+- Ob napaki shrambe so neuspešni vnosi v pomnilniku za ponovni poskus/izvoz. Ne zapiraj aplikacije, dokler napake ne odpraviš ali podatkov ne izvoziš.
+- Predlogi progresije so pomoč pri beleženju, ne zagotovilo varnega bremena ali zdravstvena ocena.
+- Nadgradnja na telefonu, tipkovnica Android WebView, dovoljenja in alarm pri zaklenjenem zaslonu potrebujejo preverjanje na napravi.
+- Za GitHub Pages objavi celoten spletni runtime (`index.html`, `css/`, `js/`, `vendor/`, ikone, manifest in `sw.js`), ne samo HTML.

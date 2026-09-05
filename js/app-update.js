@@ -100,6 +100,8 @@
   async function getInstalledVersion() {
     const appPlugin = getPlugin('App');
 
+    if (!appPlugin && !window.__WT_ANDROID_APP__ && typeof APP_VERSION === 'string') return APP_VERSION;
+
     if (
       !appPlugin ||
       typeof appPlugin.getInfo !== 'function'
@@ -475,6 +477,11 @@
 
     const manual = Boolean(manualCheck);
 
+    if (navigator.onLine === false) {
+      if (manual) showMessage('Ni povezave. Trening deluje brez interneta; posodobitve preveri pozneje.', 'err');
+      return;
+    }
+
     if (!manual) {
       const lastCheck = parseInt(
         localStorage.getItem(
@@ -588,7 +595,7 @@
     }
 
     const container =
-      document.querySelector('.topbtns');
+      document.getElementById('wt-update-settings') || document.querySelector('.topbtns');
 
     if (!container) {
       return;
@@ -601,7 +608,7 @@
       'wt-update-check-btn';
 
     button.type = 'button';
-    button.className = 'icon-btn';
+    button.className = 'sb';
 
     button.textContent =
       '⬆ Posodobitve';

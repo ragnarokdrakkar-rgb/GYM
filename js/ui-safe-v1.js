@@ -1,6 +1,10 @@
 (function () {
   'use strict';
 
+  // Redline owns the four-tab layout and settings. Keep this legacy injection
+  // compatible with older HTML without installing a second navigation system.
+  if (document.getElementById('page-program')) return;
+
   const NAV_KEY = 'wt_extra_nav_safe_v1';
   const STYLE_ID = 'wt-safe-ui-style';
   const APP_CARD_ID = 'wt-safe-app-card';

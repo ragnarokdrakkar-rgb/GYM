@@ -88,7 +88,7 @@ function buildImmutableSessionRecord(start,end,durMin,ctx){
   const snap=buildSessionSnapshot(cn,w,di);
   return {
     schemaVersion:4,
-    id:'sess_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),
+    id:c.sessionId||('sess_'+new Date(start).getTime()+'_'+Math.random().toString(36).slice(2,8)),
     date:start.toISOString().split('T')[0],
     startISO:start.toISOString(),endISO:end.toISOString(),
     dayName:DAY_NAMES[di],dayIdx:di,weekNum:w+1,weekIdx:w,cycle:cn,profile,
@@ -111,10 +111,11 @@ function buildSessionSnapshot(cn,w,di){
     const pain=getPain(key);maxPain=Math.max(maxPain,pain);
     const sets=raw.map((s,si)=>{
       const kg=parseFloat(s.kg)||0,reps=parseInt(s.reps)||0,vol=kg*reps;
-      totalSets++; if(s.done)totalDone++; totalTonnage+=s.done?vol:0;
-      return {set:si+1,kg:s.kg||'',reps:s.reps||'',rpe:s.rpe||null,done:!!s.done,drop:!!s.drop,note:s.note||'',volume:vol,exerciseId:s.exerciseId||exStableId(name),exName:s.exName||name};
+      const warmup=s.type==='warmup'||s.warm===true;
+      if(!warmup){totalSets++;if(s.done)totalDone++;totalTonnage+=s.done?vol:0;}
+      return {id:s.id||`${key}:${si}`,sessionId:s.sessionId||null,set:si+1,kg:s.kg??'',reps:s.reps??'',rpe:s.rpe||null,done:!!s.done,type:warmup?'warmup':s.type||'work',drop:!!s.drop,note:s.note||'',volume:vol,exerciseId:s.exerciseId||exStableId(name),rosterId:e.id||null,exName:s.exName||name};
     });
-    exercises.push({key,exerciseId:exStableId(name),name,originalName:e.n||name,isExtra:!!e.extra,isMain:!!e.m,targetSets:n,targetReps:(PROG.weeks[w]||{}).reps||'',pain,sets});
+    exercises.push({key,exerciseId:exStableId(name),rosterId:e.id||null,name,originalName:e.n||name,isExtra:!!e.extra,isMain:!!e.m,loadType:e.loadType||'external',targetSets:n,targetReps:e.targetReps||(PROG.weeks[w]||{}).reps||'',targetRpe:e.targetRpe||(PROG.weeks[w]||{}).rpe||'',pain,sets});
   });
   return {exercises,totals:{sets:totalSets,doneSets:totalDone,tonnage:Math.round(totalTonnage),maxPain}};
 }
@@ -135,9 +136,7 @@ function renderTodayCard(){
   const suggested=getSuggestedDayIndex(),last=getLastSessionForDay(cd),main=getMainSuggestionForDay(cd),isSuggested=suggested===cd;
   const lastTxt=last?`Zadnjič ${last.date}: ${last.durationMin||'?'} min`:'Ta trening še nima session zgodovine';
   const mainTxt=main&&main.kg?`${main.name}: izhodišče ${main.kg} kg`:main?main.name:'';
-  const profile=getActiveProfile()==='bulk'?'bulk':'cut';
-  const phase=profile==='bulk'?'Bulk':'Cut';
-  el.innerHTML=`<div class="today-rail-v17"><span class="today-live-v17">${isSuggested?'Naslednji trening':'Izbran trening'}</span><span class="phase-chip-v17 ${profile}" title="Fazo spremeniš v Nastavitvah">${phase}</span></div><div class="today-card-grid"><div class="today-copy-v17"><div class="today-eyebrow">Cikel ${getCyc().num} · Teden ${cw+1}</div><div class="today-title">${safeHtml(PROG.days[cd].title)}</div><div class="today-meta"><span>${safeHtml(lastTxt)}</span>${mainTxt?`<span>${safeHtml(mainTxt)}</span>`:''}</div></div><button class="today-action" onclick="startTodayWorkout()"><span>${stRun?'Nadaljuj':'Začni'}</span><small>${stRun?'aktivni trening':'trening zdaj'}</small><b aria-hidden="true">→</b></button></div>${!isSuggested?`<div class="today-secondary"><span>Predlagan je ${safeHtml(DAY_NAMES[suggested])}</span><button class="sb" onclick="openSuggestedWorkout(${suggested})">Odpri predlog →</button></div>`:''}`;
+  el.innerHTML=`<div class="today-copy-v17"><div class="today-eyebrow">${stRun?'Trening poteka':'Pripravljen na trening'} · Cikel ${getCyc().num} / Teden ${cw+1}</div><div class="today-title">${safeHtml(PROG.days[cd].title)}</div><div class="today-meta">${safeHtml(lastTxt)}</div></div>`;
 }
 function openSuggestedWorkout(di){showDay(di);renderTodayCard();}
 function startTodayWorkout(){
@@ -163,22 +162,11 @@ function sanitizeImported(value,depth=0){
   return value;
 }
 function validateBackupP1(backup){
-  if(!backup||typeof backup!=='object'||Array.isArray(backup))return {ok:false,msg:'Datoteka ni veljaven JSON objekt.'};
-  if(!backup.sets||typeof backup.sets!=='object'||Array.isArray(backup.sets))return {ok:false,msg:'Backup ne vsebuje sets podatkov.'};
-  if(backup.sessions!==undefined&&!Array.isArray(backup.sessions))return {ok:false,msg:'sessions mora biti seznam.'};
-  if(Number(backup.schemaVersion||backup.version||1)>5)return {ok:false,msg:'Backup je iz novejše verzije aplikacije.'};
-  let rows=0;
-  for(const [k,v] of Object.entries(backup.sets)){
-    if(!/^c\d+w\d+d\d+e\d+$/.test(k)||!Array.isArray(v))return {ok:false,msg:'Pokvarjen ključ setov: '+k};
-    rows+=v.length;if(rows>250000)return {ok:false,msg:'Backup vsebuje nenormalno veliko setov.'};
-    for(const set of v){if(!set||typeof set!=='object'||Array.isArray(set))return {ok:false,msg:'Neveljaven zapis seta.'};const kg=parseFloat(set.kg||0),reps=parseInt(set.reps||0);if(kg<0||kg>1500||reps<0||reps>1000)return {ok:false,msg:'Backup vsebuje nerealne kg ali ponovitve.'};}
-  }
-  if(Array.isArray(backup.sessions)&&backup.sessions.length>100000)return {ok:false,msg:'Preveč session zapisov.'};
-  return {ok:true,msg:'OK'};
+  return validateBackupV18(backup);
 }
 function backupSummaryP1(backup){
   const setKeys=backup.sets?Object.keys(backup.sets).length:0,setRows=backup.sets?Object.values(backup.sets).reduce((a,v)=>a+(Array.isArray(v)?v.length:0),0):0,sess=Array.isArray(backup.sessions)?backup.sessions.length:0,bw=backup.bw?Object.keys(backup.bw).length:0,pain=backup.pain?Object.keys(backup.pain).length:0,bd=backup.date?String(backup.date).split('T')[0]:'neznan datum',bv=backup.schemaVersion||backup.version||'?';
-  return `Backup ${bd} · shema ${bv}\n${sess} sessionov · ${setKeys} vaj / ${setRows} setov · ${bw} meritev teže · ${pain} zapisov bolečine\n\nZamenjaj vse = popolna obnova. Združi = uvoženi zapisi dopolnijo trenutno bazo.`;
+  return `Backup ${bd} · shema ${bv}\n${sess} treningov · ${setKeys} vaj / ${setRows} setov · ${bw} meritev teže · ${pain} zapisov bolečine\n\nZamenjaj vse = popolna obnova. Združi = dodaj manjkajoče zapise; ob konfliktu obdrži trenutne podatke. Program, faza in nastavitve se pri združevanju ne zamenjajo.`;
 }
 function mergeObj(current,incoming){return {...(current&&typeof current==='object'?current:{}),...(incoming&&typeof incoming==='object'?incoming:{})};}
 function mergeSessions(current,incoming){
@@ -188,23 +176,29 @@ function mergeSessions(current,incoming){
 const MANAGED_LOCAL_KEYS=[...Object.values(LS),'wt_sugs6','wt_bwgoal','wt_alarm6','wt_collars_kg','wt_exswap','wt_extra_ex','wt_hidden_ex','wt_daylist_cut','wt_daylist_bulk','wt_daylist_shared_v16','wt_daylist_migration_v16','wt_program_meta_shared_v16','wt_ex_ordernames','wt_rep_prs','wt_phases','wt_profile','wt_531tm','wt_531offset','wt_goals','wt_daylog','wt_custom_ex','wt_kg_step','wt_reps_step','wt_colors','wt_custom_rest','wt_compact','wt_gym_mode','wt_active_ex','wt_active_timer'];
 function clearManagedData(){MANAGED_LOCAL_KEYS.forEach(k=>localStorage.removeItem(k));}
 async function restoreBackupObjectP1(rawBackup,opts={}){
-  const checked=validateBackupP1(rawBackup);if(!checked.ok)throw new Error(checked.msg);
+  if(stRun||window.v6RecoveryPending||localStorage.getItem('wt_active_sess'))throw new Error('Najprej zaključi ali obnovi aktivni trening.');
+  const checked=validateBackupV18(rawBackup);if(!checked.ok)throw new Error(checked.msg);
   const backup=sanitizeImported(rawBackup),mode=opts.mode||'replace';
-  if(mode==='replace')clearManagedData();
-  const putObj=(key,val,getter)=>{if(val===undefined)return;const next=mode==='merge'?mergeObj(getter(),val):val;lss(key,next);};
-  putObj(LS.sets,backup.sets,getSets);putObj(LS.pr,backup.pr||{},getPRs);putObj(LS.notes,backup.notes||{},getNotes);putObj(LS.bw,backup.bw||{},getBW);putObj(LS.meas,backup.meas||{},getMeas);putObj(LS.gym,backup.gym||{},getGym);putObj(LS.pain,backup.pain||{},getPainData);putObj(LS.cynotes,backup.cynotes||{},getCyNotes);putObj(LS.restplan,backup.restplan||{},getRestPlan);putObj(LS.setcounts,backup.setcounts||{},getSetCounts);
-  if(backup.cycle){const cur=getCyc(),inc=backup.cycle;saveCyc(mode==='merge'?{num:Math.max(cur.num||1,inc.num||1),startDates:mergeObj(cur.startDates,inc.startDates)}:inc);}
-  if(mode==='merge')saveSessions(mergeSessions(getSessions(),backup.sessions||[]));else saveSessions(Array.isArray(backup.sessions)?backup.sessions:[]);
-  const setRaw=(k,v,merge=false)=>{if(v===undefined)return;if(merge){let cur={};try{cur=JSON.parse(localStorage.getItem(k)||'{}');}catch(e){}localStorage.setItem(k,JSON.stringify(mergeObj(cur,v)));}else localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));};
-  if(backup.bwgoal!==undefined)localStorage.setItem('wt_bwgoal',String(backup.bwgoal));
-  let importedTheme=backup.theme;if(importedTheme==='"dark"'||importedTheme==='"light"'){try{importedTheme=JSON.parse(importedTheme);}catch(e){}}if(importedTheme==='dark'||importedTheme==='light')localStorage.setItem(LS.theme,importedTheme);
-  if(backup.alarm)saveAlarmSettings(backup.alarm);if(backup.collars!==undefined)setCollars(backup.collars);
-  setRaw('wt_exswap',backup.swaps,mode==='merge');setRaw('wt_extra_ex',backup.extra_ex,mode==='merge');setRaw('wt_hidden_ex',backup.hidden_ex,mode==='merge');setRaw('wt_ex_ordernames',backup.ex_ordernames,mode==='merge');setRaw('wt_rep_prs',backup.rep_prs,mode==='merge');
-  if(backup.daylists){if(backup.daylists.cut)setRaw('wt_daylist_cut',backup.daylists.cut);if(backup.daylists.bulk)setRaw('wt_daylist_bulk',backup.daylists.bulk);if(backup.daylists.shared)setRaw('wt_daylist_shared_v16',backup.daylists.shared);}
-  if(backup.phases)setRaw('wt_phases',backup.phases);if(backup.profile)setRaw('wt_profile',backup.profile);if(backup.tm531)setRaw('wt_531tm',backup.tm531);if(backup.offset531!==undefined)setRaw('wt_531offset',String(backup.offset531));if(backup.goals)setRaw('wt_goals',backup.goals);if(backup.daylog)setRaw('wt_daylog',backup.daylog,mode==='merge');if(backup.custom_ex)setRaw(CUST_KEY,backup.custom_ex);if(backup.kg_step)setRaw('wt_kg_step',String(backup.kg_step));if(backup.reps_step)setRaw('wt_reps_step',String(backup.reps_step));if(backup.sugs)setRaw('wt_sugs6',backup.sugs);if(backup.colors)setRaw('wt_colors',backup.colors);if(backup.custom_rest)setRaw('wt_custom_rest',backup.custom_rest);if(backup.compact!==undefined)setRaw('wt_compact',backup.compact?'1':'0');if(backup.gym_mode!==undefined)setRaw('wt_gym_mode',backup.gym_mode?'1':'0');
-  if(opts.photos&&Array.isArray(backup.photos)&&backup.photos.length>0&&await uiConfirm(`Backup vsebuje ${backup.photos.length} fotografij. ${mode==='replace'?'Zamenjam':'Dodam'} tudi fotografije?`)){
-    const db=await openPhotoDB();if(mode==='replace')await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).clear();tx.oncomplete=res;});for(const p of backup.photos){if(p&&p.blob)await new Promise(res=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).add({date:p.date||new Date().toISOString(),blob:p.blob});tx.oncomplete=res;});}
+  const plan=buildRestorePlanV18(backup,mode);
+  commitStorageBatch(plan);
+  // Photos use their own single IndexedDB transaction; a failed photo import is
+  // explicitly distinguished from the successfully restored training data.
+  let photoError=false;
+  if(opts.photos&&Array.isArray(backup.photos)&&backup.photos.length&&await uiConfirm(`Treningi so obnovljeni. ${mode==='replace'?'Zamenjam':'Dodam'} tudi ${backup.photos.length} fotografij?`)){
+    try{
+      const db=await openPhotoDB();
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction(DB_STORE,'readwrite'),store=tx.objectStore(DB_STORE);
+        tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error('Photo import aborted'));
+        if(mode==='replace')store.clear();
+        for(const p of backup.photos){if(p&&p.blob)store.add({date:p.date||new Date().toISOString(),blob:p.blob});}
+      });
+    }catch(error){photoError=true;}
   }
-  PROG=buildPhaseProgramV16(getActiveProfile());try{ensureDayLists();}catch(e){}initTheme();applyAllColors();initBWGoal();cw=0;cd=0;localStorage.setItem('wt_last_week','0');localStorage.setItem('wt_last_day','0');localStorage.removeItem('wt_active_ex');localStorage.removeItem('wt_active_timer');document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===0));showPage('workout');showDay(0);initP1();
+  applyProgramStateV6();ensureDayLists();initTheme();applyAllColors();initBWGoal();
+  if(mode==='replace'){cw=0;cd=0;}
+  renderDayTabsV6();renderV6Settings();initProfileUI();showPage('workout');showDay(cd);initP1();
+  if(photoError)await uiConfirm('Treningi so obnovljeni, fotografij pa ni bilo mogoče uvoziti. Prejšnje fotografije so ostale ohranjene.','Razumem');
+  return {ok:true,photos:photoError?'failed':'unchanged-or-restored'};
 }
 

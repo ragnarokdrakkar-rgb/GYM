@@ -494,24 +494,16 @@ function renderBWStats(entries,goal){
 function getPhases(){try{return JSON.parse(localStorage.getItem('wt_phases')||'[]');}catch{return [];}}
 function savePhases(p){localStorage.setItem('wt_phases',JSON.stringify(p));}
 function startPhase(){
-  const type=document.getElementById('phase-type').value;
-  const phases=getPhases();
-  const today=new Date().toISOString().split('T')[0];
-  // Zaključi prejšnjo fazo
-  if(phases.length>0&&!phases[phases.length-1].end){
-    phases[phases.length-1].end=today;
-  }
-  phases.push({type,start:today,end:null});
-  savePhases(phases);
-  renderPhases();
-  toast('✓ Faza '+type+' začeta','ok');
+  showPage('tools');
+  document.getElementById('profile-status')?.scrollIntoView({block:'center',behavior:'smooth'});
 }
 function endPhase(idx){
-  const phases=getPhases();
-  if(phases[idx]){phases[idx].end=new Date().toISOString().split('T')[0];savePhases(phases);renderPhases();}
+  startPhase();
 }
 function deletePhase(idx){
-  const phases=getPhases();phases.splice(idx,1);savePhases(phases);renderPhases();
+  const phases=getPhases();
+  if(phases[idx]&&!phases[idx].end){toast('Aktivno fazo spremeni v Nastavitvah.','err');return;}
+  phases.splice(idx,1);savePhases(phases);renderPhases();
 }
 function renderPhases(){
   const el=document.getElementById('phase-list');if(!el)return;
@@ -1188,6 +1180,19 @@ function getE1RMHistory(){
   Object.entries(BIG_LIFTS).forEach(([key,exName])=>{lifts[exName]=[];});
   const sessions=getSessions().slice().reverse();
   sessions.forEach(s=>{
+    if(Array.isArray(s.exercises)){
+      // Locked snapshots are the historical source of truth, even after
+      // another execution replaces the editable rows for this day/week.
+      s.exercises.forEach(ex=>{
+        if(ex.loadType==='bodyweight'||ex.loadType==='assisted')return;
+        const sets=(ex.sets||[]).filter(x=>x.done&&x.type!=='warmup'&&!x.warm&&!x.drop&&Number(x.kg)>0&&Number(x.reps)>0);
+        if(!sets.length)return;
+        const best=Math.max(...sets.map(x=>Number(x.kg)*(1+Number(x.reps)/30)));
+        if(!lifts[ex.name])lifts[ex.name]=[];
+        lifts[ex.name].push({date:s.date,e1rm:Math.round(best)});
+      });
+      return;
+    }
     const di=DAY_NAMES.indexOf(s.dayName);if(di<0)return;
     // SAMO pravi teden te sesije
     const w=Math.max(0,(s.weekNum||1)-1);
@@ -1448,19 +1453,19 @@ function getDaysSinceLastBackup(){
   return Math.floor((Date.now()-new Date(last).getTime())/86400000);
 }
 
-// === IDB BACKUP STORAGE — preživi reinstall PWA, hrani zadnjih 12 backupov ===
+// === IDB BACKUP STORAGE — local snapshots; clearing app/site data removes them ===
 async function saveBackupToIDB(blob,label){
   const db=await openPhotoDB();
   return new Promise((res,rej)=>{
     const tx=db.transaction(BK_STORE,'readwrite');
     const obj={date:new Date().toISOString(),label:label||'auto',blob:blob,sizeKB:Math.round(blob.length/1024)};
     tx.objectStore(BK_STORE).add(obj);
-    tx.oncomplete=async()=>{
-      // Cleanup — drži samo zadnjih 4
-      await pruneOldBackups(12);
-      res();
+    tx.oncomplete=()=>{
+      res(); // The acknowledged snapshot is valid even if later housekeeping fails.
+      pruneOldBackups(12).catch(error=>console.warn('Snapshot cleanup failed',error.name));
     };
     tx.onerror=()=>rej(tx.error);
+    tx.onabort=()=>rej(tx.error||new Error('Snapshot transaction aborted'));
   });
 }
 

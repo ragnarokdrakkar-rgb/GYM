@@ -1,12 +1,12 @@
 // ============== PROFIL SISTEM ==============
 function getActiveProfile(){return localStorage.getItem('wt_profile')||'cut';}
 function setActiveProfile(p){localStorage.setItem('wt_profile',p);}
-// 5/3/1 Training Max-i (90% 1RM) — uporabnik vnese 1RM
+// 5/3/1: neposredno urejanje osnovnega Training Max (TM).
 function get531TMs(){try{return JSON.parse(localStorage.getItem('wt_531tm')||'{}');}catch{return {};}}
-function save531TMs(t){localStorage.setItem('wt_531tm',JSON.stringify(t));}
+function save531TMs(t){return safeSetRaw('wt_531tm',JSON.stringify(t));}
 // Koliko ciklov 5/3/1 je bilo opravljenih (za progresijo TM)
 function get531CycleOffset(){return parseInt(localStorage.getItem('wt_531offset')||'0');}
-function set531CycleOffset(n){localStorage.setItem('wt_531offset',String(n));}
+function set531CycleOffset(n){return safeSetRaw('wt_531offset',String(n));}
 
 // Cut/Bulk je faza, ne drug seznam vaj. Program ostane uporabnikov, faza pa
 // določa tedenske cilje. 5/3/1 se vklopi samo na posamezni vaji v builderju.
@@ -16,9 +16,9 @@ const PHASE_PLANS_V16={
     weeks:PROG_CUT.weeks.map(w=>({...w}))
   },
   bulk:{
-    label:'Bulk',eyebrow:'RAST',summary:'Več delovnih serij in prostora za postopno napredovanje.',
+    label:'Bulk',eyebrow:'RAST',summary:'Postopna rast; več privzetih serij v tretjem tednu. Tvoje prilagoditve ostanejo.',
     weeks:[
-      {reps:'6–10',rpe:'RPE 7–8',sM:4,sA:3,pill:'bl',rb:'rh',dl:false,label:'Osnova'},
+      {reps:'6–10',rpe:'RPE 7–8',sM:5,sA:4,pill:'bl',rb:'rh',dl:false,label:'Osnova'},
       {reps:'8–12',rpe:'RPE 8',sM:4,sA:4,pill:'gr',rb:'rm',dl:false,label:'Volumen'},
       {reps:'6–10',rpe:'RPE 8–9',sM:5,sA:4,pill:'am',rb:'rh',dl:false,label:'Napredek'},
       {reps:'8–10',rpe:'RPE 6',sM:3,sA:3,pill:'gr',rb:'rl',dl:true,label:'Deload'}
@@ -79,12 +79,20 @@ async function switchProfile(p){
   if(p===cur){toast('Faza '+(p==='bulk'?'Bulk':'Cut')+' je že aktivna.','ok');return false;}
   const accepted=await uiConfirm(
     `Preklopim na ${p==='bulk'?'Bulk':'Cut'}?\n\n`+
-    'Tvoje izbrane vaje, njihov vrstni red in zgodovina ostanejo enaki. Spremenijo se samo tedenski cilji setov, ponovitev in RPE.'
+    'Vaje, vrstni red, zgodovina in tvoji ročni cilji ostanejo enaki. Privzeti cilji po tednih:\n'+
+    PHASE_PLANS_V16[p].weeks.map((w,i)=>`${i+1}. ${w.sM}/${w.sA} serij (glavna/dodatna), ${w.reps} pon., ${w.rpe}`).join('\n')+
+    '\n\nFaza se začne danes. 5/3/1 se ne vklopi samodejno.'
   );
   if(!accepted)return false;
-  setActiveProfile(p);
+  const phases=getPhases(),now=new Date(),today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
+  phases.forEach(phase=>{if(!phase.end)phase.end=today;});
+  phases.push({type:p,start:today,end:null});
+  try{commitStorageBatch(new Map([['wt_profile',p],['wt_phases',JSON.stringify(phases)]]));}
+  catch(error){toast(error.message,'err');return false;}
   PROG=buildPhaseProgramV16(p);
+  applyProgramStateV6(p);ensureDayLists();
   initProfileUI();
+  showDay(cd);renderPhases();
   toast('Faza '+(p==='bulk'?'Bulk':'Cut')+' je aktivna. Vaje so ostale enake.','ok');
   return true;
 }
@@ -138,19 +146,21 @@ function renderPhaseHubV16(){
 function save531FromInputs(){
   const tms=get531TMs();
   let any=false;
-  ['bench','squat','deadlift','ohp'].forEach(l=>{
+  for(const l of ['bench','squat','deadlift','ohp']){
     const inp=document.getElementById('tm-'+l);
     if(inp&&inp.value){
-      // Vnos je 1RM, shranimo TM = 90% (zaokroženo)
-      const oneRM=parseFloat(inp.value);
-      if(oneRM>0){tms[l]=roundToPlate(oneRM*0.9);any=true;}
+      // Direct base TM editing is idempotent; no repeated 90% conversion.
+      const tm=Number(inp.value);
+      if(!Number.isFinite(tm)||tm<=0||tm>1500){toast('Vsi vneseni TM morajo biti med 0 in 1500 kg.','err');return false;}
+      tms[l]=tm;any=true;
     }
-  });
-  if(!any){toast('Vnesi vsaj en 1RM','err');return;}
-  save531TMs(tms);
+  }
+  if(!any){toast('Vnesi veljaven osnovni Training Max.','err');return false;}
+  if(!save531TMs(tms))return false;
   render531Current();
-  if(getActiveProfile()==='bulk')showDay(cd);
+  showDay(cd);
   toast('✓ Training Max-i shranjeni','ok');
+  return true;
 }
 
 function render531Current(){
@@ -162,21 +172,21 @@ function render531Current(){
     const tm=getCurrentTM(k);
     return `${lbl} TM ${tm}kg`;
   });
-  el.innerHTML=parts.length?`Trenutni TM (cikel ${offset+1}): ${parts.join(' · ')}`:'Ni vnesenih 1RM-jev.';
+  el.innerHTML=parts.length?`Trenutni TM (cikel ${offset+1}): ${parts.join(' · ')}`:'Ni vnesenih osnovnih TM.';
 }
 
 async function advance531Cycle(){
   if(!await uiConfirm('Zaključi cikel? TM se poveča: +2.5kg bench/OHP, +5kg squat/deadlift.'))return;
-  set531CycleOffset(get531CycleOffset()+1);
+  if(!set531CycleOffset(get531CycleOffset()+1))return;
   render531Current();
-  if(getActiveProfile()==='bulk')showDay(cd);
+  showDay(cd);
   toast('✓ Nov cikel — TM povišan','ok');
 }
 async function reset531Cycle(){
-  if(!await uiConfirm('Resetiraj progresijo ciklov na začetek (TM nazaj na osnovne 1RM)?'))return;
-  set531CycleOffset(0);
+  if(!await uiConfirm('Resetiraj progresijo ciklov na začetek (TM nazaj na osnovne TM)?'))return;
+  if(!set531CycleOffset(0))return;
   render531Current();
-  if(getActiveProfile()==='bulk')showDay(cd);
+  showDay(cd);
   toast('↺ Cikli resetirani','ok');
 }
 // Per-vaja: {primary: [muscles], secondary: [muscles], category}

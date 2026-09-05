@@ -1,13 +1,19 @@
-/* Workout Tracker service worker v1.0.50 */
-const CACHE_NAME = 'workout-tracker-v1.0.50-forge-ui1-js4-core3-data2-state3-programs2';
+/* Workout Tracker service worker v1.1.0 */
+const CACHE_NAME = 'workout-tracker-v1.1.0-redline-ui1-state4-backup1';
 const CORE_FILES = [
   './',
   './index.html',
   './js/core/bootstrap.js',
   './js/core/state-storage.js',
+  './js/core/backup.js',
   './js/data/exercise-swaps.js',
   './js/data/programs.js',
   './js/app.js',
+  './js/app-ui.js',
+  './js/app-update.js',
+  './js/rest-native-notifications.js',
+  './js/ui-safe-v1.js',
+  './js/workout/set-log.js',
   './css/app.css',
   './vendor/chart.umd.js',
   './manifest.json',

@@ -894,7 +894,11 @@ async function sv(key,si,field,val,di,ei,cn,isBarbell){
   const _exObj=PROG.days[di].ex[ei];
   const _curName=getSwappedName(key,_exObj?_exObj.n:'',_exObj&&_exObj.extra);
   if(_curName){all[key][si].exName=_curName;all[key][si].exerciseId=exStableId(_curName);}
-  saveSets(all);
+  if(typeof activeSessionContext!=='undefined'&&activeSessionContext?.sessionId){
+    all[key][si].sessionId=activeSessionContext.sessionId;
+    all[key][si].id=all[key][si].id||`${activeSessionContext.sessionId}:${key}:${si}`;
+  }
+  if(!saveSets(all))return false;
   rebuildRows(key,di,ei,wk,n,all[key]);checkPR(key,di,ei,all[key]);
   if(field==='kg'){
     const kg=parseFloat(val)||0;
@@ -1037,7 +1041,11 @@ function tgSet(key,si,di,ei,cn){
   const _exO=PROG.days[di].ex[ei];
   const _cn=getSwappedName(key,_exO?_exO.n:'',_exO&&_exO.extra);
   if(_cn){all[key][si].exName=_cn;all[key][si].exerciseId=exStableId(_cn);}
-  saveSets(all);
+  if(typeof activeSessionContext!=='undefined'&&activeSessionContext?.sessionId){
+    all[key][si].sessionId=activeSessionContext.sessionId;
+    all[key][si].id=all[key][si].id||`${activeSessionContext.sessionId}:${key}:${si}`;
+  }
+  if(!saveSets(all))return false;
   const btns=document.querySelectorAll(`#ec-${key} .lb`);
   if(btns[si]){btns[si].classList.toggle('done',all[key][si].done);btns[si].textContent=all[key][si].done?'✓':'Zapiši';btns[si].setAttribute('aria-label',(all[key][si].done?'Razveljavi':'Zabeleži')+' set '+(si+1));}
   if(all[key][si].done){
@@ -1308,23 +1316,65 @@ function swMessage(msg){
 // === SESSION PERSISTENCE ===
 const LS_SESS='wt_active_sess';
 
-let activeSessionContext=null;
+let activeSessionContext=null,sessionTransitionBusy=false;
+function newSessionContextV18(now=new Date()){
+  return {sessionId:'sess_'+now.getTime()+'_'+Math.random().toString(36).slice(2,10),startMs:now.getTime(),startISO:now.toISOString(),dayIdx:cd,weekIdx:cw,cycle:getCyc().num,profile:getActiveProfile()};
+}
+function sessionMatchesPlanV18(record,ctx){return record.cycle===ctx.cycle&&(record.weekIdx??record.weekNum-1)===ctx.weekIdx&&record.dayIdx===ctx.dayIdx;}
+async function restorePreviousDayDraftV18(){
+  if(stRun||window.v6RecoveryPending){toast('Najprej zaključi aktivni trening.','err');return false;}
+  let draft;try{draft=JSON.parse(localStorage.getItem('wt_previous_day_draft_v18')||'null');}catch(error){}
+  if(!draft?.sets){toast('Ni shranjenih vnosov pred novo izvedbo.','err');return false;}
+  const checked=validateBackupV18({version:7,sets:draft.sets});
+  if(!checked.ok){toast(checked.msg,'err');return false;}
+  if(!await uiConfirm('Obnovim vnose pred zadnjo novo izvedbo? Trenutni vnosi tega dne bodo zamenjani; zaključeni treningi ostanejo v zgodovini.','Obnovi vnose'))return false;
+  const all=getSets(),previous=Object.fromEntries(Object.keys(draft.sets).map(k=>[k,all[k]||[]]));
+  Object.assign(all,draft.sets);
+  try{commitStorageBatch(new Map([[LS.sets,JSON.stringify(all)],['wt_previous_day_draft_v18',JSON.stringify({date:new Date().toISOString(),sets:previous})]]));}
+  catch(error){toast(error.message,'err');return false;}
+  showDay(cd);toast('Vnosi obnovljeni; prejšnje stanje je na voljo za povrnitev.','ok');return true;
+}
 function tickSessionClock(){const el=document.getElementById('st-d');if(!el||!stStart)return;const d=Math.max(0,Math.floor((Date.now()-stStart)/1000));el.textContent=pad(Math.floor(d/3600))+':'+pad(Math.floor((d%3600)/60))+':'+pad(d%60);}
 async function toggleSess(){
+  if(sessionTransitionBusy)return false;
+  sessionTransitionBusy=true;
+  try{return await transitionSessionV18();}
+  finally{sessionTransitionBusy=false;}
+}
+async function transitionSessionV18(){
   const dot=document.getElementById('sess-dot');
   if(!stRun){
-    if('Notification' in window&&Notification.permission==='default'){try{Notification.requestPermission();}catch(e){}}
-    sessStart=new Date();stStart=Date.now();stRun=true;activeSessionContext={startMs:stStart,startISO:sessStart.toISOString(),dayIdx:cd,weekIdx:cw,cycle:getCyc().num,profile:getActiveProfile()};
-    safeSetRaw(LS_SESS,JSON.stringify(activeSessionContext));
+    if(window.v6RecoveryPending){toast('Najprej nadaljuj ali zavrzi najdeni trening.','err');return false;}
+    if(!retryPendingStorageWrites()){toast('Najprej shrani čakajoče vnose.','err');return false;}
+    const next=newSessionContextV18(),all=getSets(),prefix=`c${next.cycle}w${next.weekIdx}d${next.dayIdx}e`;
+    const prior=getSessions().find(s=>sessionMatchesPlanV18(s,next));
+    const dayKeys=Object.keys(all).filter(k=>k.startsWith(prefix));
+    const hasOldDone=dayKeys.some(k=>(all[k]||[]).some(s=>s.done));
+    const changes=new Map([[LS_SESS,JSON.stringify(next)]]);
+    if(prior&&hasOldDone){
+      if(!await uiConfirm('Ta dan ima že opravljene sete. Začnem novo izvedbo s praznimi seti? Prejšnji trening ostane v zgodovini, trenutni vnosi pa v obnovitvenem osnutku.','Nova izvedba'))return false;
+      const oldDay=Object.fromEntries(dayKeys.map(k=>[k,all[k]]));
+      changes.set('wt_previous_day_draft_v18',JSON.stringify({date:new Date().toISOString(),sets:oldDay}));
+      dayKeys.forEach(k=>{all[k]=[];});
+      changes.set(LS.sets,JSON.stringify(all));
+    }
+    try{commitStorageBatch(changes);}catch(error){toast(error.message,'err');return false;}
+    activeSessionContext=next;sessStart=new Date(next.startISO);stStart=next.startMs;stRun=true;
     if(dot)dot.classList.add('on');document.getElementById('st-b').textContent='Zaključi';document.getElementById('st-b').classList.add('active');document.getElementById('st-s').textContent=`${sessStart.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'})} · ${DAY_NAMES[activeSessionContext.dayIdx]}`;
-    clearInterval(stInt);stInt=setInterval(tickSessionClock,1000);tickSessionClock();renderTodayCard();return;
+    clearInterval(stInt);stInt=setInterval(tickSessionClock,1000);tickSessionClock();showDay(cd);renderTodayCard();return true;
   }
   const ctx=activeSessionContext||JSON.parse(localStorage.getItem(LS_SESS)||'{}');
   if(!await uiConfirm(`Zaključi trening ${DAY_NAMES[ctx.dayIdx??cd]}?`,'Zaključi'))return;
-  clearInterval(stInt);stRun=false;localStorage.removeItem(LS_SESS);if(dot)dot.classList.remove('on');
-  const end=new Date(),dur=Math.floor((end-sessStart)/1000),durMin=Math.max(0,Math.floor(dur/60)),record=buildImmutableSessionRecord(sessStart,end,durMin,ctx),sessions=getSessions();sessions.unshift(record);saveSessions(sessions);
+  if(!retryPendingStorageWrites()){toast('Trening še ni shranjen. Ponovi shranjevanje ali izvozi čakajoče podatke.','err');return false;}
+  const end=new Date(),dur=Math.floor((end-sessStart)/1000),durMin=Math.max(0,Math.floor(dur/60)),record=buildImmutableSessionRecord(sessStart,end,durMin,ctx);
+  const sessions=getSessions().filter(s=>s.id!==record.id);sessions.unshift(record);
+  try{commitStorageBatch(new Map([[LS.sessions,JSON.stringify(sessions)],[LS_SESS,null],['wt_session_draft_v6',null]]));}
+  catch(error){toast(error.message,'err');return false;}
+  clearInterval(stInt);stRun=false;if(dot)dot.classList.remove('on');
   document.getElementById('st-b').textContent='Začni trening';document.getElementById('st-b').classList.remove('active');document.getElementById('st-d').textContent='00:00:00';document.getElementById('st-s').textContent=`Zadnji: ${durMin}min · ${record.dayName}`;
-  sessStart=null;activeSessionContext=null;await autoBackupToIDB();setGymMode(false);renderTodayCard();toast('✓ Trening shranjen + lokalni snapshot','ok');
+  sessStart=null;activeSessionContext=null;const backedUp=await autoBackupToIDB();setGymMode(false);renderTodayCard();
+  toast(backedUp?'✓ Trening shranjen · lokalna kopija pripravljena':'Trening je shranjen, lokalna kopija pa ni uspela. Izvozi zunanjo kopijo.',backedUp?'ok':'err');
+  return true;
 }
 function restoreSession(){
   const raw=localStorage.getItem(LS_SESS);if(!raw)return;

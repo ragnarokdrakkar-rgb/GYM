@@ -5,20 +5,20 @@ const V6_KEYS={
   settings:'wt_v6_settings',restLog:'wt_rest_log_v6',draft:'wt_session_draft_v6',
   metaCut:'wt_program_meta_cut',metaBulk:'wt_program_meta_bulk',metaShared:'wt_program_meta_shared_v16',lastExternal:'wt_last_external_backup_v6'
 };
-const V6_DEFAULTS={progression:true,smartRest:true,restWarning:true,rpeUp:8.5,rpeDown:9.5,completionUp:90,painStop:4};
+const V6_DEFAULTS={progression:true,smartRest:true,restWarning:true,rpeUp:8.5,rpeDown:9.5,completionUp:100,painStop:4};
 function getV6Settings(){try{return {...V6_DEFAULTS,...JSON.parse(localStorage.getItem(V6_KEYS.settings)||'{}')};}catch{return {...V6_DEFAULTS};}}
-function saveV6Settings(s){localStorage.setItem(V6_KEYS.settings,JSON.stringify({...V6_DEFAULTS,...s}));}
-function toggleV6Setting(k){const s=getV6Settings();s[k]=!s[k];saveV6Settings(s);renderV6Settings();if(cd!==undefined)showDay(cd);}
+function saveV6Settings(s){return safeSetRaw(V6_KEYS.settings,JSON.stringify({...V6_DEFAULTS,...s,completionUp:100}));}
+function toggleV6Setting(k){const s=getV6Settings();s[k]=!s[k];if(!saveV6Settings(s))return;renderV6Settings();if(cd!==undefined)showDay(cd);}
 function saveProgressionSettingsV6(){const s=getV6Settings();
   s.rpeUp=Math.max(6,Math.min(10,parseFloat(document.getElementById('v6-rpe-up')?.value)||8.5));
   s.rpeDown=Math.max(7,Math.min(10,parseFloat(document.getElementById('v6-rpe-down')?.value)||9.5));
-  s.completionUp=Math.max(50,Math.min(100,parseInt(document.getElementById('v6-completion-up')?.value)||90));
+  s.completionUp=100;
   s.painStop=Math.max(1,Math.min(10,parseInt(document.getElementById('v6-pain-stop')?.value)||4));
-  saveV6Settings(s);toast('✓ Pravila shranjena','ok');if(cd!==undefined)showDay(cd);
+  if(!saveV6Settings(s))return;toast('✓ Pravila shranjena','ok');if(cd!==undefined)showDay(cd);
 }
 function renderV6Settings(){const s=getV6Settings();
   [['v6-prog-toggle','progression'],['v6-rest-toggle','smartRest'],['v6-rest-warn-toggle','restWarning']].forEach(([id,k])=>document.getElementById(id)?.classList.toggle('on',!!s[k]));
-  const vals={'v6-rpe-up':s.rpeUp,'v6-rpe-down':s.rpeDown,'v6-completion-up':s.completionUp,'v6-pain-stop':s.painStop};Object.entries(vals).forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.value=v;});
+  const vals={'v6-rpe-up':s.rpeUp,'v6-rpe-down':s.rpeDown,'v6-completion-up':100,'v6-pain-stop':s.painStop};Object.entries(vals).forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.value=v;});
   const log=getRestLogV6(),sum=document.getElementById('v6-rest-summary');if(sum){const last=log.slice(-20),avg=last.length?Math.round(last.reduce((a,b)=>a+(b.actualSec||0),0)/last.length):0;sum.textContent=last.length?`Zadnjih ${last.length} odmorov · povprečno ${fmtRest(avg)}`:'Po prvih setih bo prikazana statistika dejanskega počitka.';}
 }
 
@@ -88,32 +88,60 @@ isExHidden=function(exKey){const m=String(exKey).match(/^c\d+w\d+d(\d+)e(\d+)$/)
 /* ---------- Exercise timeline + progression ---------- */
 function parseRepRangeV6(v){const n=String(v||'').match(/(\d+)\D+(\d+)/);if(n)return {min:+n[1],max:+n[2]};const one=String(v||'').match(/\d+/);return one?{min:+one[0],max:+one[0]}:{min:5,max:10};}
 function getRestLogV6(){try{return JSON.parse(localStorage.getItem(V6_KEYS.restLog)||'[]');}catch{return [];}}
-function saveRestLogV6(v){localStorage.setItem(V6_KEYS.restLog,JSON.stringify(v.slice(-500)));}
-function getExerciseTimelineV6(di,ei,name){const id=exStableId(name),out=[];getSessions().forEach(s=>{const ex=Array.isArray(s.exercises)?s.exercises.find(x=>x.exerciseId===id||x.name===name):null;if(!ex)return;const done=(ex.sets||[]).filter(x=>x.done&&Number(x.kg)>0&&Number(x.reps)>0);if(!done.length)return;const top=done.reduce((a,b)=>(Number(b.kg)*(1+Number(b.reps)/30))>(Number(a.kg)*(1+Number(a.reps)/30))?b:a),rpes=done.map(x=>Number(x.rpe)).filter(Boolean),notes=done.map(x=>x.note).filter(Boolean);const rest=getRestLogV6().filter(r=>r.exerciseId===id&&r.date===s.date);out.push({date:s.date,cycle:s.cycle,week:(s.weekIdx??((s.weekNum||1)-1)),sets:done,doneSets:done.length,targetSets:ex.targetSets||done.length,completion:(ex.targetSets||done.length)?done.length/(ex.targetSets||done.length):1,topKg:Number(top.kg),topReps:Number(top.reps),e1rm:Number(top.kg)*(1+Number(top.reps)/30),tonnage:done.reduce((a,x)=>a+Number(x.kg)*Number(x.reps),0),avgRpe:rpes.length?rpes.reduce((a,b)=>a+b,0)/rpes.length:0,maxRpe:rpes.length?Math.max(...rpes):0,pain:Number(ex.pain)||0,notes,avgRest:rest.length?rest.reduce((a,b)=>a+(b.actualSec||0),0)/rest.length:0});});
-  if(!out.length){try{getExerciseHistory(di,ei,name).forEach(h=>out.push({date:h.date,cycle:h.c,week:h.w,sets:h.sets.map(x=>({...x,done:true})),doneSets:h.sets.length,targetSets:h.sets.length,completion:1,topKg:h.top.kg,topReps:h.top.reps,e1rm:h.e1rm,tonnage:h.totalVol,avgRpe:0,maxRpe:0,pain:0,notes:[],avgRest:0}));}catch(e){}}
+function saveRestLogV6(v){return safeSetRaw(V6_KEYS.restLog,JSON.stringify(v.slice(-500)));}
+function getExerciseTimelineV6(di,ei,name){const id=exStableId(name),rosterId=PROG.days[di]?.ex?.[ei]?.id,out=[];getSessions().forEach(s=>{const ex=Array.isArray(s.exercises)?s.exercises.find(x=>(x.exerciseId===id||x.name===name)&&(!rosterId||!x.rosterId||x.rosterId===rosterId)):null;if(!ex)return;const done=(ex.sets||[]).filter(x=>x.done&&x.type!=='warmup'&&!x.warm&&!x.drop&&x.kg!==''&&x.kg!==null&&Number.isFinite(Number(x.kg))&&Number(x.kg)>=0&&Number(x.reps)>0);if(!done.length)return;const top=done.reduce((a,b)=>(Number(b.kg)*(1+Number(b.reps)/30))>(Number(a.kg)*(1+Number(a.reps)/30))?b:a),rpes=done.map(x=>Number(x.rpe)).filter(Boolean),notes=done.map(x=>x.note).filter(Boolean);const rest=getRestLogV6().filter(r=>r.exerciseId===id&&r.date===s.date);out.push({date:s.date,loadType:ex.loadType||'external',cycle:s.cycle,week:(s.weekIdx??((s.weekNum||1)-1)),sets:done,doneSets:done.length,targetSets:ex.targetSets||done.length,completion:(ex.targetSets||done.length)?done.length/(ex.targetSets||done.length):1,topKg:Number(top.kg),topReps:Number(top.reps),e1rm:Number(top.kg)*(1+Number(top.reps)/30),tonnage:done.reduce((a,x)=>a+Number(x.kg)*Number(x.reps),0),avgRpe:rpes.length?rpes.reduce((a,b)=>a+b,0)/rpes.length:0,maxRpe:rpes.length?Math.max(...rpes):0,pain:Number(ex.pain)||0,notes,avgRest:rest.length?rest.reduce((a,b)=>a+(b.actualSec||0),0)/rest.length:0});});
+  if(!out.length){try{getExerciseHistory(di,ei,name).filter(h=>h.date).forEach(h=>out.push({date:h.date,cycle:h.c,week:h.w,sets:h.sets.map(x=>({...x,done:true})),doneSets:h.sets.length,targetSets:h.sets.length,completion:1,topKg:h.top.kg,topReps:h.top.reps,e1rm:h.e1rm,tonnage:h.totalVol,avgRpe:0,maxRpe:0,pain:0,notes:[],avgRest:0}));}catch(e){}}
   return out.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.cycle-a.cycle||b.week-a.week);
 }
 function exerciseCategoryV6(e,name){if(e?.m)return 'main';const map=EX_MAP[name],db=EXERCISE_DB.find(x=>x.n===name);return (map?.cat||db?.c)==='compound'?'compound':'isolation';}
 function defaultIncrementV6(e,name){if(e?.increment)return Number(e.increment);const cat=exerciseCategoryV6(e,name);if(cat==='isolation')return 1;return /squat|deadlift|leg press|romanian|rdl|hip thrust/i.test(name)?5:2.5;}
 function roundStepV6(v,step){return Math.round(v/step)*step;}
-function evaluateProgressionV6(history,cfg={}){if(!history.length)return {action:'none',label:'Najprej zabeleži trening',suggestedKg:0,reasons:['Ni zaključenih sessionov za to vajo.'],confidence:'nizka',stagnating:false};const s=getV6Settings(),last=history[0],prev=history[1],prev2=history[2],step=Number(cfg.increment)||2.5,mode=cfg.mode||'auto',reasons=[],base=last.topKg||0,range=parseRepRangeV6(cfg.targetReps),twoDrops=!!(prev&&prev2&&last.e1rm<prev.e1rm*.98&&prev.e1rm<prev2.e1rm*.98),flatHard=history.slice(0,3).length===3&&history.slice(0,3).every(x=>x.avgRpe>=9)&&Math.max(...history.slice(0,3).map(x=>x.e1rm))-Math.min(...history.slice(0,3).map(x=>x.e1rm))<3,repeatedPain=history.slice(0,2).length===2&&history.slice(0,2).every(x=>x.pain>=3);
-  let action='hold',kg=base;
-  if(mode==='hold'){reasons.push('V builderju je izbrano: brez samodejne spremembe.');}
-  else if(last.pain>=s.painStop||repeatedPain){action='reduce';kg=roundStepV6(base*.9,step);reasons.push(last.pain>=s.painStop?`Bolečina ${last.pain}/10 presega varno mejo.`:'Bolečina se ponavlja na dveh treningih.');}
-  else if(twoDrops){action='deload';kg=roundStepV6(base*.9,step);reasons.push('e1RM je padel dva treninga zapored.');}
-  else if(last.completion<.75||last.maxRpe>=s.rpeDown){action='reduce';kg=Math.max(0,roundStepV6(base-step,step));reasons.push(last.completion<.75?'Opravljenih je manj kot 75% ciljnih setov.':`Najvišji RPE ${last.maxRpe.toFixed(1)} je previsok.`);}
-  else if(mode==='linear'){action='increase';kg=roundStepV6(base+step,step);reasons.push(`Linearna progresija: +${step} kg po opravljenem treningu.`);}
-  else if(mode==='double'){
-    const avgReps=last.sets.reduce((a,x)=>a+Number(x.reps||0),0)/last.sets.length;
-    if(last.completion>=.9&&avgReps>=range.max&&(!last.avgRpe||last.avgRpe<=s.rpeUp)){action='increase';kg=roundStepV6(base+step,step);reasons.push(`Dosežen zgornji rob ${range.max} ponovitev pri nadzorovanem RPE.`);}else{action='hold';reasons.push(`Najprej dvigni povprečje ponovitev proti ${range.max}.`);}
-  } else if(last.completion>=s.completionUp/100&&(!last.avgRpe||last.avgRpe<=s.rpeUp)&&(!prev||last.e1rm>=prev.e1rm*.99)){action='increase';kg=roundStepV6(base+step,step);reasons.push(`${Math.round(last.completion*100)}% izvedba in povprečni RPE ${last.avgRpe?last.avgRpe.toFixed(1):'ni vnesen'}.`);reasons.push('e1RM je stabilen ali raste.');}
-  else {action='hold';reasons.push(last.avgRpe>s.rpeUp?`Povprečni RPE ${last.avgRpe.toFixed(1)} je že visok.`:'Za povečanje manjka še en stabilen trening.');}
-  if(last.avgRest&&last.avgRest<60&&exerciseCategoryV6(cfg.exercise,cfg.name)!=='isolation')reasons.push('Povprečni počitek je bil kratek; padec moči morda ni program.');
-  return {action,label:{increase:`Povečaj na ${kg} kg`,hold:`Ohrani ${kg} kg`,reduce:`Zmanjšaj na ${kg} kg`,deload:`Deload okoli ${kg} kg`}[action],suggestedKg:kg,reasons,confidence:history.length>=3?'visoka':history.length===2?'srednja':'nizka',stagnating:twoDrops||flatHard||repeatedPain,last};
+function evaluateProgressionV6(history,cfg={}){
+  if(!history.length)return {action:'none',label:'Najprej zabeleži trening',suggestedKg:0,reasons:['Ni primerljivih zaključenih treningov.'],confidence:'nizka',stagnating:false};
+  const settings=getV6Settings(),last=history[0],previous=history[1],step=Number(cfg.increment)>0?Number(cfg.increment):2.5;
+  const mode=cfg.mode||'auto',base=Math.max(0,Number(last.topKg)||0),range=parseRepRangeV6(cfg.targetReps);
+  const sets=(last.sets||[]).filter(x=>x.done!==false&&x.type!=='warmup'&&!x.warm&&!x.drop);
+  const completeRpe=sets.length>0&&sets.every(x=>Number(x.rpe)>=1&&Number(x.rpe)<=10);
+  const targetKnown=typeof cfg.targetReps==='string'&&/\d/.test(cfg.targetReps);
+  const upper=mode==='linear'?range.min:range.max;
+  const repsMet=targetKnown&&sets.length>0&&sets.every(x=>Number(x.reps)>=upper);
+  const allDone=Number(last.completion)>=1;
+  const loadType=cfg.exercise?.loadType||last.loadType||'external';
+  const reasons=[];let action='hold',kg=base,label='',stagnating=false;
+  const repeatedPain=history.slice(0,2).length===2&&history.slice(0,2).every(x=>Number(x.pain)>=3);
+  if(Number(last.pain)>=settings.painStop||repeatedPain){
+    label='Preveri bolečino';reasons.push('Prekini ali prilagodi bolečo vajo. Aplikacija ne more določiti varnega bremena; ob vztrajanju poišči strokovno oceno.');
+  }else if(mode==='hold'||mode==='531'){
+    reasons.push(mode==='531'?'Sledi ločenemu načrtu 5/3/1.':'Za to vajo je izbrana ročna progresija.');
+  }else if(loadType==='assisted'||loadType==='bodyweight'||base===0){
+    reasons.push(loadType==='assisted'?'Primerjaj ponovitve pri isti asistenci; manj pomoči pomeni večjo zahtevnost.':'Najprej napreduj pri ponovitvah oziroma zahtevnosti izvedbe. Dodano breme izberi ročno.');
+  }else if(last.loadType&&last.loadType!==loadType){
+    reasons.push('Pomen kilogramov je spremenjen. Najprej zabeleži primerljiv trening z novo vrsto bremena.');
+  }else if(!completeRpe){
+    reasons.push('RPE manjka pri enem ali več delovnih setih. Napora ne morem oceniti.');
+  }else if(!allDone){
+    reasons.push('Trening je nepopoln. Sam izpuščen set ne pomeni, da moraš zmanjšati težo.');
+  }else if(sets.some(x=>Number(x.rpe)>=settings.rpeDown)){
+    action='reduce';kg=Math.max(0,roundStepV6(base-step,step));reasons.push('Visok napor v delovnem setu: preveri počitek in tehniko ter razmisli o manjšem bremenu.');
+  }else if(!repsMet){
+    reasons.push(targetKnown?`Najprej dosezi ${upper} ponovitev v vsakem delovnem setu.`:'Najprej določi ciljni razpon ponovitev.');
+  }else if(sets.some(x=>Number(x.rpe)>settings.rpeUp)){
+    reasons.push('Cilj ponovitev je dosežen, napor pa je še visok.');
+  }else if(previous&&Number(last.e1rm)<Number(previous.e1rm)*.98){
+    reasons.push('Primerljiv rezultat je nižji. Ohrani breme in preveri regeneracijo.');stagnating=true;
+  }else{
+    const candidate=roundStepV6(base+step,step);
+    const barbell=typeof BARBELL_EX!=='undefined'&&BARBELL_EX.includes(cfg.name);
+    if(barbell&&typeof calcPlatesFor==='function'&&!calcPlatesFor(candidate))reasons.push('Predlagan korak ni izvedljiv s shranjenimi ploščami. Prilagodi korak ali opremo.');
+    else{action='increase';kg=candidate;reasons.push('Vsi delovni seti dosežejo cilj ponovitev pri nadzorovanem RPE.');}
+  }
+  const comparable=history.slice(0,3).filter(h=>(h.sets||[]).length&&h.completion>=1&&(h.sets||[]).every(x=>Number(x.rpe)>=1&&Number(x.rpe)<=10));
+  const confidence=completeRpe&&allDone&&targetKnown?(comparable.length>=3?'visoka':comparable.length>=2?'srednja':'nizka'):'nizka';
+  return {action,label:label||{increase:`Predlog: ${kg} kg`,hold:`Ohrani ${kg} kg`,reduce:`Razmisli o ${kg} kg`}[action],suggestedKg:kg,reasons,confidence,stagnating,last};
 }
 function isDeloadWeekIdx(w){return !!(PROG.weeks&&PROG.weeks[w]&&PROG.weeks[w].dl);}
 function progressionForExerciseV6(di,ei,name){const e=PROG.days[di]?.ex?.[ei],hist=getExerciseTimelineV6(di,ei,name).filter(h=>!isDeloadWeekIdx(h.week));return evaluateProgressionV6(hist,{name,exercise:e,increment:defaultIncrementV6(e,name),mode:e?.progMode||'auto',targetReps:e?.targetReps||PROG.weeks[cw]?.reps});}
-function renderProgressionCardV6(di,ei,name){if(!getV6Settings().progression)return '';const r=progressionForExerciseV6(di,ei,name);const cls=r.action==='none'?'':r.action;return `<div class="prog-v6 ${cls}"><div class="prog-v6-head"><span class="prog-v6-title">🧠 ${safeHtml(r.label)}</span><span class="v6-chip ${r.action==='increase'?'good':r.action==='hold'?'warn':r.action==='none'?'':'bad'}">${safeHtml(r.confidence)} zaupanje</span></div><div class="prog-v6-reasons">${r.reasons.slice(0,3).map(x=>`<div>• ${safeHtml(x)}</div>`).join('')}</div></div>`;}
+function renderProgressionCardV6(di,ei,name){if(!getV6Settings().progression)return '';const r=progressionForExerciseV6(di,ei,name);const cls=r.action==='none'?'':r.action;return `<div class="prog-v6 ${cls}"><div class="prog-v6-head"><span class="prog-v6-title">🧠 ${safeHtml(r.label)}</span><span class="v6-chip ${r.action==='increase'?'good':r.action==='hold'?'warn':r.action==='none'?'':'bad'}">Zanesljivost: ${safeHtml(r.confidence)}</span></div><div class="prog-v6-reasons">${r.reasons.slice(0,3).map(x=>`<div>• ${safeHtml(x)}</div>`).join('')}</div></div>`;}
 smartCycleSuggestion=function(cn,di,ei,name){const r=progressionForExerciseV6(di,ei,name),cur=cycleExerciseMetrics(cn,di,ei),actionMap={increase:['su','+'+(r.suggestedKg-(cur.peak||r.last?.topKg||0))+'kg'],hold:['ss','Ohrani'],reduce:['sd2','Zmanjšaj'],deload:['sd2','Deload'],none:['ss','Brez podatkov']},a=actionMap[r.action]||actionMap.hold;return {skg:r.suggestedKg||0,sc:a[0],sl:a[1],reason:r.reasons.join(' '),...cur,trend:0};};
 
 /* ---------- Quick logging and render wrapper ---------- */
@@ -172,14 +200,14 @@ tgSet=function(key,si,di,ei,cn){
   startT=function(){};
 
   try{
-    _tgSetV5(key,si,di,ei,cn);
+    if(_tgSetV5(key,si,di,ei,cn)===false)return false;
   }finally{
     startT=startTimerOnce;
   }
 
   const after=getSets()[key]?.[si];
 
-  if(!before&&after?.done){
+  if(!before&&after?.done&&!storageHasPendingWrites()){
     if(!after.drop){
       const exercise=PROG.days[di]?.ex?.[ei];
       const name=currentExerciseName(di,ei,key);
@@ -233,9 +261,9 @@ openExHistory=function(di,ei){const key=sdk(getCyc().num,cw,di,ei),e=PROG.days[d
 /* ---------- Backup center ---------- */
 const _buildBackupJSONV5=buildBackupJSON;
 buildBackupJSON=async function(includePhotos){const b=JSON.parse(await _buildBackupJSONV5(includePhotos));b.version=7;b.schemaVersion=7;b.daylists={...(b.daylists||{}),shared:getDayLists()};b.programMeta={shared:getProgramMetaV6(),cut:null,bulk:null};b.phase={active:getActiveProfile(),plansVersion:1};b.v6settings=getV6Settings();b.restLog=getRestLogV6();b.lastExternal=localStorage.getItem(V6_KEYS.lastExternal)||null;return JSON.stringify(b);};
-validateBackupP1=function(backup){if(!backup||typeof backup!=='object'||Array.isArray(backup))return {ok:false,msg:'Datoteka ni veljaven JSON objekt.'};if(!backup.sets||typeof backup.sets!=='object'||Array.isArray(backup.sets))return {ok:false,msg:'Backup ne vsebuje sets podatkov.'};if(backup.sessions!==undefined&&!Array.isArray(backup.sessions))return {ok:false,msg:'sessions mora biti seznam.'};if(Number(backup.schemaVersion||backup.version||1)>7)return {ok:false,msg:'Backup je iz novejše verzije aplikacije.'};if(backup.daylists?.shared!==undefined&&(!backup.daylists.shared||typeof backup.daylists.shared!=='object'||Array.isArray(backup.daylists.shared)))return {ok:false,msg:'Skupni program v backupu ni veljaven.'};let rows=0;for(const [k,v] of Object.entries(backup.sets)){if(!/^c\d+w\d+d\d+e\d+$/.test(k)||!Array.isArray(v))return {ok:false,msg:'Pokvarjen ključ setov: '+k};rows+=v.length;if(rows>250000)return {ok:false,msg:'Nenormalno veliko setov.'};for(const set of v){if(!set||typeof set!=='object'||Array.isArray(set))return {ok:false,msg:'Neveljaven zapis seta.'};const kg=parseFloat(set.kg||0),reps=parseInt(set.reps||0);if(kg<0||kg>1500||reps<0||reps>1000)return {ok:false,msg:'Nerealne vrednosti kg ali ponovitev.'};}}return {ok:true,msg:'Struktura, skupni program in meje vrednosti so veljavni.'};};
+validateBackupP1=validateBackupV18;
 const _restoreBackupV5=restoreBackupObjectP1;
-restoreBackupObjectP1=async function(backup,opts={}){if((opts.mode||'replace')==='replace')Object.values(V6_KEYS).forEach(k=>localStorage.removeItem(k));await _restoreBackupV5(backup,opts);if(backup.daylists?.shared)localStorage.setItem(SHARED_DAYLIST_KEY_V16,JSON.stringify(backup.daylists.shared));if(backup.programMeta?.shared)localStorage.setItem(V6_KEYS.metaShared,JSON.stringify(backup.programMeta.shared));else if(backup.programMeta?.cut)localStorage.setItem(V6_KEYS.metaShared,JSON.stringify(backup.programMeta.cut));else if(backup.programMeta?.bulk)localStorage.setItem(V6_KEYS.metaShared,JSON.stringify(backup.programMeta.bulk));if(backup.phase?.active)setActiveProfile(backup.phase.active);if(backup.v6settings)saveV6Settings(backup.v6settings);if(Array.isArray(backup.restLog))saveRestLogV6(backup.restLog);if(backup.lastExternal)localStorage.setItem(V6_KEYS.lastExternal,backup.lastExternal);applyProgramStateV6();ensureDayLists();renderDayTabsV6();renderV6Settings();initProfileUI();showDay(activeDayIndicesV6()[0]||0);};
+restoreBackupObjectP1=async function(backup,opts={}){return _restoreBackupV5(backup,opts);};
 function backupStatsV6(b){return {sessions:Array.isArray(b.sessions)?b.sessions.length:0,setKeys:b.sets?Object.keys(b.sets).length:0,setRows:b.sets?Object.values(b.sets).reduce((a,x)=>a+(Array.isArray(x)?x.length:0),0):0,bw:b.bw?Object.keys(b.bw).length:0,rest:Array.isArray(b.restLog)?b.restLog.length:0};}
 function currentBackupStatsV6(){return backupStatsV6({sessions:getSessions(),sets:getSets(),bw:getBW(),restLog:getRestLogV6()});}
 renderBackupList=async function(){const el=document.getElementById('backup-list');if(!el)return;const list=await getAllBackups();renderBackupStatusV6();if(!list.length){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:.5rem;">Ni lokalnih snapshotov.</div>';return;}el.innerHTML=list.map(b=>{let stats={sessions:'?',setRows:'?'};try{stats=backupStatsV6(JSON.parse(b.blob));}catch(e){}const d=new Date(b.date),date=d.toLocaleDateString('sl-SI')+' '+d.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});return `<div class="bk-item"><div class="bk-item-l"><div class="bk-item-date">${date}</div><div class="bk-item-meta">${b.sizeKB||'?'}KB · ${stats.sessions} sessionov · ${stats.setRows} setov · ${safeHtml(b.label)}</div></div><div class="bk-item-r"><button class="bk-item-btn" onclick="previewBackupV6(${b.id})">🔎</button><button class="bk-item-btn" onclick="downloadBackupFromIDB(${b.id})">⬇</button><button class="bk-item-btn del" onclick="delBackupConfirm(${b.id})">×</button></div></div>`;}).join('');};
@@ -739,6 +767,7 @@ applyProgramStateV6();
         );
       }
 
+      if(storageHasPendingWrites())throw new Error('Set has pending storage writes');
       draftByKeyV10.delete(key);
       toast(
         `\u2713 ${displayNumberV10(kg)}kg \u00d7 ${reps} @ RPE ${displayNumberV10(rpe)}`,
@@ -1509,6 +1538,7 @@ applyProgramStateV6();
   let saveStatusTimerV15=null;
 
   function markSaveStateV15(state='saved'){
+    if(typeof storageHasPendingWrites==='function'&&storageHasPendingWrites())state='error';
     const el=document.getElementById('save-status-v15');
     if(!el)return;
 
@@ -1592,7 +1622,7 @@ applyProgramStateV6();
   tgSet=function(key,si,di,ei,cn){
     captureUndoV15(key,si,di,ei,cn);
     const result=baseToggleSetV15.apply(this,arguments);
-    markSaveStateV15('saved');
+    refreshStorageStatus(result===false?'error':'saved');
     updateUndoButtonV15();
     return result;
   };
@@ -1612,7 +1642,7 @@ applyProgramStateV6();
       all[item.key].push({kg:'',reps:'',rpe:null,done:false});
     }
     all[item.key][item.si]=cloneSetV15(item.before);
-    saveSets(all);
+    if(!saveSets(all))return false;
     writeUndoStackV15(stack);
 
     try{
@@ -3008,21 +3038,10 @@ applyProgramStateV6();
       const base=restoreBackupObjectP1;
 
       async function wrapped(backup,options={}){
-        if((options.mode||'replace')==='replace'){
-          localStorage.removeItem(PLATE_PREF_KEY);
-        }
-
-        await base.call(this,backup,options);
-
-        if(
-          backup?.platePrefsV13&&
-          typeof backup.platePrefsV13==='object'
-        ){
-          savePlatePrefs(backup.platePrefsV13);
-        }
-
+        const result=await base.call(this,backup,options);
         installRemovedFeatureGuards();
         scheduleUi();
+        return result;
       }
 
       wrapped.__wtV13Wrapped=true;
