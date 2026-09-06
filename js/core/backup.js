@@ -28,8 +28,16 @@ function validateBackupV18(backup){
       }
     }
   }
-  for(const key of ['pr','notes','bw','meas','gym','pain','cynotes','restplan','setcounts','swaps','sugs','extra_ex','hidden_ex','ex_ordernames','rep_prs','daylog','colors','custom_rest','tm531','v6settings','platePrefsV13']){
+  for(const key of ['pr','notes','bw','meas','gym','pain','cynotes','restplan','setcounts','swaps','extra_ex','hidden_ex','ex_ordernames','rep_prs','daylog','colors','custom_rest','tm531','v6settings','platePrefsV13']){
     if(backup[key]!==undefined&&backup[key]!==null&&!obj(backup[key]))return bad('Polje '+key+' mora biti objekt.');
+  }
+  // renderCycle writes an array; older backups use {} when no suggestions exist.
+  // Preserve both representations unchanged during validation and restoration.
+  if(backup.sugs!==undefined&&backup.sugs!==null){
+    const suggestions=backup.sugs;
+    if(Array.isArray(suggestions)){
+      if(suggestions.length>100000||suggestions.some(item=>!obj(item)))return bad('Neveljaven seznam predlogov cikla.');
+    }else if(!obj(suggestions))return bad('Predlogi cikla morajo biti seznam ali objekt.');
   }
   for(const key of ['phases','goals','custom_ex','restLog','photos']){
     if(backup[key]!==undefined&&!Array.isArray(backup[key]))return bad('Polje '+key+' mora biti seznam.');

@@ -1,14 +1,20 @@
-# Workout Tracker 1.1.1 — popravki treninga in faz
+# Workout Tracker 1.1.2 — popravek izvoza varnostne kopije
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
-1. Pred nadgradnjo izvozi JSON kopijo v Nastavitvah in jo shrani zunaj aplikacije.
-2. Prenesi [APK izdaje 1.1.1](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.1.1/Workout-Tracker-v1.1.1.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
+2. Prenesi [APK izdaje 1.1.2](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.1.2/Workout-Tracker-v1.1.2.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode je 60. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.1.2 je 61. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Popravek v 1.1.2
+
+- Validator sprejme seznam predlogov naslednjega cikla, ki ga ustvarja aplikacija, ter starejšo objektno obliko. Izvoz in obnova ne odpovesta več z napako »Polje sugs mora biti objekt«.
+- Predlogi, treningi in shranjeni podatki se ne brišejo ali pretvarjajo. Preverjanje nevarnih ključev in nepravilnih podatkov ostaja vključeno.
+- Dodani testi validacije, obnove in dejanskega izvoznega handlerja, vključno z neuspešnim shranjevanjem datoteke.
 
 ## Popravki v 1.1.1
 

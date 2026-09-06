@@ -48,6 +48,46 @@ test('backup accepts legacy blanks and zero external load',()=>{
   assert.equal(h.run("validateBackupV18({version:5,sets:{c1w0d0e0:[{kg:'',reps:'',rpe:null,done:false},{kg:0,reps:8,rpe:8,done:true}]}}).ok"),true);
 });
 
+test('cycle suggestion arrays validate and restore without dropping suggestions or workout history',()=>{
+  const h=harness({wt_s6:'original'});
+  const candidate={schemaVersion:7,sets:{c1w0d0e0:[{kg:80,reps:8,done:true}]},sessions:[{id:'saved-workout',durationMin:60}],sugs:[{n:'Bench',di:0,ei:0,peak:80,skg:82.5,sc:'su',sl:'+2.5kg',completion:1,maxRpe:8,maxPain:0}]};
+  h.context.candidate=candidate;
+  const original=JSON.stringify(candidate);
+  assert.equal(h.run('validateBackupV18(candidate).ok'),true);
+  assert.equal(JSON.stringify(candidate),original);
+  assert.equal(h.data.get('wt_s6'),'original');
+  h.run("commitStorageBatch(buildRestorePlanV18(candidate,'replace'))");
+  assert.deepEqual(JSON.parse(h.data.get('wt_sugs6')),candidate.sugs);
+  assert.deepEqual(JSON.parse(h.data.get('wt_sess6')),candidate.sessions);
+  assert.deepEqual(JSON.parse(h.data.get('wt_s6')),candidate.sets);
+});
+
+test('suggestions remain compatible with old backups while malformed and prototype-bearing values are rejected',()=>{
+  const h=harness();
+  for(const sugs of [undefined,null,{},[],{legacy:{skg:80}}]){
+    h.context.candidate={version:5,sets:{},sugs};assert.equal(h.run('validateBackupV18(candidate).ok'),true);
+  }
+  for(const sugs of ['bad',42,true,[null],['Bench'],[[]],JSON.parse('[{"__proto__":{"bad":true}}]')]){
+    h.context.candidate={version:7,sets:{},sugs};assert.equal(h.run('validateBackupV18(candidate).ok'),false);
+  }
+});
+
+test('real export handler sends suggestion-array backup to file saver and only marks successful saves',async()=>{
+  const h=harness(),saved=[],messages=[];
+  let rejectSave=false;
+  const backup={schemaVersion:7,sets:{c1w0d0e0:[{kg:80,reps:8,done:true}]},sessions:[{id:'old-session'}],sugs:[{n:'Bench',skg:82.5}]};
+  Object.assign(h.context,{buildBackupJSON:async()=>JSON.stringify(backup),localDateKey:()=> '2026-09-06',saveBackupFile:async(json,name)=>{if(rejectSave)throw new Error('Save cancelled');saved.push({json,name});},renderBackupStatusV6(){},toast:(message,type)=>messages.push({message,type}),console:{warn(){}}});
+  h.run('validateBackupP1=validateBackupV18;');
+  const source=read('src/app/v6-core.js'),start=source.indexOf('    exportData=async function(){'),end=source.indexOf('    window.exportData=exportData;',start);
+  assert.ok(start>=0&&end>start);h.run(source.slice(start,end));
+  assert.equal(await h.run('exportData()'),true);
+  assert.equal(saved.length,1);assert.deepEqual(JSON.parse(saved[0].json),backup);
+  assert.equal(messages.at(-1).type,'ok');assert.ok(h.data.has('wt_last_external_backup_v6'));
+  const before=[...h.data];rejectSave=true;
+  assert.equal(await h.run('exportData()'),false);
+  assert.equal(messages.at(-1).type,'err');assert.deepEqual([...h.data],before);assert.equal(saved.length,1);
+});
+
 test('batch write rolls back every original key if a later write fails',()=>{
   const h=harness({wt_s6:'old sets',wt_sess6:'old sessions',wt_active_sess:'active'});
   h.rejectWith((k,v)=>k==='wt_sess6'&&v==='new sessions');
