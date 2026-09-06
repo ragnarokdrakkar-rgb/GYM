@@ -1958,7 +1958,7 @@ applyProgramStateV6();
     const keys=focusKeysV11();
     const active=activeKeyV11(keys);
     const signature=keys.map(key=>
-      key+':'+(exerciseCompleteV11(key)?'1':'0')+':'+(key===active?'1':'0')
+      key+':'+JSON.stringify(exerciseProgressV20(key))+':'+(key===active?'1':'0')
     ).join('|');
 
     if(dots.dataset.signature===signature)return;
@@ -1967,11 +1967,12 @@ applyProgramStateV6();
 
     keys.forEach((key,index)=>{
       const button=document.createElement('button');
-      const complete=exerciseCompleteV11(key);
+      const progress=exerciseProgressV20(key);
+      const label=progress.state==='complete'?'končana':progress.state==='partial'?'delno končana':'ni začeta';
       button.type='button';
-      button.className='focus-dot-v11 '+(complete?'complete':'pending')+(key===active?' active':'');
-      button.setAttribute('aria-label',`Vaja ${index+1}: ${complete?'koncana':'ni koncana'}`);
-      button.title=`Vaja ${index+1} - ${complete?'koncana':'ni koncana'}`;
+      button.className='focus-dot-v11 '+progress.state+(key===active?' active':'');
+      button.setAttribute('aria-label',`Vaja ${index+1}: ${label}, ${progress.done}/${progress.total} serij`);
+      button.title=`Vaja ${index+1}: ${label}, ${progress.done}/${progress.total} serij`;
       button.addEventListener('click',()=>{
         const api=focusApiV11();
         if(api&&typeof api.setFocus==='function')api.setFocus(key,true);
@@ -2404,6 +2405,8 @@ applyProgramStateV6();
   }
 
   function firstWeight(card){
+    const current=card?.querySelector('.quick-log-v6 [data-field="kg"]');
+    if(current)return Number(String(current.value||'').replace(',','.'))||0;
     return Number(
       String(
         card?.querySelector('tr[id^="row-"] .wi')?.value||''
@@ -2413,6 +2416,7 @@ applyProgramStateV6();
 
   function renderPlateBox(card,key,kg){
     if(!card)return;
+    if(card.querySelector('.quick-log-v6 [data-field="kg"]'))kg=firstWeight(card);
 
     let box=card.querySelector('.platebox');
 
@@ -2426,6 +2430,12 @@ applyProgramStateV6();
       else card.querySelector('.ex-body')?.appendChild(box);
     }
 
+    const quick=card.querySelector('.quick-log-v6');
+    const log=quick?.querySelector('.compact-log-v10');
+    if(quick&&box.parentNode!==quick)quick.insertBefore(box,log||null);
+    const signature=JSON.stringify([kg,kg>0?calcPlatesFor(kg):null]);
+    if(box.dataset.signature===signature)return;
+    box.dataset.signature=signature;
     if(kg<=0){
       box.innerHTML=
         '<span style="color:var(--text3);">'+
@@ -3134,6 +3144,9 @@ applyProgramStateV6();
     });
 
     window.addEventListener('pageshow',scheduleUi);
+    document.addEventListener('input',event=>{
+      if(event.target.matches('.quick-log-v6 [data-field="kg"]'))scheduleUi();
+    });
   }
 
   window.WTReleasePatchV13={

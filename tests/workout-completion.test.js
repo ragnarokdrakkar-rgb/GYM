@@ -18,6 +18,20 @@ function harness(items=[{n:'Bench',m:true,progMode:'531',targetSets:4}]){
   return h;
 }
 const rows=n=>Array.from({length:n},()=>({done:true,kg:80,reps:8}));
+test('focus state keeps each partially completed exercise blue and uses required targets',()=>{
+  const h=harness([{n:'Bench',targetSets:3},{n:'Row',targetSets:3},{n:'Squat',targetSets:3}]);
+  for(let i=0;i<3;i++){
+    const key=`c1w0d0e${i}`;
+    assert.equal(h.run(`exerciseProgressV20('${key}').state`),'pending');
+    h.sets[key]=rows(1);
+    assert.equal(h.run(`exerciseProgressV20('${key}').state`),'partial');
+  }
+  h.sets.c1w0d0e0=rows(3);
+  assert.equal(h.run("exerciseProgressV20('c1w0d0e0').state"),'complete');
+  assert.equal(h.run("exerciseProgressV20('c1w0d0e1').state"),'partial');
+  h.sets.c1w0d0e0=[{done:false},...rows(3)];
+  assert.equal(h.run("exerciseProgressV20('c1w0d0e0').state"),'partial');
+});
 test('final day completion and cards share 531 targets, including deload and set adjustments',()=>{
   const h=harness();
   for(const week of [0,3])for(const extra of [-2,-1,0,2]){
@@ -75,7 +89,7 @@ test('disabled/hidden rows do not leak into current stats or new session snapsho
   const before=JSON.stringify(h.sets);
   assert.equal(h.run('buildSessionSnapshot(1,0,0).totals.doneSets'),1);
   assert.equal(h.run('buildSessionSnapshot(1,0,0).totals.tonnage'),640);
-  assert.equal(h.run('JSON.stringify(calcVolumeThisWeek())'),'{"Chest":1}');
+  assert.equal(h.run('JSON.stringify(calcVolumeThisWeek())'),'{"Prsa":1}');
   assert.equal(h.run("sessionStatsV19({cycle:1,weekNum:1,dayIdx:0}).setCount"),1);
   assert.equal(JSON.stringify(h.sets),before);
 });

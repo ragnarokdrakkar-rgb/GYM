@@ -24,6 +24,20 @@ function activeWorkoutEntriesV19(cycle,week,dayIndex){
 function completedSetLabelV19(done,target){
   return done>target?`${done} opravljenih · cilj ${target}`:`${done}/${target}`;
 }
+function exerciseProgressV20(key){
+  const match=String(key).match(/^c(\d+)w(\d+)d(\d+)e(\d+)$/);
+  if(!match)return {state:'pending',done:0,total:0};
+  const week=Number(match[2]),di=Number(match[3]),ei=Number(match[4]);
+  const total=nsf(di,ei,PROG.weeks[week],key);
+  const rows=getSets()[key]||[];
+  const done=rows.slice(0,total).filter(row=>row?.done===true).length;
+  return {state:done>=total?'complete':done>0?'partial':'pending',done,total};
+}
+function canonicalMuscleV20(value){
+  const name=String(value||'').trim();
+  const aliases={chest:'Prsa',back:'Hrbet',quads:'Kvadricepsi',hamstring:'Hamstringi',hamstrings:'Hamstringi',glutes:'Gluteusi',shoulders:'Ramena','front delt':'Sprednji deltoid','rear delt':'Zadnji deltoid',biceps:'Bicepsi',triceps:'Tricepsi',calves:'Mečni',traps:'Trapezius'};
+  return aliases[name.toLowerCase()]||name;
+}
 
 function sdk(c,w,d,e){return `c${c}w${w}d${d}e${e}`;}
 function getPeakForExercise(cn,di,ei){

@@ -2,7 +2,7 @@
 function renderProgramPageV18(){
   const el=document.getElementById('program-overview-v18');if(!el)return;
   const meta=getProgramMetaV6(),roster=getDayLists()||{};
-  el.innerHTML=meta.days.map((day,di)=>{
+  el.innerHTML=meta.days.map((day,di)=>({day,di})).filter(({day})=>day.active!==false&&day.deleted!==true).map(({day,di})=>{
     const exercises=roster[di]||[];
     return '<section class="program-day-v18"><div class="program-day-head"><div><span>Dan '+(di+1)+(day.active===false?' · neaktiven':'')+'</span><h2>'+safeHtml(day.name||day.title)+'</h2></div><button class="sb" onclick="openProgramDayV18('+di+')">Odpri trening →</button></div><ol>'+exercises.filter(e=>!e.programDisabled).map(e=>'<li><strong>'+safeHtml(e.n0||e.n)+'</strong><span>'+safeHtml(e.targetSets?e.targetSets+' serij':'Tedenski cilji')+' · '+safeHtml(e.targetReps||'Po tednu')+' · '+safeHtml(e.progMode==='531'?'5/3/1':e.progMode==='double'?'Dvojna progresija':'Prilagojeno vaji')+'</span></li>').join('')+'</ol></section>';
   }).join('');

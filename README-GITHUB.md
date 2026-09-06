@@ -1,14 +1,20 @@
-# Workout Tracker 1.1.2 — popravek izvoza varnostne kopije
+# Workout Tracker 1.1.3 — preglednejši trening
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
-2. Prenesi [APK izdaje 1.1.2](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.1.2/Workout-Tracker-v1.1.2.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+2. Prenesi [APK izdaje 1.1.3](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.1.3/Workout-Tracker-v1.1.3.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.1.2 je 61. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.1.3 je 62. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Popravki v 1.1.3
+
+- Kalkulator plošč ob trenutnem vnosu, zložljiv 5/3/1, fiksne barve napredka vaj.
+- Glavni Program prikazuje samo aktivne dneve. Združena angleška/slovenska imena mišic v volumnu.
+- Urejevalnik zgodovine, izvor rekordov in nova ikona zaganjalnika še niso vključeni.
 
 ## Popravek v 1.1.2
 

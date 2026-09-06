@@ -8,4 +8,4 @@ http.createServer((req,res)=>{
   const file=path.resolve(root,relative);
   if(!file.startsWith(root+path.sep)||!(/^(index\.html|manifest\.json|icon[^/]*\.png|sw\.js|(?:css|js|assets|vendor)\/)/.test(relative))){res.writeHead(404).end();return;}
   fs.readFile(file,(error,data)=>{if(error){res.writeHead(404).end();return;}res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});res.end(data);});
-}).listen(4173,'127.0.0.1',()=>console.log('Workout preview: http://127.0.0.1:4173'));
+}).listen(Number(process.env.WT_PREVIEW_PORT)||4173,'127.0.0.1',()=>console.log('Workout preview ready (localhost only)'));

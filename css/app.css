@@ -2307,3 +2307,11 @@ body:not([data-page="workout"]) .focus-nav-v10{display:none!important;}
 }
 @media(min-width:900px){#page-tools.active{display:grid;grid-template-columns:1fr 1fr;gap:16px;}#page-tools>.page-heading-v17,#page-tools>.clrb{grid-column:1/-1;}#page-tools>.card{margin:0;}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+/* Status colors communicate completion, independently of the selected theme. */
+html body .focus-dots-v11 .focus-dot-v11.pending{background:#ef4444!important;border-color:#ef4444!important;box-shadow:none!important;}
+html body .focus-dots-v11 .focus-dot-v11.partial{background:#3b82f6!important;border-color:#3b82f6!important;box-shadow:none!important;}
+html body .focus-dots-v11 .focus-dot-v11.complete{background:#22c55e!important;border-color:#22c55e!important;box-shadow:none!important;}
+html body .focus-dots-v11 .focus-dot-v11.active{outline:2px solid #fff!important;outline-offset:3px;}
+html body .quick-log-v6>.platebox{grid-column:1/-1;display:block!important;margin:8px 0;padding:12px;border:1px solid #68402b;border-radius:12px;background:#191512;color:#fafafa;}
+.prescription-v20{margin:12px 0;border:1px solid var(--border);border-radius:12px;padding:12px;}
+.prescription-v20>summary{cursor:pointer;font-weight:700;color:var(--text);min-height:24px;}

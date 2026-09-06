@@ -1067,8 +1067,10 @@ function calcVolumeThisWeek(){
       const sets=(all[k]||[]).filter(s=>s.done&&s.reps&&!s.drop&&s.type!=='warmup'&&s.warm!==true);
       const cnt=sets.length;
       if(cnt===0)return;
-      map.p.forEach(m=>{groups[m]=(groups[m]||0)+cnt;});
-      (map.s||[]).forEach(m=>{groups[m]=(groups[m]||0)+cnt*0.5;});
+      const primary=new Set(map.p.map(canonicalMuscleV20).filter(Boolean));
+      const secondary=new Set((map.s||[]).map(canonicalMuscleV20).filter(Boolean));
+      primary.forEach(m=>{groups[m]=(groups[m]||0)+cnt;});
+      secondary.forEach(m=>{if(!primary.has(m))groups[m]=(groups[m]||0)+cnt*0.5;});
     });
   });
   return groups;

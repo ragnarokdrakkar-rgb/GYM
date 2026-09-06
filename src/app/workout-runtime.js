@@ -102,7 +102,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
       </div>
     </div>
     ${sugHtml}
-    ${p531Html}
+    ${p531Html?`<details class="prescription-v20"><summary>5/3/1 · načrt serij</summary>${p531Html}</details>`:''}
     <div id="wu-dyn-${exKey}"></div>
     <div class="ex-d">${safeHtml(e.d||'')}</div>${e.tip?`<div class="ex-tip">${safeHtml(e.tip)}</div>`:''}${painHtml}
     <div class="set-header-v17"><span>Delovne serije</span><span>KG / PON / RPE</span></div>
