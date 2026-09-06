@@ -81,7 +81,7 @@ async function duplicateProgramDayV6(di){const m=getProgramMetaV6();if(m.days.le
 
 /* target sets/reps from builder */
 const _nsfV5=nsf;
-nsf=function(di,ei,wk,exKey){const e=PROG.days[di]?.ex?.[ei];if(e?.progMode==='531')return Math.max(1,3+getExtraSets(exKey));if(e&&e.targetSets){const base=wk?.dl?Math.min(3,e.targetSets):e.targetSets;return Math.max(1,base+getExtraSets(exKey));}return _nsfV5(di,ei,wk,exKey);};
+nsf=function(di,ei,wk,exKey){return exerciseTargetSetsV19(PROG.days[di]?.ex?.[ei],wk,exKey);};
 const _isExHiddenV5=isExHidden;
 isExHidden=function(exKey){const m=String(exKey).match(/^c\d+w\d+d(\d+)e(\d+)$/);if(m){const e=PROG.days[+m[1]]?.ex?.[+m[2]];if(e?.programDisabled)return true;}return _isExHiddenV5(exKey);};
 
@@ -3257,24 +3257,7 @@ applyProgramStateV6();
   }
 
   function targetSetsV14(item,weekPlan,key){
-    let base;
-
-    if(Number(item?.targetSets)>0){
-      base=Math.max(1,Math.min(12,Number(item.targetSets)));
-
-      if(weekPlan?.dl){
-        base=Math.min(3,base);
-      }
-    }else{
-      base=weekPlan?.dl
-        ?3
-        :(item?.m?Number(weekPlan?.sM)||4:Number(weekPlan?.sA)||4);
-    }
-
-    return Math.max(
-      1,
-      Math.round(base)+(Number(getExtraSets(key))||0)
-    );
+    return exerciseTargetSetsV19(item,weekPlan,key);
   }
 
   isDayComplete=function(cycle,week,dayIndex){
@@ -3289,21 +3272,9 @@ applyProgramStateV6();
       return false;
     }
 
-    const list=dayListAtV14(dayIndex,cycle,week);
     const allSets=getSets();
-    const hidden=getHiddenEx();
     const weekPlan=PROG.weeks?.[week]||PROG.weeks?.[cw];
-
-    const visible=list
-      .map((item,exerciseIndex)=>({
-        item,
-        exerciseIndex,
-        key:sdk(cycle,week,dayIndex,exerciseIndex)
-      }))
-      .filter(({item,key})=>
-        item?.programDisabled!==true&&
-        !hidden[key]
-      );
+    const visible=activeWorkoutEntriesV19(cycle,week,dayIndex);
 
     if(visible.length===0)return false;
 

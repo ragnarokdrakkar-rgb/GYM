@@ -129,10 +129,11 @@ function setProgressNavActive(p){
   document.querySelectorAll('.progress-subnav button').forEach(b=>b.classList.toggle('active',b.dataset.progress===p));
 }
 function showPage(p){
+  if(p==='body')p='bodyweight'; // Retired measurements route, including restored navigation.
   const page=document.getElementById('page-'+p);if(!page)return;
   document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
   page.classList.add('active');
-  const isProgress=['cycle','gymlog','bodyweight','body','stats'].includes(p);
+  const isProgress=['cycle','gymlog','bodyweight','stats'].includes(p);
   document.querySelectorAll('.nt').forEach(e=>e.classList.remove('active'));
   const nav=document.querySelector(`.nt[data-nav="${isProgress?'progress':p==='tools'?'tools':p==='program'?'program':'workout'}"]`);if(nav)nav.classList.add('active');
   if(isProgress)setProgressNavActive(p);
@@ -141,7 +142,6 @@ function showPage(p){
   safeSetRaw('wt_last_page',p);
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
-  if(p==='body')renderMeas();
   if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();renderColorPickersInto();initDisplayUI();const _cp=document.getElementById('color-presets');if(_cp)_cp.innerHTML=renderColorPresets();}
   if(p==='gymlog'){renderSessHist();renderWeeklySummary();renderTonnageChart();const _tc=document.getElementById('train-calendar');if(_tc)_tc.innerHTML=renderTrainCalendar();}
   if(p==='stats'){
@@ -156,10 +156,27 @@ function showPage(p){
 function getExtraSets(exKey){const sc=getSetCounts();return sc[exKey]||0;}
 function setExtraSets(exKey,val){const sc=getSetCounts();sc[exKey]=val;saveSetCounts(sc);}
 
+// Cards, day checkmarks and saved sessions must use the same target.
+function exerciseTargetSetsV19(item,wk,key){
+  const manual=Number(item?.targetSets);
+  const base=item?.progMode==='531'?3:manual>0
+    ?(wk?.dl?Math.min(3,manual):manual)
+    :wk?.dl?3:(Number(item?.m?wk?.sM:wk?.sA)||4);
+  return Math.max(1,Math.round(base)+(Math.trunc(Number(getExtraSets(key)))||0));
+}
 function nsf(di,ei,wk,exKey){
-  if(!PROG.days[di]||!PROG.days[di].ex[ei])return Math.max(1,4+getExtraSets(exKey));
-  const base=wk.dl?3:(PROG.days[di].ex[ei].m?wk.sM:wk.sA);
-  return Math.max(1,base+getExtraSets(exKey));
+  return exerciseTargetSetsV19(PROG.days[di]?.ex?.[ei],wk,exKey);
+}
+// Keep original exercise indexes: filtering must never reassign saved set keys.
+function activeWorkoutEntriesV19(cycle,week,dayIndex){
+  const day=typeof getProgramMetaV6==='function'?getProgramMetaV6().days?.[dayIndex]:PROG.days[dayIndex];
+  if(!day||day.deleted===true||day.active===false)return [];
+  const list=dayListFor(dayIndex,cycle,week),hidden=getHiddenEx();
+  return list.map((item,exerciseIndex)=>({item,exerciseIndex,key:sdk(cycle,week,dayIndex,exerciseIndex)}))
+    .filter(({item,key})=>item&&!item.programDisabled&&!hidden[key]);
+}
+function completedSetLabelV19(done,target){
+  return done>target?`${done} opravljenih · cilj ${target}`:`${done}/${target}`;
 }
 
 function sdk(c,w,d,e){return `c${c}w${w}d${d}e${e}`;}
@@ -177,7 +194,7 @@ function getWeek1Weight(cn,di,ei){
 function allDone(di,ei){
   const wk=PROG.weeks[cw],exKey=sdk(getCyc().num,cw,di,ei),n=nsf(di,ei,wk,exKey),key=exKey;
   const all=getSets();if(!all[key])return false;
-  return all[key].slice(0,n).every(s=>s.done);
+  return all[key].length>=n&&all[key].slice(0,n).every(s=>s&&s.done===true);
 }
 
 // Ali so v danem dnevu (cikel cn, teden w) vse VIDNE vaje dokončane? (vsaj 1 vaja z done)
@@ -1007,12 +1024,12 @@ function isExercisePending(key){
   const w=+m[2],di=+m[3],ei=+m[4],all=getSets();
   if(!PROG.days[di]||!PROG.days[di].ex[ei]||isExHidden(key))return false;
   const n=nsf(di,ei,PROG.weeks[w],key),sets=all[key]||[];
-  return !sets.slice(0,n).every(s=>s&&s.done);
+  return sets.length<n||!sets.slice(0,n).every(s=>s&&s.done);
 }
 function visibleExerciseKeys(){return Array.from(document.querySelectorAll('#day-content .exc')).map(c=>c.id.replace(/^ec-/,''));}
 function findNextPendingExerciseKey(){
   const cn=getCyc().num,di=cd,w=cw,all=getSets(),exs=(PROG.days[di]&&PROG.days[di].ex)||[];
-  for(let ei=0;ei<exs.length;ei++){const key=sdk(cn,w,di,ei);if(isExHidden(key))continue;const n=nsf(di,ei,PROG.weeks[w],key),sets=all[key]||[];if(!sets.slice(0,n).every(s=>s&&s.done))return key;}
+  for(const {item,key} of activeWorkoutEntriesV19(cn,w,di)){const n=exerciseTargetSetsV19(item,PROG.weeks[w],key),sets=all[key]||[];if(sets.length<n||!sets.slice(0,n).every(s=>s&&s.done))return key;}
   return '';
 }
 function setGymFocus(key,scroll=true){
@@ -1065,13 +1082,15 @@ function buildImmutableSessionRecord(start,end,durMin,ctx){
   };
 }
 function buildSessionSnapshot(cn,w,di){
-  const all=getSets(),exs=(PROG.days[di]&&PROG.days[di].ex)||[];
+  const all=getSets();
   const exercises=[];let totalSets=0,totalDone=0,totalTonnage=0,maxPain=0;
-  exs.forEach((e,ei)=>{
-    const key=sdk(cn,w,di,ei); if(isExHidden(key))return;
+  activeWorkoutEntriesV19(cn,w,di).forEach(({item:e,key})=>{
     const name=getSwappedName(key,e.n,e.extra);
-    const n=nsf(di,ei,PROG.weeks[w],key);
-    const raw=(all[key]||[]).slice(0,n);
+    const n=exerciseTargetSetsV19(e,PROG.weeks[w],key);
+    const saved=all[key]||[];
+    // Preserve completed work even if the user subsequently reduced the target.
+    const retainedCount=saved.reduce((count,set,index)=>set?.done?Math.max(count,index+1):count,n);
+    const raw=Array.from({length:retainedCount},(_,index)=>saved[index]||{});
     const pain=getPain(key);maxPain=Math.max(maxPain,pain);
     const sets=raw.map((s,si)=>{
       const kg=parseFloat(s.kg)||0,reps=parseInt(s.reps)||0,vol=kg*reps;
@@ -1249,7 +1268,7 @@ async function duplicateProgramDayV6(di){const m=getProgramMetaV6();if(m.days.le
 
 /* target sets/reps from builder */
 const _nsfV5=nsf;
-nsf=function(di,ei,wk,exKey){const e=PROG.days[di]?.ex?.[ei];if(e?.progMode==='531')return Math.max(1,3+getExtraSets(exKey));if(e&&e.targetSets){const base=wk?.dl?Math.min(3,e.targetSets):e.targetSets;return Math.max(1,base+getExtraSets(exKey));}return _nsfV5(di,ei,wk,exKey);};
+nsf=function(di,ei,wk,exKey){return exerciseTargetSetsV19(PROG.days[di]?.ex?.[ei],wk,exKey);};
 const _isExHiddenV5=isExHidden;
 isExHidden=function(exKey){const m=String(exKey).match(/^c\d+w\d+d(\d+)e(\d+)$/);if(m){const e=PROG.days[+m[1]]?.ex?.[+m[2]];if(e?.programDisabled)return true;}return _isExHiddenV5(exKey);};
 
@@ -4425,24 +4444,7 @@ applyProgramStateV6();
   }
 
   function targetSetsV14(item,weekPlan,key){
-    let base;
-
-    if(Number(item?.targetSets)>0){
-      base=Math.max(1,Math.min(12,Number(item.targetSets)));
-
-      if(weekPlan?.dl){
-        base=Math.min(3,base);
-      }
-    }else{
-      base=weekPlan?.dl
-        ?3
-        :(item?.m?Number(weekPlan?.sM)||4:Number(weekPlan?.sA)||4);
-    }
-
-    return Math.max(
-      1,
-      Math.round(base)+(Number(getExtraSets(key))||0)
-    );
+    return exerciseTargetSetsV19(item,weekPlan,key);
   }
 
   isDayComplete=function(cycle,week,dayIndex){
@@ -4457,21 +4459,9 @@ applyProgramStateV6();
       return false;
     }
 
-    const list=dayListAtV14(dayIndex,cycle,week);
     const allSets=getSets();
-    const hidden=getHiddenEx();
     const weekPlan=PROG.weeks?.[week]||PROG.weeks?.[cw];
-
-    const visible=list
-      .map((item,exerciseIndex)=>({
-        item,
-        exerciseIndex,
-        key:sdk(cycle,week,dayIndex,exerciseIndex)
-      }))
-      .filter(({item,key})=>
-        item?.programDisabled!==true&&
-        !hidden[key]
-      );
+    const visible=activeWorkoutEntriesV19(cycle,week,dayIndex);
 
     if(visible.length===0)return false;
 
@@ -5669,7 +5659,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const doneSets=sets.filter(s=>s.done&&s.kg&&s.reps);
   const topSet=doneSets.length>0?doneSets.reduce((a,b)=>parseFloat(b.kg)>parseFloat(a.kg)?b:a):null;
   const totalVol=doneSets.reduce((a,b)=>a+(parseFloat(b.kg)||0)*(parseFloat(b.reps)||0),0);
-  const summaryHtml=topSet?`<div class="exc-summary"><span class="es-stats">✓ ${doneSets.length}/${n} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${exKey}')">razširi ▾</button></div>`:'';
+  const summaryHtml=topSet?`<div class="exc-summary"><span class="es-stats">✓ ${completedSetLabelV19(doneSets.length,n)} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${exKey}')">razširi ▾</button></div>`:'';
   const painHtml=renderPainBox(exKey,displayName,di,ei,cn);
   const activeCls=(typeof isActiveGymEx==='function'&&isActiveGymEx(exKey))?' active-ex':'';
   return `<div class="exc${isPR?' pr-card':''}${collapsed?' col-done':''}${activeCls}" id="ec-${exKey}">
@@ -5836,20 +5826,18 @@ function addSet(exKey,di,ei,cn){
   // Re-render just this exercise
   const card=document.getElementById('ec-'+exKey);
   if(card){const tmp=document.createElement('div');tmp.innerHTML=renderEx(PROG.days[di].ex[ei],ei,di,wk,cn);card.replaceWith(tmp.firstChild);}
+  updateTabColors();refreshGymTarget();
 }
 
 function removeSet(exKey,di,ei,cn){
   const wk=PROG.weeks[cw];
-  const baseN=wk.dl?3:(PROG.days[di].ex[ei].m?wk.sM:wk.sA);
   const extra=getExtraSets(exKey);
-  if(baseN+extra<=1)return;
+  if(nsf(di,ei,wk,exKey)<=1)return;
   setExtraSets(exKey,extra-1);
-  const n=nsf(di,ei,wk,exKey);
-  const all=getSets();
-  if(all[exKey]&&all[exKey].length>n) all[exKey]=all[exKey].slice(0,n);
-  saveSets(all);
+  // Reducing the target must not erase already recorded work.
   const card=document.getElementById('ec-'+exKey);
   if(card){const tmp=document.createElement('div');tmp.innerHTML=renderEx(PROG.days[di].ex[ei],ei,di,wk,cn);card.replaceWith(tmp.firstChild);}
+  updateTabColors();refreshGymTarget();
 }
 
 function toggleSwap(key){
@@ -6268,18 +6256,7 @@ function getTonnageHistory(){
   const sessions=getSessions().slice().reverse();
   const all=getSets();
   return sessions.map(s=>{
-    const di=DAY_NAMES.indexOf(s.dayName);
-    let tonnage=0;
-    if(di>=0){
-      // SAMO pravi teden te sesije (weekNum je 1-indexed)
-      const w=Math.max(0,(s.weekNum||1)-1);
-      for(let ei=0;ei<20;ei++){
-        const k=sdk(s.cycle,w,di,ei);
-        if(all[k])all[k].filter(x=>x.done&&x.kg&&x.reps).forEach(x=>{
-          tonnage+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0);
-        });
-      }
-    }
+    const {tonnage}=sessionStatsV19(s,all);
     return {date:s.date,day:s.dayName,tonnage:Math.round(tonnage)};
   }).filter(t=>t.tonnage>0);
 }
@@ -6311,11 +6288,11 @@ function renderMuscleFrequency(){
   const recent=sessions.filter(s=>new Date(s.date).getTime()>=weekAgo);
   const freq={};
   recent.forEach(s=>{
-    const di=DAY_NAMES.indexOf(s.dayName);if(di<0)return;
     const seen=new Set();
-    PROG.days[di]&&PROG.days[di].ex.forEach(e=>{
-      let map=EX_MAP[e.n];
-      if(!map){const db=EXERCISE_DB.find(x=>x.n===e.n);if(db)map={p:[db.m]};}
+    sessionExercisesForStatsV19(s).forEach(e=>{
+      if(!(e.sets||[]).some(set=>set?.done&&set.type!=='warmup'&&set.warm!==true))return;
+      let map=EX_MAP[e.name];
+      if(!map){const db=EXERCISE_DB.find(x=>x.n===e.name);if(db)map={p:[db.m]};}
       if(map&&map.p)map.p.forEach(m=>seen.add(m));
     });
     seen.forEach(m=>{freq[m]=(freq[m]||0)+1;});
@@ -6547,15 +6524,15 @@ function rebuildRows(key,di,ei,wk,n,sets){
 function rerenderExCard(key,di,ei,cn){
   const card=document.getElementById('ec-'+key);if(!card)return;
   const wk=PROG.weeks[cw],n=nsf(di,ei,wk,key);
-  const sets=(getSets()[key]||[]).slice(0,n);
+  const sets=getSets()[key]||[];
   const doneSets=sets.filter(s=>s.done&&s.kg&&s.reps);
   const topSet=doneSets.length>0?doneSets.reduce((a,b)=>parseFloat(b.kg)>parseFloat(a.kg)?b:a):null;
   const totalVol=doneSets.reduce((a,b)=>a+(parseFloat(b.kg)||0)*(parseFloat(b.reps)||0),0);
-  const isAllDone=sets.length>=n&&sets.every(s=>s.done);
+  const isAllDone=sets.length>=n&&sets.slice(0,n).every(s=>s.done);
   // Update / create summary
   let sm=card.querySelector('.exc-summary');
   if(topSet){
-    const sumHTML=`<span class="es-stats">✓ ${doneSets.length}/${n} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${key}')">${card.classList.contains('col-done')?'razširi ▾':'skrči ▴'}</button>`;
+    const sumHTML=`<span class="es-stats">✓ ${completedSetLabelV19(doneSets.length,n)} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${key}')">${card.classList.contains('col-done')?'razširi ▾':'skrči ▴'}</button>`;
     if(!sm){sm=document.createElement('div');sm.className='exc-summary';card.querySelector('.ex-top').after(sm);}
     sm.innerHTML=sumHTML;
   }
@@ -7044,6 +7021,28 @@ async function confirmNext(){
 }
 
 // GYM LOG
+// Locked history records what was actually trained then. Only legacy records
+// without a snapshot need to resolve the current active roster.
+function sessionExercisesForStatsV19(session,all=getSets()){
+  if(Array.isArray(session.exercises))return session.exercises;
+  const di=Number.isInteger(session.dayIdx)?session.dayIdx:DAY_NAMES.indexOf(session.dayName);
+  if(di<0)return [];
+  const week=Math.max(0,(session.weekNum||1)-1);
+  return activeWorkoutEntriesV19(session.cycle,week,di).map(({item,key})=>({
+    name:item.n,sets:Array.isArray(all[key])?all[key]:[]
+  }));
+}
+function sessionStatsV19(session,all=getSets()){
+  let tonnage=0,setCount=0;
+  sessionExercisesForStatsV19(session,all).forEach(exercise=>{
+    (exercise.sets||[]).forEach(set=>{
+      if(!set?.done||set.type==='warmup'||set.warm===true)return;
+      setCount++;
+      tonnage+=(parseFloat(set.kg)||0)*(parseFloat(set.reps)||0);
+    });
+  });
+  return {tonnage,setCount};
+}
 function renderSessHist(){
   const sessions=getSessions();
   const el=document.getElementById('sess-hist-content');if(!el)return;
@@ -7070,18 +7069,7 @@ function renderSessHist(){
   const curMonth=new Date().toISOString().slice(0,7);
   // Pomožna: izračun tonaže/setov za sesijo
   function sessStats(s){
-    const di=DAY_NAMES.indexOf(s.dayName);
-    let tonnage=0,setCount=0;
-    if(di>=0){
-      const w=Math.max(0,(s.weekNum||1)-1);
-      for(let ei=0;ei<20;ei++){
-        const k=sdk(s.cycle,w,di,ei);
-        if(all[k])all[k].filter(x=>x.done&&x.kg&&x.reps).forEach(x=>{
-          tonnage+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0);setCount++;
-        });
-      }
-    }
-    return {tonnage,setCount};
+    return sessionStatsV19(s,all);
   }
   let html='';
   months.forEach(mk=>{
@@ -7281,14 +7269,7 @@ function renderWeeklySummary(){
   function calcSetsAndVol(sessList){
     let s=0,v=0;
     sessList.forEach(sess=>{
-      const di=DAY_NAMES.indexOf(sess.dayName);
-      if(di<0||!PROG.days[di])return;
-      // SAMO pravi teden te sesije
-      const w=Math.max(0,(sess.weekNum||1)-1);
-      for(let ei=0;ei<PROG.days[di].ex.length;ei++){
-        const key=sdk(sess.cycle,w,di,ei);
-        if(all[key]){all[key].filter(x=>x.done).forEach(x=>{s++;v+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0);});}
-      }
+      const stats=sessionStatsV19(sess,all);s+=stats.setCount;v+=stats.tonnage;
     });
     return {sets:s,vol:v};
   }
@@ -7390,28 +7371,45 @@ function logBW(){
   const d=getBW();d[new Date().toISOString().split('T')[0]]=val;saveBW(d);
   document.getElementById('bw-in').value='';renderBW();
 }
+function getBWPhaseContext(entries){
+  // The selected profile is canonical; a historical or mismatched phase cannot override it.
+  const type=getActiveProfile()==='bulk'?'bulk':'cut',label=type==='bulk'?'Bulk':'Cut';
+  const phases=getPhases();
+  const active=(Array.isArray(phases)?phases:[]).filter(p=>p&&p.type===type&&!p.end&&/^\d{4}-\d{2}-\d{2}$/.test(p.start)&&Number.isFinite(Date.parse(p.start))).sort((a,b)=>b.start.localeCompare(a.start))[0];
+  const start=active?active.start:null;
+  const phaseEntries=start?entries.filter(([date,kg])=>date>=start&&Number.isFinite(Date.parse(date))&&Number.isFinite(parseFloat(kg))&&parseFloat(kg)>0).slice().sort((a,b)=>a[0].localeCompare(b[0])):[];
+  return {type,label,start,entries:phaseEntries};
+}
+function isBWGoalAligned(phase,goal){
+  if(!phase.entries.length)return false;
+  const baseline=parseFloat(phase.entries[0][1]);
+  return phase.type==='bulk'?goal>=baseline:goal<=baseline;
+}
 function renderBW(){
   const data=getBW(),entries=Object.entries(data).sort((a,b)=>a[0].localeCompare(b[0]));
-  if(entries.length===0)return;
+  if(entries.length===0){
+    for(const id of ['bw-prog-wrap','bw-chart-card','bw-log-card','bw-stats-card']){const el=document.getElementById(id);if(el)el.style.display='none';}
+    if(bwChart){bwChart.destroy();bwChart=null;}
+    renderPhases();return;
+  }
   const goal=getBWGoal();
-  const first=parseFloat(entries[0][1]);
-  const latest=parseFloat(entries[entries.length-1][1]);
-  // Za napredek uporabi 7-dnevno povprečje PO DATUMIH (stabilno, konsistentno s statistiko)
-  const avg7=avg7d(entries);
-  const isLoss=goal<first;
-  const total=Math.abs(first-goal);
-  const done=isLoss?Math.max(0,first-avg7):Math.max(0,avg7-first);
+  const phase=getBWPhaseContext(entries),phaseEntries=phase.entries;
+  const first=phaseEntries.length?parseFloat(phaseEntries[0][1]):null;
+  const avg7=avg7d(phaseEntries),isLoss=phase.type==='cut';
+  const goalAligned=isBWGoalAligned(phase,goal);
+  const total=first===null?0:Math.abs(first-goal);
+  const done=goalAligned?(isLoss?Math.max(0,first-avg7):Math.max(0,avg7-first)):0;
   const pct=total>0?Math.min(100,Math.round((done/total)*100)):0;
   document.getElementById('bw-prog-wrap').style.display='block';
   document.getElementById('bw-chart-card').style.display='block';
   document.getElementById('bw-log-card').style.display='block';
   document.getElementById('bw-pf').style.width=pct+'%';
-  document.getElementById('bw-pt').textContent=done.toFixed(1)+'kg '+(isLoss?'izgubljeno':'pridobljeno')+' · '+pct+'%';
-  const pl=document.getElementById('bw-prog-label');if(pl)pl.textContent=`Napredek do ${goal}kg`;
-  const sl=document.getElementById('bw-start-label');if(sl)sl.textContent=`Start: ${first}kg`;
+  document.getElementById('bw-pt').textContent=first===null?'Za napredek potrebujemo meritev v trenutni fazi.':!goalAligned?`Zapisani cilj ${goal}kg ni v smeri faze ${phase.label}. Preveri cilj.`:done.toFixed(1)+'kg '+(isLoss?'izgubljeno':'pridobljeno')+' v tej fazi · '+pct+'%';
+  const pl=document.getElementById('bw-prog-label');if(pl)pl.textContent=`Napredek faze ${phase.label} do ${goal}kg`;
+  const sl=document.getElementById('bw-start-label');if(sl)sl.textContent=first===null?'Začetek faze: čaka na meritev':`Začetna meritev faze: ${first}kg (${phaseEntries[0][0]})`;
   const gl=document.getElementById('bw-goal-label');if(gl)gl.textContent=`Cilj: ${goal}kg`;
   const bwRev=entries.slice().reverse();
-  const bwRow=(e,i,arr)=>{const prev=arr[i+1];const diff=prev?parseFloat(e[1])-parseFloat(prev[1]):0;const ds=diff!==0?`<span style="font-size:11px;color:${diff<0?'var(--green-text)':'var(--red-text)'}">${diff<0?'↓':'↑'}${Math.abs(diff).toFixed(1)}kg</span>`:'';return`<div class="bwe"><span>${e[0]}</span><span style="display:flex;gap:8px;align-items:center;">${ds}<strong style="color:var(--text);">${e[1]}kg</strong><button class="bk-item-btn" style="font-size:11px;padding:2px 6px;" onclick="editBW('${e[0]}',${e[1]})" title="Uredi">✎</button><button class="bk-item-btn del" style="font-size:11px;padding:2px 6px;" onclick="deleteBW('${e[0]}')" title="Izbriši">×</button></span></div>`;};
+  const bwRow=(e,i,arr)=>{const prev=arr[i+1];const diff=prev?parseFloat(e[1])-parseFloat(prev[1]):0;const ds=diff!==0?`<span style="font-size:11px;color:var(--text3)">${diff<0?'↓':'↑'}${Math.abs(diff).toFixed(1)}kg</span>`:'';return`<div class="bwe"><span>${e[0]}</span><span style="display:flex;gap:8px;align-items:center;">${ds}<strong style="color:var(--text);">${e[1]}kg</strong><button class="bk-item-btn" style="font-size:11px;padding:2px 6px;" onclick="editBW('${e[0]}',${e[1]})" title="Uredi">✎</button><button class="bk-item-btn del" style="font-size:11px;padding:2px 6px;" onclick="deleteBW('${e[0]}')" title="Izbriši">×</button></span></div>`;};
   const bwShown=bwRev.slice(0,10).map((e,i)=>bwRow(e,i,bwRev)).join('');
   const bwRest=bwRev.slice(10).map((e,i)=>bwRow(e,i+10,bwRev)).join('');
   let bwHtml=bwShown;
@@ -7437,8 +7435,7 @@ function renderBW(){
 function avg7d(entries){
   if(!entries||entries.length===0)return null;
   const lastT=new Date(entries[entries.length-1][0]).getTime();
-  let win=entries.filter(e=>lastT-new Date(e[0]).getTime()<=6.5*86400000);
-  if(win.length<2)win=entries.slice(-Math.min(7,entries.length));
+  const win=entries.filter(e=>lastT-new Date(e[0]).getTime()<=6.5*86400000);
   return win.reduce((a,e)=>a+parseFloat(e[1]),0)/win.length;
 }
 // Drseče povprečje PO DATUMIH za graf (za vsako točko: vnosi zadnjih `days` dni)
@@ -7466,18 +7463,19 @@ function renderBWStats(entries,goal){
   const card=document.getElementById('bw-stats-card');
   const el=document.getElementById('bw-stats');
   if(!el)return;
-  if(entries.length<2){card.style.display='none';return;}
-  card.style.display='block';
-  const vals=entries.map(e=>parseFloat(e[1]));
-  const dates=entries.map(e=>new Date(e[0]));
+  if(entries.length===0){if(card)card.style.display='none';el.innerHTML='';return;}
+  if(card)card.style.display='block';
+  const phase=getBWPhaseContext(entries);
+  entries=phase.entries;
   // 7-dnevno povprečje — PO DATUMIH (zadnjih 7 dni), ne po vnosih
   const avg7=avg7d(entries);
   // Tedenska sprememba — LINEARNA REGRESIJA (zgladi dnevno nihanje); okno 21 dni, razširi na 35 če premalo točk
-  const now=dates[dates.length-1].getTime();
+  const now=entries.length?new Date(entries[entries.length-1][0]).getTime():null;
   let weeklyChange=null;
   for(const winDays of [21,35]){
     const recentWindow=entries.filter(e=>now-new Date(e[0]).getTime()<=winDays*86400000);
-    if(recentWindow.length>=3){
+    // A weekly estimate needs at least three measurements spanning a full week.
+    if(recentWindow.length>=3&&now-new Date(recentWindow[0][0]).getTime()>=7*86400000){
       const pts=recentWindow.map(e=>({x:(new Date(e[0]).getTime()-now)/86400000,y:parseFloat(e[1])}));
       const nP=pts.length;
       const sumX=pts.reduce((a,p)=>a+p.x,0), sumY=pts.reduce((a,p)=>a+p.y,0);
@@ -7486,13 +7484,11 @@ function renderBWStats(entries,goal){
       if(Math.abs(denom)>0.0001){weeklyChange=((nP*sumXY-sumX*sumY)/denom)*7;break;}
     }
   }
-  if(weeklyChange===null&&vals.length>=2){
-    const daySpan=(dates[dates.length-1]-dates[0])/86400000||1;
-    weeklyChange=((vals[vals.length-1]-vals[0])/daySpan)*7;
-  }
   // Napoved do cilja — upošteva SMER trenda
   let forecast='';
-  if(weeklyChange!==null&&Math.abs(weeklyChange)>0.05){
+  const goalAligned=isBWGoalAligned(phase,goal);
+  if(entries.length&&!goalAligned)forecast=`Zapisani cilj ${goal}kg ni v smeri faze ${phase.label}. Preveri cilj; shranjena vrednost se ni spremenila.`;
+  if(goalAligned&&weeklyChange!==null&&Math.abs(weeklyChange)>0.05){
     const remaining=goal-avg7;
     if(Math.abs(remaining)<=0.2){
       forecast=`✓ Cilj dosežen!`;
@@ -7509,30 +7505,28 @@ function renderBWStats(entries,goal){
       }
     }
   }
-  // Tempo ocena za cut
+  // Describe direction for the canonical phase, without prescribing a medically ideal rate.
   let tempoNote='';
-  if(weeklyChange!==null&&weeklyChange<0){
-    const rate=Math.abs(weeklyChange);
-    if(rate>0.8)tempoNote='<span style="color:var(--red-text);">⚠ Hitro — tvegaš izgubo mišice. Razmisli o manjšem deficitu.</span>';
-    else if(rate>=0.3&&rate<=0.7)tempoNote='<span style="color:var(--green-text);">✓ Idealen tempo za cut (0.3-0.7kg/teden)</span>';
-    else if(rate<0.3)tempoNote='<span style="color:var(--amber-text);">Počasen tempo — ok če si blizu cilja</span>';
-  }
-  const wcColor=weeklyChange<0?'var(--green-text)':weeklyChange>0?'var(--red-text)':'var(--text2)';
+  const towardPhase=weeklyChange!==null&&(phase.type==='bulk'?weeklyChange>0:weeklyChange<0);
+  const wcColor=weeklyChange===null||weeklyChange===0?'var(--text2)':towardPhase?'var(--green-text)':'var(--amber-text)';
+  if(weeklyChange===null)tempoNote=phase.start?`Za trend faze ${phase.label} še ni dovolj podatkov. Potrebne so vsaj 3 meritve v tej fazi, ki pokrivajo vsaj 7 dni.`:`Začetek trenutne faze ${phase.label} ni zabeležen; trend faze ni na voljo.`;
+  else if(weeklyChange===0)tempoNote=`Teža je v fazi ${phase.label} trenutno stabilna.`;
+  else tempoNote=`<span style="color:${wcColor};">${phase.label}: teža trenutno ${weeklyChange>0?'narašča':'pada'}${towardPhase?'.':` — nasprotno smeri faze ${phase.label}.`}</span>`;
   const wcStr=weeklyChange!==null?`${weeklyChange>0?'+':''}${weeklyChange.toFixed(2)}kg`:'—';
   el.innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:.5rem;">
       <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-size:20px;font-weight:700;color:var(--purple-text);">${avg7.toFixed(1)}kg</div>
-        <div style="font-size:11px;color:var(--text3);">7-dnevno povprečje</div>
+        <div style="font-size:20px;font-weight:700;color:var(--purple-text);">${avg7===null?'—':avg7.toFixed(1)+'kg'}</div>
+        <div style="font-size:11px;color:var(--text3);">7-dnevno povprečje · ${phase.label}</div>
       </div>
       <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;">
         <div style="font-size:20px;font-weight:700;color:${wcColor};">${wcStr}</div>
-        <div style="font-size:11px;color:var(--text3);">Tedenska sprememba</div>
+        <div style="font-size:11px;color:var(--text3);">Tedenska sprememba · ${phase.label}</div>
       </div>
     </div>
     ${tempoNote?`<div style="font-size:12px;padding:6px 0;">${tempoNote}</div>`:''}
     ${forecast?`<div style="font-size:12px;color:var(--text2);padding:6px;background:var(--bg3);border-radius:6px;">${forecast}</div>`:''}
-    <div style="font-size:10px;color:var(--text3);margin-top:6px;">Dnevna teža niha ±1-2kg (voda, hrana). Sledi 7-dnevnemu povprečju, ne posameznim dnevom.</div>`;
+    <div style="font-size:10px;color:var(--text3);margin-top:6px;">${phase.start?`Faza ${phase.label} od ${phase.start}. `:''}Trend in napredek upoštevata samo meritve trenutne faze. Graf in dnevnik ohranjata celotno zgodovino. Dnevna teža niha; posamezna meritev še ne določa trenda.</div>`;
 }
 
 // === FAZE (cut/bulk/maintenance) ===
@@ -7576,6 +7570,7 @@ function renderPhases(){
 // MEASUREMENTS — neck removed
 function renderMeas(){
   const inp=document.getElementById('meas-inputs');
+  if(!inp)return; // Screen retired; retain stored measurements and backup support.
   if(inp)inp.innerHTML=MEAS_FIELDS.map(f=>`<div style="display:flex;flex-direction:column;gap:4px;"><label style="font-size:11px;color:var(--text2);">${f} (cm)</label><input class="meas-in" type="number" id="mi-${f}" placeholder="cm" min="20" max="200" step="0.5"></div>`).join('');
   const data=getMeas(),entries=Object.entries(data).sort((a,b)=>a[0].localeCompare(b[0]));
   if(entries.length===0)return;
@@ -8082,8 +8077,7 @@ function calcVolumeThisWeek(){
   const groups={};
   const customs=getCustomExercises();
   PROG.days.forEach((d,di)=>{
-    const allEx=buildDayExList(di);
-    allEx.forEach((e,ei)=>{
+    activeWorkoutEntriesV19(cn,cw,di).forEach(({item:e,key:k})=>{
       let map=EX_MAP[e.n];
       // Če ni v EX_MAP, poišči v built-in DB ali custom
       if(!map){
@@ -8092,8 +8086,7 @@ function calcVolumeThisWeek(){
         else{const cu=customs.find(x=>x.n===e.n);if(cu)map={p:[cu.muscle],s:[]};}
       }
       if(!map)return;
-      const k=`c${cn}w${cw}d${di}e${ei}`;
-      const sets=(all[k]||[]).filter(s=>s.done&&s.kg&&s.reps&&!s.drop);
+      const sets=(all[k]||[]).filter(s=>s.done&&s.reps&&!s.drop&&s.type!=='warmup'&&s.warm!==true);
       const cnt=sets.length;
       if(cnt===0)return;
       map.p.forEach(m=>{groups[m]=(groups[m]||0)+cnt;});

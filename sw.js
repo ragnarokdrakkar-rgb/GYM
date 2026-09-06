@@ -1,5 +1,5 @@
-/* Workout Tracker service worker v1.1.0 */
-const CACHE_NAME = 'workout-tracker-v1.1.0-redline-ui1-state4-backup1';
+/* Workout Tracker service worker v1.1.1 */
+const CACHE_NAME = 'workout-tracker-v1.1.1-workout-phase-fix';
 const CORE_FILES = [
   './',
   './index.html',

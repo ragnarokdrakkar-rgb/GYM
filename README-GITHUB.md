@@ -1,14 +1,22 @@
-# Workout Tracker 1.1.0 — Redline
+# Workout Tracker 1.1.1 — popravki treninga in faz
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Pred nadgradnjo izvozi JSON kopijo v Nastavitvah in jo shrani zunaj aplikacije.
-2. Na [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest) prenesi `Workout-Tracker-v1.1.0.apk`.
+2. Prenesi [APK izdaje 1.1.1](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.1.1/Workout-Tracker-v1.1.1.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode je 59. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode je 60. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Popravki v 1.1.1
+
+- Kljukica opravljenega dneva uporablja isti cilj serij kot kartice, tudi za 5/3/1 in ročne prilagoditve.
+- Deaktivirane/skrite vaje in neaktivni dnevi ne štejejo v trenutni trening, mišični volumen ali nove zapise. Vaje ostajajo v programu; zgodovina že zaključenih treningov se ne preračunava po današnjem programu.
+- Bulk/Cut trend, povprečje in napredek upoštevajo meritve od začetka trenutne faze. Za tedenski trend so potrebne vsaj tri meritve v razponu sedmih dni. Celoten graf in dnevnik ostaneta.
+- Odstranjena stran Mere/obsegi; Teža ostaja. Stari podatki mer in podpora varnostnim kopijam niso odstranjeni.
+- Opravljene serije nad naknadno zmanjšanim ciljem so jasno označene in ohranjene v novem shranjenem treningu.
 
 ## Novo v 1.1.0
 

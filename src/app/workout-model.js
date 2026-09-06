@@ -2,10 +2,27 @@
 function getExtraSets(exKey){const sc=getSetCounts();return sc[exKey]||0;}
 function setExtraSets(exKey,val){const sc=getSetCounts();sc[exKey]=val;saveSetCounts(sc);}
 
+// Cards, day checkmarks and saved sessions must use the same target.
+function exerciseTargetSetsV19(item,wk,key){
+  const manual=Number(item?.targetSets);
+  const base=item?.progMode==='531'?3:manual>0
+    ?(wk?.dl?Math.min(3,manual):manual)
+    :wk?.dl?3:(Number(item?.m?wk?.sM:wk?.sA)||4);
+  return Math.max(1,Math.round(base)+(Math.trunc(Number(getExtraSets(key)))||0));
+}
 function nsf(di,ei,wk,exKey){
-  if(!PROG.days[di]||!PROG.days[di].ex[ei])return Math.max(1,4+getExtraSets(exKey));
-  const base=wk.dl?3:(PROG.days[di].ex[ei].m?wk.sM:wk.sA);
-  return Math.max(1,base+getExtraSets(exKey));
+  return exerciseTargetSetsV19(PROG.days[di]?.ex?.[ei],wk,exKey);
+}
+// Keep original exercise indexes: filtering must never reassign saved set keys.
+function activeWorkoutEntriesV19(cycle,week,dayIndex){
+  const day=typeof getProgramMetaV6==='function'?getProgramMetaV6().days?.[dayIndex]:PROG.days[dayIndex];
+  if(!day||day.deleted===true||day.active===false)return [];
+  const list=dayListFor(dayIndex,cycle,week),hidden=getHiddenEx();
+  return list.map((item,exerciseIndex)=>({item,exerciseIndex,key:sdk(cycle,week,dayIndex,exerciseIndex)}))
+    .filter(({item,key})=>item&&!item.programDisabled&&!hidden[key]);
+}
+function completedSetLabelV19(done,target){
+  return done>target?`${done} opravljenih · cilj ${target}`:`${done}/${target}`;
 }
 
 function sdk(c,w,d,e){return `c${c}w${w}d${d}e${e}`;}
@@ -23,7 +40,7 @@ function getWeek1Weight(cn,di,ei){
 function allDone(di,ei){
   const wk=PROG.weeks[cw],exKey=sdk(getCyc().num,cw,di,ei),n=nsf(di,ei,wk,exKey),key=exKey;
   const all=getSets();if(!all[key])return false;
-  return all[key].slice(0,n).every(s=>s.done);
+  return all[key].length>=n&&all[key].slice(0,n).every(s=>s&&s.done===true);
 }
 
 // Ali so v danem dnevu (cikel cn, teden w) vse VIDNE vaje dokončane? (vsaj 1 vaja z done)

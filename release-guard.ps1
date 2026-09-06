@@ -318,7 +318,6 @@ function Invoke-SourceGuard {
         'id="page-cycle"',
         'id="page-stats"',
         'id="page-bodyweight"',
-        'id="page-body"',
         'id="page-tools"',
         'id="day-content"',
         'id="st-b"',

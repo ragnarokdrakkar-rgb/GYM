@@ -129,10 +129,11 @@ function setProgressNavActive(p){
   document.querySelectorAll('.progress-subnav button').forEach(b=>b.classList.toggle('active',b.dataset.progress===p));
 }
 function showPage(p){
+  if(p==='body')p='bodyweight'; // Retired measurements route, including restored navigation.
   const page=document.getElementById('page-'+p);if(!page)return;
   document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
   page.classList.add('active');
-  const isProgress=['cycle','gymlog','bodyweight','body','stats'].includes(p);
+  const isProgress=['cycle','gymlog','bodyweight','stats'].includes(p);
   document.querySelectorAll('.nt').forEach(e=>e.classList.remove('active'));
   const nav=document.querySelector(`.nt[data-nav="${isProgress?'progress':p==='tools'?'tools':p==='program'?'program':'workout'}"]`);if(nav)nav.classList.add('active');
   if(isProgress)setProgressNavActive(p);
@@ -141,7 +142,6 @@ function showPage(p){
   safeSetRaw('wt_last_page',p);
   if(p==='bodyweight'){initBWGoal();renderBW();renderPhases();}
   if(p==='cycle')renderCycle();
-  if(p==='body')renderMeas();
   if(p==='tools'){initProfileUI();initPlates();initAlarmUI();initCollarsUI();renderBackupList();initStepUI();renderCustomExList();renderColorPickersInto();initDisplayUI();const _cp=document.getElementById('color-presets');if(_cp)_cp.innerHTML=renderColorPresets();}
   if(p==='gymlog'){renderSessHist();renderWeeklySummary();renderTonnageChart();const _tc=document.getElementById('train-calendar');if(_tc)_tc.innerHTML=renderTrainCalendar();}
   if(p==='stats'){

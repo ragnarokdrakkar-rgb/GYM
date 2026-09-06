@@ -43,12 +43,12 @@ function isExercisePending(key){
   const w=+m[2],di=+m[3],ei=+m[4],all=getSets();
   if(!PROG.days[di]||!PROG.days[di].ex[ei]||isExHidden(key))return false;
   const n=nsf(di,ei,PROG.weeks[w],key),sets=all[key]||[];
-  return !sets.slice(0,n).every(s=>s&&s.done);
+  return sets.length<n||!sets.slice(0,n).every(s=>s&&s.done);
 }
 function visibleExerciseKeys(){return Array.from(document.querySelectorAll('#day-content .exc')).map(c=>c.id.replace(/^ec-/,''));}
 function findNextPendingExerciseKey(){
   const cn=getCyc().num,di=cd,w=cw,all=getSets(),exs=(PROG.days[di]&&PROG.days[di].ex)||[];
-  for(let ei=0;ei<exs.length;ei++){const key=sdk(cn,w,di,ei);if(isExHidden(key))continue;const n=nsf(di,ei,PROG.weeks[w],key),sets=all[key]||[];if(!sets.slice(0,n).every(s=>s&&s.done))return key;}
+  for(const {item,key} of activeWorkoutEntriesV19(cn,w,di)){const n=exerciseTargetSetsV19(item,PROG.weeks[w],key),sets=all[key]||[];if(sets.length<n||!sets.slice(0,n).every(s=>s&&s.done))return key;}
   return '';
 }
 function setGymFocus(key,scroll=true){
@@ -101,13 +101,15 @@ function buildImmutableSessionRecord(start,end,durMin,ctx){
   };
 }
 function buildSessionSnapshot(cn,w,di){
-  const all=getSets(),exs=(PROG.days[di]&&PROG.days[di].ex)||[];
+  const all=getSets();
   const exercises=[];let totalSets=0,totalDone=0,totalTonnage=0,maxPain=0;
-  exs.forEach((e,ei)=>{
-    const key=sdk(cn,w,di,ei); if(isExHidden(key))return;
+  activeWorkoutEntriesV19(cn,w,di).forEach(({item:e,key})=>{
     const name=getSwappedName(key,e.n,e.extra);
-    const n=nsf(di,ei,PROG.weeks[w],key);
-    const raw=(all[key]||[]).slice(0,n);
+    const n=exerciseTargetSetsV19(e,PROG.weeks[w],key);
+    const saved=all[key]||[];
+    // Preserve completed work even if the user subsequently reduced the target.
+    const retainedCount=saved.reduce((count,set,index)=>set?.done?Math.max(count,index+1):count,n);
+    const raw=Array.from({length:retainedCount},(_,index)=>saved[index]||{});
     const pain=getPain(key);maxPain=Math.max(maxPain,pain);
     const sets=raw.map((s,si)=>{
       const kg=parseFloat(s.kg)||0,reps=parseInt(s.reps)||0,vol=kg*reps;

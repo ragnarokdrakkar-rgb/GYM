@@ -81,7 +81,7 @@ function renderEx(e,ei,di,wk,cn,isExtra){
   const doneSets=sets.filter(s=>s.done&&s.kg&&s.reps);
   const topSet=doneSets.length>0?doneSets.reduce((a,b)=>parseFloat(b.kg)>parseFloat(a.kg)?b:a):null;
   const totalVol=doneSets.reduce((a,b)=>a+(parseFloat(b.kg)||0)*(parseFloat(b.reps)||0),0);
-  const summaryHtml=topSet?`<div class="exc-summary"><span class="es-stats">✓ ${doneSets.length}/${n} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${exKey}')">razširi ▾</button></div>`:'';
+  const summaryHtml=topSet?`<div class="exc-summary"><span class="es-stats">✓ ${completedSetLabelV19(doneSets.length,n)} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${exKey}')">razširi ▾</button></div>`:'';
   const painHtml=renderPainBox(exKey,displayName,di,ei,cn);
   const activeCls=(typeof isActiveGymEx==='function'&&isActiveGymEx(exKey))?' active-ex':'';
   return `<div class="exc${isPR?' pr-card':''}${collapsed?' col-done':''}${activeCls}" id="ec-${exKey}">
@@ -248,20 +248,18 @@ function addSet(exKey,di,ei,cn){
   // Re-render just this exercise
   const card=document.getElementById('ec-'+exKey);
   if(card){const tmp=document.createElement('div');tmp.innerHTML=renderEx(PROG.days[di].ex[ei],ei,di,wk,cn);card.replaceWith(tmp.firstChild);}
+  updateTabColors();refreshGymTarget();
 }
 
 function removeSet(exKey,di,ei,cn){
   const wk=PROG.weeks[cw];
-  const baseN=wk.dl?3:(PROG.days[di].ex[ei].m?wk.sM:wk.sA);
   const extra=getExtraSets(exKey);
-  if(baseN+extra<=1)return;
+  if(nsf(di,ei,wk,exKey)<=1)return;
   setExtraSets(exKey,extra-1);
-  const n=nsf(di,ei,wk,exKey);
-  const all=getSets();
-  if(all[exKey]&&all[exKey].length>n) all[exKey]=all[exKey].slice(0,n);
-  saveSets(all);
+  // Reducing the target must not erase already recorded work.
   const card=document.getElementById('ec-'+exKey);
   if(card){const tmp=document.createElement('div');tmp.innerHTML=renderEx(PROG.days[di].ex[ei],ei,di,wk,cn);card.replaceWith(tmp.firstChild);}
+  updateTabColors();refreshGymTarget();
 }
 
 function toggleSwap(key){
@@ -680,18 +678,7 @@ function getTonnageHistory(){
   const sessions=getSessions().slice().reverse();
   const all=getSets();
   return sessions.map(s=>{
-    const di=DAY_NAMES.indexOf(s.dayName);
-    let tonnage=0;
-    if(di>=0){
-      // SAMO pravi teden te sesije (weekNum je 1-indexed)
-      const w=Math.max(0,(s.weekNum||1)-1);
-      for(let ei=0;ei<20;ei++){
-        const k=sdk(s.cycle,w,di,ei);
-        if(all[k])all[k].filter(x=>x.done&&x.kg&&x.reps).forEach(x=>{
-          tonnage+=(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0);
-        });
-      }
-    }
+    const {tonnage}=sessionStatsV19(s,all);
     return {date:s.date,day:s.dayName,tonnage:Math.round(tonnage)};
   }).filter(t=>t.tonnage>0);
 }
@@ -723,11 +710,11 @@ function renderMuscleFrequency(){
   const recent=sessions.filter(s=>new Date(s.date).getTime()>=weekAgo);
   const freq={};
   recent.forEach(s=>{
-    const di=DAY_NAMES.indexOf(s.dayName);if(di<0)return;
     const seen=new Set();
-    PROG.days[di]&&PROG.days[di].ex.forEach(e=>{
-      let map=EX_MAP[e.n];
-      if(!map){const db=EXERCISE_DB.find(x=>x.n===e.n);if(db)map={p:[db.m]};}
+    sessionExercisesForStatsV19(s).forEach(e=>{
+      if(!(e.sets||[]).some(set=>set?.done&&set.type!=='warmup'&&set.warm!==true))return;
+      let map=EX_MAP[e.name];
+      if(!map){const db=EXERCISE_DB.find(x=>x.n===e.name);if(db)map={p:[db.m]};}
       if(map&&map.p)map.p.forEach(m=>seen.add(m));
     });
     seen.forEach(m=>{freq[m]=(freq[m]||0)+1;});
@@ -959,15 +946,15 @@ function rebuildRows(key,di,ei,wk,n,sets){
 function rerenderExCard(key,di,ei,cn){
   const card=document.getElementById('ec-'+key);if(!card)return;
   const wk=PROG.weeks[cw],n=nsf(di,ei,wk,key);
-  const sets=(getSets()[key]||[]).slice(0,n);
+  const sets=getSets()[key]||[];
   const doneSets=sets.filter(s=>s.done&&s.kg&&s.reps);
   const topSet=doneSets.length>0?doneSets.reduce((a,b)=>parseFloat(b.kg)>parseFloat(a.kg)?b:a):null;
   const totalVol=doneSets.reduce((a,b)=>a+(parseFloat(b.kg)||0)*(parseFloat(b.reps)||0),0);
-  const isAllDone=sets.length>=n&&sets.every(s=>s.done);
+  const isAllDone=sets.length>=n&&sets.slice(0,n).every(s=>s.done);
   // Update / create summary
   let sm=card.querySelector('.exc-summary');
   if(topSet){
-    const sumHTML=`<span class="es-stats">✓ ${doneSets.length}/${n} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${key}')">${card.classList.contains('col-done')?'razširi ▾':'skrči ▴'}</button>`;
+    const sumHTML=`<span class="es-stats">✓ ${completedSetLabelV19(doneSets.length,n)} · top ${topSet.kg}kg×${topSet.reps} · ${Math.round(totalVol)}kg</span><button class="toggle-fold" onclick="toggleFold('${key}')">${card.classList.contains('col-done')?'razširi ▾':'skrči ▴'}</button>`;
     if(!sm){sm=document.createElement('div');sm.className='exc-summary';card.querySelector('.ex-top').after(sm);}
     sm.innerHTML=sumHTML;
   }

@@ -88,7 +88,6 @@
     <button data-progress="cycle" onclick="showProgressPage('cycle')">Cikli</button>
     <button data-progress="stats" onclick="showProgressPage('stats')">Moč</button>
     <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
-    <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
   </div>
   <div class="page-heading-v17"><span>PROGRESIJA</span><h1>Cikli</h1><p>Pregled progresije in naslednjih odločitev.</p></div>
   <div class="card">
@@ -130,7 +129,6 @@
     <button data-progress="cycle" onclick="showProgressPage('cycle')">Cikli</button>
     <button data-progress="stats" onclick="showProgressPage('stats')">Moč</button>
     <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
-    <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
   </div>
   <div class="page-heading-v17"><span>REZULTATI</span><h1>Napredek</h1><p>Trendi, konsistenca in zgodovina treningov.</p></div>
   <!-- Weekly Summary -->
@@ -193,7 +191,6 @@
     <button data-progress="cycle" onclick="showProgressPage('cycle')">Cikli</button>
     <button data-progress="stats" onclick="showProgressPage('stats')">Moč</button>
     <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
-    <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
   </div>
   <div class="page-heading-v17"><span>TELO</span><h1>Telesna teža</h1><p>Jasen trend brez ugibanja.</p></div>
   <div class="card">
@@ -229,26 +226,6 @@
   <div class="card" id="bw-log-card" style="display:none;"><div class="ct">🕐 Zgodovina</div><div id="bw-log"></div></div>
 </div>
 
-<!-- BODY MEASUREMENTS PAGE -->
-<div class="page" id="page-body">
-  <div class="progress-subnav">
-    <button data-progress="gymlog" onclick="showProgressPage('gymlog')">Pregled</button>
-    <button data-progress="cycle" onclick="showProgressPage('cycle')">Cikli</button>
-    <button data-progress="stats" onclick="showProgressPage('stats')">Moč</button>
-    <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
-    <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
-  </div>
-  <div class="page-heading-v17"><span>TELO</span><h1>Telesne mere</h1><p>Spremljaj spremembe skozi čas.</p></div>
-  <div class="card">
-    <div class="ct">📏 Telesne mere</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;">Enkrat mesečno, zjutraj. Vse v cm.</div>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:1rem;" id="meas-inputs"></div>
-    <button class="bwbtn" onclick="saveMeasurements()">Shrani</button>
-  </div>
-  <div class="card" id="meas-curr-card" style="display:none;"><div class="ct">📐 Trenutne mere</div><div class="meas-grid" id="meas-curr"></div></div>
-  <div class="card" id="meas-hist-card" style="display:none;"><div class="ct">🕐 Zgodovina</div><div id="meas-hist"></div></div>
-</div>
-
 <!-- STATS PAGE -->
 <div class="page" id="page-stats">
   <div class="progress-subnav">
@@ -256,7 +233,6 @@
     <button data-progress="cycle" onclick="showProgressPage('cycle')">Cikli</button>
     <button data-progress="stats" onclick="showProgressPage('stats')">Moč</button>
     <button data-progress="bodyweight" onclick="showProgressPage('bodyweight')">Teža</button>
-    <button data-progress="body" onclick="showProgressPage('body')">Mere</button>
   </div>
   <div class="page-heading-v17"><span>Strength lab</span><h1>Moč</h1><p>e1RM, volumen in razmerja moči.</p></div>
   <div class="card">
@@ -365,7 +341,7 @@
 <div class="note-pop" id="onboarding-pop">
   <div class="note-pop-card onboarding-card">
     <div class="onboarding-icon">🏋️</div>
-    <h3>Workout Tracker 1.1.0</h3>
+    <h3>Workout Tracker 1.1.1</h3>
     <p>Najprej izberi fazo. Svoj seznam vaj nato urediš samo enkrat in ostane enak tudi ob preklopu faze.</p>
     <div class="onboarding-options">
       <button class="onboarding-option cut" onclick="finishOnboarding('cut')"><strong>Cut</strong><span>Ohranjanje moči · manj utrujenosti</span><small>Izbrane vaje ostanejo tvoje</small></button>
