@@ -110,6 +110,19 @@ async function copyDiagnosticsV18(){
       }
       const status=card.querySelector('.set-review-v18 summary');
       const rows=getSets()[key]||[],done=rows.filter(s=>s.done).length;
+      card.querySelectorAll('table.st tbody tr').forEach(row=>{
+        const si=Number(row.id.split('-').pop()),cell=row.querySelector('.kg-cell');
+        if(!cell||!Number.isInteger(si)||cell.querySelector('.review-rpe-v23'))return;
+        const label=document.createElement('label');label.className='review-rpe-v23';label.textContent='RPE ';
+        const input=document.createElement('input');input.type='number';input.min='1';input.max='10';input.step='0.5';input.inputMode='decimal';
+        input.value=rows[si]?.rpe||'';input.placeholder='—';input.setAttribute('aria-label','RPE, serija '+(si+1));
+        input.addEventListener('change',()=>{
+          const value=input.value===''?null:Number(input.value),current=getSets()[key]?.[si]?.rpe||null;
+          if(value!==null&&(!Number.isFinite(value)||value<1||value>10)){input.value=current||'';toast('RPE mora biti med 1 in 10.','err');return;}
+          if(value!==current)setRpe(key,si,value,di,ei,Number(m[1]));
+        });
+        label.append(input);cell.append(label);
+      });
       text(status,'Serije ('+done+' opravljene) · pregled in popravek');
       const log=card.querySelector('.compact-log-v10');
       if(log&&!log.disabled)text(log,'Zabeleži set');
@@ -373,7 +386,11 @@ async function copyDiagnosticsV18(){
   // --- Program: pregled tedna in naslednji trening ---
   function renderWeekStrip(){
     const overview=document.getElementById('program-overview-v18');if(!overview)return;
-    const days=Array.from(document.querySelectorAll('.dtabs .dt[data-day-index]'));
+    const meta=getProgramMetaV6();
+    const days=Array.from(document.querySelectorAll('.dtabs .dt[data-day-index]')).filter(d=>{
+      const day=meta.days[Number(d.dataset.dayIndex)];
+      return day&&day.active!==false&&day.deleted!==true;
+    });
     const week=document.querySelector('.wtabs .wt.active');
     let strip=document.getElementById('week-strip-v22');
     if(!days.length){if(strip)strip.remove();return;}

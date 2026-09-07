@@ -2535,10 +2535,19 @@ html body .focus-dots-v11 .focus-dot-v11.active{outline:2px solid var(--white-ho
 .step-btn-v22:active{background:var(--bg3);transform:scale(.95);}
 html.gym-mode .step-btn-v22{min-height:40px;font-size:13px;}
 html.gym-mode .set-strip-v22{margin-bottom:16px;}
-html.gym-mode .exercise-type-v17,html.gym-mode .previous-v18,html.gym-mode .set-review-v18,html.gym-mode .set-ctrl,
+html.gym-mode .exercise-type-v17,html.gym-mode .previous-v18,
 html.gym-mode .exercise-actions-v10 .b,html.gym-mode .exercise-actions-v10 .prog-dir-v10,html.gym-mode .exercise-quick-v17{display:none!important;}
 html.gym-mode .exercise-actions-v10{padding-bottom:10px;}
 html.gym-mode .compact-set-label-v10{font-size:15px;}
+
+/* 1.2.1: editable focus sets and unclipped selection rings. */
+html.gym-mode .set-review-v18{display:block!important;}
+.review-rpe-v23{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:8px;}
+.review-rpe-v23 input{width:64px;min-height:44px;font-size:16px;}
+html body .focus-dots-v11{min-width:0;min-height:44px;padding:12px;gap:16px;justify-content:flex-start;}
+html body .focus-dot-v11:first-child{margin-left:auto;}
+html body .focus-dot-v11:last-child{margin-right:auto;}
+html body .focus-dot-v11.active{transform:none;width:16px;height:16px;min-width:16px;min-height:16px;}
 body.deload-v22 .today-eyebrow::after{content:"Deload";margin-left:8px;padding:2px 8px;border-radius:var(--r-pill);background:var(--amber-bg);color:var(--amber-text);font-size:11px;font-weight:700;vertical-align:1px;}
 body.deload-v22{--phase:#e9b86a;--phase-glow:rgba(233,184,106,.26);}
 body.deload-v22 .session-actions-v17 .session-primary-v17,body.deload-v22 .compact-log-v10{background:linear-gradient(135deg,#d9a24a,#e9b86a 55%,#f2d59e 100%)!important;}
