@@ -1,5 +1,5 @@
-/* Workout Tracker service worker v1.2.1 */
-const CACHE_NAME = 'workout-tracker-v1.2.1-focus-fix';
+/* Workout Tracker service worker v1.2.2 */
+const CACHE_NAME = 'workout-tracker-v1.2.2-focus-fix';
 const CORE_FILES = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const CORE_FILES = [
   './js/data/programs.js',
   './js/app.js',
   './js/app-ui.js',
+  './js/history-editor.js',
   './js/app-update.js',
   './js/rest-native-notifications.js',
   './js/ui-safe-v1.js',

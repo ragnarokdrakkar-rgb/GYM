@@ -39,6 +39,7 @@ const runtimeSupportPaths = [
 
 const injectionPaths = [
   'js/app-ui.js',
+  'js/history-editor.js',
   'js/app-update.js',
   'js/rest-native-notifications.js',
   'js/ui-safe-v1.js',

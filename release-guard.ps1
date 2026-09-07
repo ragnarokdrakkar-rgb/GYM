@@ -230,6 +230,7 @@ function Invoke-SourceGuard {
     $InjectionRelativePaths = @(
         'js\core\backup.js',
         'js\app-ui.js',
+        'js\history-editor.js',
         'js\app-update.js',
         'js\rest-native-notifications.js',
         'js\ui-safe-v1.js',
@@ -548,6 +549,7 @@ function Invoke-AndroidGuard {
     $RequiredScriptSources = @(
         'js/core/backup.js',
         'js/app-ui.js',
+        'js/history-editor.js',
         'js/app.js',
         'js/app-update.js',
         'js/rest-native-notifications.js',
@@ -593,6 +595,7 @@ function Invoke-AndroidGuard {
         @{ Source = 'js\core\backup.js'; Www = 'js\core\backup.js' },
         @{ Source = 'js\core\state-storage.js'; Www = 'js\core\state-storage.js' },
         @{ Source = 'js\app-ui.js'; Www = 'js\app-ui.js' },
+        @{ Source = 'js\history-editor.js'; Www = 'js\history-editor.js' },
         @{ Source = 'js\app.js'; Www = 'js\app.js' },
         @{ Source = 'js\app-update.js'; Www = 'js\app-update.js' },
         @{ Source = 'js\rest-native-notifications.js'; Www = 'js\rest-native-notifications.js' },

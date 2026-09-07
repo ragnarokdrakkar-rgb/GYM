@@ -341,7 +341,7 @@
 <div class="note-pop" id="onboarding-pop">
   <div class="note-pop-card onboarding-card">
     <div class="onboarding-icon">🏋️</div>
-    <h3>Workout Tracker 1.2.1</h3>
+    <h3>Workout Tracker 1.2.2</h3>
     <p>Najprej izberi fazo. Svoj seznam vaj nato urediš samo enkrat in ostane enak tudi ob preklopu faze.</p>
     <div class="onboarding-options">
       <button class="onboarding-option cut" onclick="finishOnboarding('cut')"><strong>Cut</strong><span>Ohranjanje moči · manj utrujenosti</span><small>Izbrane vaje ostanejo tvoje</small></button>
@@ -458,6 +458,28 @@
       <div style="font-size:10px;color:var(--text3);margin-top:.4rem;">Po vsakem 4-tedenskem ciklu pritisni "Zaključi cikel": +2.5kg bench/OHP, +5kg squat/deadlift.</div>
     </div>
   </div>
+  <div class="card">
+    <div class="ct">Zgodovina · pregled in popravki</div>
+    <p>Uredi stare vaje in serije ali preveri izvor nenavadnega PR-ja. Program ostane nespremenjen. Pred več popravki izvozi backup.</p>
+    <details ontoggle="if(this.open)renderHistoryEditorV24()"><summary>Odpri celotno zgodovino</summary>
+      <label>Iskanje po vaji, datumu ali ključu <input id="history-query-v24" type="search" oninput="renderHistoryEditorV24()" placeholder="Bench, datum, c1w0…"></label>
+      <label><input id="history-suspect-v24" type="checkbox" onchange="renderHistoryEditorV24()"> Samo sumljive vrednosti / PR-ji</label>
+      <p>Oznaka pomeni predlog za pregled, ne dokazane napake. Noben zapis se ne izbriše samodejno.</p>
+      <button type="button" class="sb" onclick="undoHistoryEditV24()">Razveljavi zadnji popravek</button>
+      <div id="history-results-v24"></div>
+    </details>
+  </div>
+  <dialog id="history-dialog-v24" class="history-dialog-v24">
+    <form onsubmit="event.preventDefault();saveHistoryEditV24()">
+      <h2>Uredi zgodovinski zapis</h2><p id="history-edit-source"></p>
+      <label>Ime stare vaje<input id="history-edit-name" required maxlength="160"></label>
+      <label>Teža (kg)<input id="history-edit-kg" type="number" inputmode="decimal" min="0" max="2000" step="any" required></label>
+      <label>Ponovitve<input id="history-edit-reps" type="number" inputmode="numeric" min="1" max="1000" step="1" required></label>
+      <label>RPE (neobvezno)<input id="history-edit-rpe" type="number" inputmode="decimal" min="1" max="10" step="0.5"></label>
+      <button class="sb" type="submit">Shrani popravek</button>
+      <button class="sb" type="button" onclick="document.getElementById('history-dialog-v24').close()">Prekliči</button>
+    </form>
+  </dialog>
   <div class="card">
     <div class="ct">Backup</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.4;">Po zaključku treninga app samodejno shrani lokalni snapshot. Ta ni zunanji backup: občasno prenesi <strong>JSON v Drive/iCloud</strong>.</div>
@@ -579,6 +601,7 @@
 <script src="js/data/programs.js"></script>
 <script src="js/app.js"></script>
 <script src="js/app-ui.js"></script>
+<script src="js/history-editor.js"></script>
 <script src="js/app-update.js"></script>
 <script src="js/rest-native-notifications.js"></script>
 <script src="js/ui-safe-v1.js"></script>

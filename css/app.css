@@ -2541,6 +2541,15 @@ html.gym-mode .exercise-actions-v10{padding-bottom:10px;}
 html.gym-mode .compact-set-label-v10{font-size:15px;}
 
 /* 1.2.1: editable focus sets and unclipped selection rings. */
+.history-row-v24{padding:16px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere;}
+.history-row-v24 small{display:block;margin:6px 0;color:var(--text2);}
+.history-row-v24 .history-warning-v24{color:#ffb45e;}
+.history-dialog-v24{width:min(92vw,460px);max-height:85dvh;overflow:auto;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:20px;padding:20px;}
+.history-dialog-v24{margin:auto;}
+.history-dialog-v24::backdrop{background:rgba(0,0,0,.8);}
+.history-dialog-v24 label{display:grid;gap:5px;margin:12px 0;}
+.history-dialog-v24 input{width:100%;min-height:44px;font-size:16px;}
+#history-query-v24{display:block;width:100%;min-height:44px;margin:12px 0;}
 html.gym-mode .set-review-v18{display:block!important;}
 .review-rpe-v23{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:8px;}
 .review-rpe-v23 input{width:64px;min-height:44px;font-size:16px;}
