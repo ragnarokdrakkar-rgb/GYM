@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Workout">
-<meta name="theme-color" content="#090909">
+<meta name="theme-color" content="#050403">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
@@ -19,7 +19,7 @@
 <div class="prb2" id="pr-banner"></div>
 <header class="topbar">
   <div class="brand-v17">
-    <div class="brand-mark-v17" aria-hidden="true"><span>W</span><span>T</span></div>
+    <div class="brand-mark-v17" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c.6 3.4 3.2 5 4.6 7.6a7 7 0 1 1-11.4 5.9C5.2 12.6 8.9 11.3 9.4 7c1.3.9 2.1 2.2 2.4 3.7C12.9 9.2 12.3 5.6 12 2z"/><path fill="var(--flare)" d="M12.2 12.2c.9 1.6 2.6 2.4 2.6 4.3A2.8 2.8 0 0 1 9.2 17c0-1.6 1.5-2.3 1.7-4 .6.5 1 1.2 1.3-.8z"/></svg></div>
     <div class="brand-copy-v17">
       <div class="appname">Workout Tracker<span class="sess-dot" id="sess-dot" title="Trening je aktiven"></span><span class="save-status-v15" id="save-status-v15" role="status" aria-live="polite">Shranjeno</span></div>
       <div class="brand-tagline-v17">TVOJ TRENING. TVOJ NAPREDEK.</div>
@@ -28,10 +28,10 @@
 </header>
 <div id="storage-error-banner" role="alert" hidden><strong>Vnos še ni varno shranjen.</strong><span>Ne zapri aplikacije. Ponovi zapis ali izvozi podatke.</span><div><button onclick="retryPendingStorageWrites()">Ponovi shranjevanje</button><button onclick="exportData()">Izvozi podatke</button></div></div>
 <div class="nav" aria-label="Glavna navigacija">
-  <button type="button" class="nt active" data-nav="workout" onclick="showPage('workout')"><span class="nt-i" aria-hidden="true">🏋️</span><span>Trening</span></button>
-  <button type="button" class="nt" data-nav="program" onclick="showPage('program')"><span class="nt-i" aria-hidden="true">▤</span><span>Program</span></button>
-  <button type="button" class="nt" data-nav="progress" onclick="showProgressPage('gymlog')"><span class="nt-i" aria-hidden="true">📈</span><span>Napredek</span></button>
-  <button type="button" class="nt" data-nav="tools" onclick="showPage('tools')"><span class="nt-i" aria-hidden="true">⚙️</span><span>Nastavitve</span></button>
+  <button type="button" class="nt active" data-nav="workout" onclick="showPage('workout')"><span class="nt-i" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4M6 8v8M18 8v8M21 10v4M6 12h12"/></svg></span><span>Trening</span></button>
+  <button type="button" class="nt" data-nav="program" onclick="showPage('program')"><span class="nt-i" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><path d="M3.5 9.5h17M8 4.5v-2M16 4.5v-2M7.5 13.5h3M7.5 16.5h6"/></svg></span><span>Program</span></button>
+  <button type="button" class="nt" data-nav="progress" onclick="showProgressPage('gymlog')"><span class="nt-i" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 18.5 9 12l4 3.5 7.5-8.5"/><path d="M15.5 7h5v5"/></svg></span><span>Napredek</span></button>
+  <button type="button" class="nt" data-nav="tools" onclick="showPage('tools')"><span class="nt-i" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.5"/><circle cx="10" cy="17" r="2.5"/></svg></span><span>Nastavitve</span></button>
 </div>
 
 <!-- BACKUP REMINDER BANNER -->
@@ -111,13 +111,13 @@
     <button class="cfb" onclick="confirmNext()">Potrdi — začni cikel <span id="next-num">2</span></button>
   </div>
   <div class="card" id="cy-hist-card" style="display:none;">
-    <div class="ct">📈 Napredek po ciklih</div>
+    <div class="ct">Napredek po ciklih</div>
     <div class="lift-selector" id="lift-selector"></div>
     <div class="cw"><canvas id="strength-chart"></canvas></div>
     <div style="margin-top:1rem;"><div style="font-size:13px;font-weight:500;margin-bottom:.5rem;">Peak teže</div><div id="cy-hist-content"></div></div>
   </div>
   <div class="card" id="cy-notes-hist-card" style="display:none;">
-    <div class="ct">📝 Cikel opombe</div>
+    <div class="ct">Cikel opombe</div>
     <div id="cy-notes-hist"></div>
   </div>
 </div>
@@ -133,42 +133,42 @@
   <div class="page-heading-v17"><span>REZULTATI</span><h1>Napredek</h1><p>Trendi, konsistenca in zgodovina treningov.</p></div>
   <!-- Weekly Summary -->
   <div class="card" id="summary-card">
-    <div class="ct">📊 Tedenski povzetek</div>
+    <div class="ct">Tedenski povzetek</div>
     <div class="sum-grid" id="sum-grid"></div>
     <div id="sum-detail" style="font-size:12px;color:var(--text2);"></div>
   </div>
   <!-- Long-term overview -->
   <div class="card">
-    <div class="ct">📅 Dolgoročni pregled</div>
+    <div class="ct">Dolgoročni pregled</div>
     <div id="longterm-stats"></div>
   </div>
   <!-- Consistency by day -->
   <div class="card">
-    <div class="ct">📊 Konsistenca po dnevih</div>
+    <div class="ct">Konsistenca po dnevih</div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Kako pogosto opraviš vsak trening (zadnjih 8 tednov).</div>
     <div id="consistency-stats"></div>
   </div>
   <!-- Training calendar -->
   <div class="card">
-    <div class="ct">🗓️ Koledar treningov</div>
+    <div class="ct">Koledar treningov</div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:.25rem;">Barva = kateri trening. Drsaj med meseci s puščicami.</div>
     <div id="train-calendar"></div>
   </div>
   <!-- Duration trend -->
   <div class="card">
-    <div class="ct">⏱ Trajanje treningov</div>
+    <div class="ct">Trajanje treningov</div>
     <div style="position:relative;height:180px;"><canvas id="duration-chart"></canvas></div>
     <div id="duration-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj treningov.</div>
   </div>
   <!-- Tonnage trend -->
   <div class="card">
-    <div class="ct">📊 Tonaža na trening</div>
+    <div class="ct">Tonaža na trening</div>
     <div style="position:relative;height:200px;"><canvas id="tonnage-chart"></canvas></div>
     <div id="tonnage-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj treningov.</div>
   </div>
   <!-- Session history -->
   <div class="card">
-    <div class="ct">📜 Session zgodovina</div>
+    <div class="ct">Session zgodovina</div>
     <div style="display:flex;gap:6px;margin-bottom:.5rem;flex-wrap:wrap;">
       <button class="sb" onclick="addManualSession()" style="background:var(--bg3);">+ Ročno dodaj</button>
       <select class="si" id="sess-filter" onchange="renderSessHist()" style="flex:1;min-width:100px;">
@@ -194,7 +194,7 @@
   </div>
   <div class="page-heading-v17"><span>TELO</span><h1>Telesna teža</h1><p>Jasen trend brez ugibanja.</p></div>
   <div class="card">
-    <div class="ct">⚖️ Telesna teža</div>
+    <div class="ct">Telesna teža</div>
     <div style="display:flex;gap:8px;margin-bottom:.75rem;">
       <input class="bwi" type="number" id="bw-in" placeholder="kg" step="0.1" min="40" max="200">
       <button class="bwbtn" onclick="logBW()">Shrani</button>
@@ -211,19 +211,19 @@
     </div>
   </div>
   <div class="card" id="bw-stats-card" style="display:none;">
-    <div class="ct">📊 Statistika</div>
+    <div class="ct">Statistika</div>
     <div id="bw-stats"></div>
   </div>
   <div class="card" id="bw-phase-card">
-    <div class="ct">🔵 Faza</div>
+    <div class="ct">Faza</div>
     <div style="font-size:13px;color:var(--text2);margin-bottom:.5rem;">Skupna zgodovina faz treninga in telesne teže.</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
       <button class="sb" onclick="startPhase()">Spremeni fazo v Nastavitvah</button>
     </div>
     <div id="phase-list" style="margin-top:.5rem;"></div>
   </div>
-  <div class="card" id="bw-chart-card" style="display:none;"><div class="ct">📉 Trend</div><div class="cw"><canvas id="bw-chart"></canvas></div></div>
-  <div class="card" id="bw-log-card" style="display:none;"><div class="ct">🕐 Zgodovina</div><div id="bw-log"></div></div>
+  <div class="card" id="bw-chart-card" style="display:none;"><div class="ct">Trend</div><div class="cw"><canvas id="bw-chart"></canvas></div></div>
+  <div class="card" id="bw-log-card" style="display:none;"><div class="ct">Zgodovina</div><div id="bw-log"></div></div>
 </div>
 
 <!-- STATS PAGE -->
@@ -236,17 +236,17 @@
   </div>
   <div class="page-heading-v17"><span>Strength lab</span><h1>Moč</h1><p>e1RM, volumen in razmerja moči.</p></div>
   <div class="card">
-    <div class="ct">📈 e1RM napredek</div>
+    <div class="ct">e1RM napredek</div>
     <div id="e1rm-lift-chips" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.5rem;"></div>
     <div style="position:relative;height:240px;"><canvas id="e1rm-chart"></canvas></div>
     <div id="e1rm-empty" style="font-size:12px;color:var(--text3);text-align:center;padding:1rem;display:none;">Ni dovolj podatkov. Zabeleži vsaj 2 treninga z isto vajo.</div>
   </div>
   <div class="card">
-    <div class="ct">📊 Volumen + landmarks · ta teden</div>
+    <div class="ct">Volumen + landmarks · ta teden</div>
     <div id="vol-grp-view"></div>
   </div>
   <div class="card">
-    <div class="ct">💪 Razmerja moči (BW)</div>
+    <div class="ct">Razmerja moči (BW)</div>
     <div id="strength-ratios"></div>
   </div>
 </div>
@@ -266,7 +266,7 @@
 <!-- EXERCISE HISTORY POPUP -->
 <div class="note-pop" id="ex-hist-pop">
   <div class="note-pop-card" style="max-width:480px;max-height:85vh;display:flex;flex-direction:column;">
-    <h3 id="ex-hist-title">📊 Zgodovina</h3>
+    <h3 id="ex-hist-title">Zgodovina</h3>
     <div id="ex-hist-summary" style="font-size:12px;color:var(--text2);margin-bottom:.5rem;"></div>
     <div id="ex-hist-content" style="flex:1;overflow-y:auto;max-height:60vh;"></div>
     <div class="note-pop-actions">
@@ -301,7 +301,7 @@
 </div>
 <div class="note-pop" id="rest-edit-pop">
   <div class="note-pop-card">
-    <h3 id="rest-edit-title">⏱ Počitek</h3>
+    <h3 id="rest-edit-title">Počitek</h3>
     <div style="display:flex;align-items:center;gap:8px;margin:.5rem 0;">
       <input type="number" id="rest-edit-input" min="5" max="900" inputmode="numeric" onkeydown="if(event.key==='Enter')confirmRestEdit()" style="flex:1;font-size:16px;padding:8px 10px;border:.5px solid var(--border2);border-radius:8px;background:var(--bg3);color:var(--text);text-align:center;box-sizing:border-box;">
       <span style="font-size:12px;color:var(--text3);">sek</span>
@@ -341,7 +341,7 @@
 <div class="note-pop" id="onboarding-pop">
   <div class="note-pop-card onboarding-card">
     <div class="onboarding-icon">🏋️</div>
-    <h3>Workout Tracker 1.1.3</h3>
+    <h3>Workout Tracker 1.2.0</h3>
     <p>Najprej izberi fazo. Svoj seznam vaj nato urediš samo enkrat in ostane enak tudi ob preklopu faze.</p>
     <div class="onboarding-options">
       <button class="onboarding-option cut" onclick="finishOnboarding('cut')"><strong>Cut</strong><span>Ohranjanje moči · manj utrujenosti</span><small>Izbrane vaje ostanejo tvoje</small></button>
@@ -354,7 +354,7 @@
 <!-- V6 SESSION RECOVERY -->
 <div class="note-pop" id="v6-recovery-pop">
   <div class="note-pop-card" style="max-width:430px;">
-    <h3>↺ Nedokončan trening</h3>
+    <h3>Nedokončan trening</h3>
     <div id="v6-recovery-text" style="font-size:13px;color:var(--text2);line-height:1.5;"></div>
     <div class="v6-recovery-stats" id="v6-recovery-stats"></div>
     <div style="font-size:10px;color:var(--text3);margin-bottom:.6rem;">Vneseni seti so že shranjeni. Zavrzi odstrani samo aktivno session in timer, ne zabeleženih setov.</div>
@@ -368,7 +368,7 @@
 <!-- V6 PROGRAM BUILDER -->
 <div class="note-pop" id="v6-builder-pop">
   <div class="note-pop-card" style="max-width:620px;max-height:92vh;display:flex;flex-direction:column;">
-    <div class="v6-card-title"><h3 style="margin:0;">🧱 Program builder</h3><span class="v6-chip" id="v6-builder-profile"></span></div>
+    <div class="v6-card-title"><h3 style="margin:0;">Program builder</h3><span class="v6-chip" id="v6-builder-profile"></span></div>
     <div class="v6-builder-days" id="v6-builder-days"></div>
     <div id="v6-builder-content" style="flex:1;overflow:auto;max-height:70vh;"></div>
     <div class="note-pop-actions">
@@ -381,7 +381,7 @@
 <!-- V6 BACKUP PREVIEW -->
 <div class="note-pop" id="v6-backup-pop">
   <div class="note-pop-card" style="max-width:480px;max-height:88vh;display:flex;flex-direction:column;">
-    <h3>🔎 Pregled backupa</h3>
+    <h3>Pregled backupa</h3>
     <div id="v6-backup-preview" style="flex:1;overflow:auto;max-height:65vh;"></div>
     <div class="note-pop-actions">
       <button class="sb" onclick="closeBackupPreviewV6()" style="background:var(--bg3);">Zapri</button>
@@ -403,12 +403,12 @@
   <div class="page-heading-v17 tools-heading-v17"><span>PO TVOJE</span><h1>Nastavitve</h1><p>Faza, oprema, podatki in posodobitve.</p></div>
   <div class="card"><div class="ct">Podatki in aplikacija</div><div class="topbtns"><button class="sb" onclick="toggleTheme()" id="theme-btn">◐ Tema</button><button class="sb" onclick="importData()">↑ Uvozi kopijo</button><button class="sb" onclick="exportData()">↓ Izvozi kopijo</button></div><div id="wt-update-settings"></div><button class="sb" onclick="copyDiagnosticsV18()">Kopiraj tehnično diagnostiko</button><button class="sb" onclick="restorePreviousDayDraftV18()">Obnovi vnose pred novo izvedbo</button></div>
   <div class="card">
-    <div class="v6-card-title"><div class="ct" style="margin:0;">🧱 Program builder</div><span class="v6-chip">brez brisanja zgodovine</span></div>
+    <div class="v6-card-title"><div class="ct" style="margin:0;">Program builder</div><span class="v6-chip">brez brisanja zgodovine</span></div>
     <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:.75rem;">Uredi dneve, vrstni red, ciljne sete, ponovitve, RPE, počitek in način progresije. Odstranitev pomeni deaktivacijo; stari podatki ostanejo.</div>
     <button class="sb" onclick="openProgramBuilderV6()" style="width:100%;background:var(--green-bg);border-color:var(--green);color:var(--green-text);">Odpri program builder</button>
   </div>
   <div class="card">
-    <div class="ct">🧠 Pravila progresije 2.0</div>
+    <div class="ct">Pravila progresije 2.0</div>
     <div class="set-row"><span class="sl-l">Pametni predlogi<br><span style="font-size:10px;color:var(--text3);">RPE, bolečina, izvedba in e1RM trend</span></span><div class="toggle-sw" id="v6-prog-toggle" onclick="toggleV6Setting('progression')"></div></div>
     <div class="v6-builder-grid" style="margin-top:.75rem;">
       <div class="v6-builder-field"><label>RPE meja za povečanje</label><input id="v6-rpe-up" type="number" min="6" max="10" step="0.5" onchange="saveProgressionSettingsV6()"></div>
@@ -418,14 +418,14 @@
     </div>
   </div>
   <div class="card">
-    <div class="ct">📱 Prikaz</div>
+    <div class="ct">Prikaz</div>
     <div class="set-row">
       <span class="sl-l">Kompaktne kartice vaj<br><span style="font-size:10px;color:var(--text3);">Skrije opis in nasvet — (i) na vaji ju razkrije</span></span>
       <div class="toggle-sw" id="compact-toggle" onclick="toggleCompactSetting()"></div>
     </div>
   </div>
   <div class="card">
-    <div class="ct">🎨 Barve teme</div>
+    <div class="ct">Barve teme</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:.6rem;">Hitra tema:</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;" id="color-presets"></div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:.85rem;">Ali ročno, po segmentih:</div>
@@ -459,7 +459,7 @@
     </div>
   </div>
   <div class="card">
-    <div class="ct">💾 Backup</div>
+    <div class="ct">Backup</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.4;">Po zaključku treninga app samodejno shrani lokalni snapshot. Ta ni zunanji backup: občasno prenesi <strong>JSON v Drive/iCloud</strong>.</div>
     <div style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap;">
       <button class="sb" onclick="doWeeklyBackup()">⬇ Prenesi backup zdaj</button>
@@ -470,7 +470,7 @@
     <div style="font-size:11px;color:var(--text3);margin-bottom:.4rem;font-weight:500;">Lokalni snapshoti (zadnjih 12):</div>
     <div id="backup-list"></div>
   </div>  <div class="card">
-    <div class="ct">➕ Dodaj svojo vajo</div>
+    <div class="ct">Dodaj svojo vajo</div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;line-height:1.4;">Vaje se shranijo trajno in pojavijo med "Zamenjave" pri vsaki vaji.</div>
     <div class="ir"><span class="lbl">Ime vaje</span><input class="si" type="text" id="cust-name" placeholder="npr. Cable crossover"></div>
     <div class="ir"><span class="lbl">Mišična skupina</span>
@@ -500,7 +500,7 @@
     <div id="custom-ex-list"></div>
   </div>
   <div class="card">
-    <div class="ct">⚙️ Nastavitve gumbov +/-</div>
+    <div class="ct">Nastavitve gumbov +/-</div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;">Določa za koliko se spremeni vrednost ob tap +/-</div>
     <div class="ir"><span class="lbl">Korak teže (kg)</span>
       <select class="si" id="kg-step-sel" onchange="setKgStep(this.value);showDay(cd);">
@@ -520,7 +520,7 @@
     </div>
   </div>
   <div class="card">
-    <div class="ct">⏰ Nastavitve alarma</div>
+    <div class="ct">Nastavitve alarma</div>
     <div class="set-row"><span class="sl-l">🔊 Zvok</span><div class="toggle-sw" id="tg-sound" onclick="toggleAlarmOpt('sound')"></div></div>
     <div class="set-row"><span class="sl-l">📳 Vibracija</span><div class="toggle-sw" id="tg-vib" onclick="toggleAlarmOpt('vibrate')"></div></div>
     <div class="set-row"><span class="sl-l">🔔 Push obvestila</span><div class="toggle-sw" id="tg-notif" onclick="toggleAlarmOpt('notif')"></div></div>
@@ -547,7 +547,7 @@
     </div>
   </div>
   <div class="card">
-    <div class="ct">🧮 Plate calculator</div>
+    <div class="ct">Plate calculator</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;">Nastavi palico in plošče — samodejno pri barbell vajah.</div>
     <div class="ir"><span class="lbl">Palica</span>
       <select class="si" id="bar-w" onchange="barChanged()">
@@ -563,7 +563,7 @@
     <div class="plate-result" id="plate-result"></div>
   </div>
   <div class="card">
-    <div class="ct">📈 Ocenjeni 1RM</div>
+    <div class="ct">Ocenjeni 1RM</div>
     <div class="ir"><span class="lbl">Dvignjena teža</span><input class="si" type="number" id="orm-kg" placeholder="kg" min="0" step="2.5"></div>
     <div class="ir"><span class="lbl">Ponovitve</span><input class="si" type="number" id="orm-reps" placeholder="reps" min="1" max="30"></div>
     <button class="sb" onclick="calcORM()">Izračunaj</button>

@@ -1457,7 +1457,7 @@ function renderStagnationAlertsV6(){const el=document.getElementById('v6-stagnat
 
 /* ---------- Advanced exercise history ---------- */
 let v6ExHistoryChart=null;
-openExHistory=function(di,ei){const key=sdk(getCyc().num,cw,di,ei),e=PROG.days[di]?.ex?.[ei],name=currentExerciseName(di,ei,key),hist=getExerciseTimelineV6(di,ei,name);document.getElementById('ex-hist-title').textContent='📊 '+name;const sum=document.getElementById('ex-hist-summary'),content=document.getElementById('ex-hist-content');if(!hist.length){sum.innerHTML='';content.innerHTML='<div style="font-size:13px;color:var(--text3);padding:1rem;text-align:center;">Še ni zaključenih sessionov za to vajo.</div>';document.getElementById('ex-hist-pop').classList.add('on');return;}const best=Math.max(...hist.map(x=>x.e1rm)),heavy=Math.max(...hist.map(x=>x.topKg)),rpes=hist.map(x=>x.avgRpe).filter(Boolean),pains=hist.map(x=>x.pain).filter(Boolean),rests=hist.map(x=>x.avgRest).filter(Boolean),rec=progressionForExerciseV6(di,ei,name);sum.innerHTML=`<div class="v6-hist-metrics"><div class="v6-hist-metric"><strong>${Math.round(best)}kg</strong><span>best e1RM</span></div><div class="v6-hist-metric"><strong>${heavy}kg</strong><span>najtežje</span></div><div class="v6-hist-metric"><strong>${rpes.length?(rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1):'—'}</strong><span>povp. RPE</span></div><div class="v6-hist-metric"><strong>${pains.length?(pains.reduce((a,b)=>a+b,0)/pains.length).toFixed(1):'0'}</strong><span>povp. bolečina</span></div><div class="v6-hist-metric"><strong>${rests.length?fmtRest(Math.round(rests.reduce((a,b)=>a+b,0)/rests.length)):'—'}</strong><span>povp. počitek</span></div><div class="v6-hist-metric"><strong>${hist.length}</strong><span>sessionov</span></div></div><div class="prog-v6 ${rec.action}"><div class="prog-v6-title">${safeHtml(rec.label)}</div><div class="prog-v6-reasons">${rec.reasons.map(x=>`<div>• ${safeHtml(x)}</div>`).join('')}</div></div><div class="v6-hist-chart"><canvas id="v6-ex-history-chart"></canvas></div>`;content.innerHTML=hist.slice(0,10).map(h=>`<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:8px;${h.e1rm===best?'border:1px solid var(--green);':''}"><div style="display:flex;justify-content:space-between;gap:8px;"><strong style="font-size:12px;">${h.date?new Date(h.date).toLocaleDateString('sl-SI'):`C${h.cycle} T${h.week+1}`}</strong><span style="font-size:10px;color:var(--text3);">${Math.round(h.tonnage)}kg vol</span></div><div style="font-size:12px;color:var(--text2);margin-top:4px;">${h.sets.map(s=>`${s.kg}×${s.reps}${s.rpe?'@'+s.rpe:''}`).join(' · ')}</div><div style="font-size:10px;color:var(--text3);margin-top:4px;">e1RM ${Math.round(h.e1rm)}kg${h.avgRpe?' · RPE '+h.avgRpe.toFixed(1):''}${h.pain?' · bolečina '+h.pain+'/10':''}${h.avgRest?' · počitek '+fmtRest(Math.round(h.avgRest)):''}</div>${h.notes?.length?`<div style="font-size:10px;color:var(--amber-text);margin-top:4px;">📝 ${safeHtml(h.notes.join(' · '))}</div>`:''}</div>`).join('');document.getElementById('ex-hist-pop').classList.add('on');setTimeout(()=>{const c=document.getElementById('v6-ex-history-chart');if(!c||typeof Chart==='undefined')return;if(v6ExHistoryChart)v6ExHistoryChart.destroy();const data=[...hist].reverse().slice(-12);v6ExHistoryChart=new Chart(c.getContext('2d'),{type:'line',data:{labels:data.map(x=>x.date?new Date(x.date).toLocaleDateString('sl-SI',{day:'numeric',month:'numeric'}):`C${x.cycle}T${x.week+1}`),datasets:[{data:data.map(x=>Math.round(x.e1rm)),borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,.1)',tension:.25,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false},x:{grid:{display:false}}}}});},80);};
+openExHistory=function(di,ei){const key=sdk(getCyc().num,cw,di,ei),e=PROG.days[di]?.ex?.[ei],name=currentExerciseName(di,ei,key),hist=getExerciseTimelineV6(di,ei,name);document.getElementById('ex-hist-title').textContent='📊 '+name;const sum=document.getElementById('ex-hist-summary'),content=document.getElementById('ex-hist-content');if(!hist.length){sum.innerHTML='';content.innerHTML='<div style="font-size:13px;color:var(--text3);padding:1rem;text-align:center;">Še ni zaključenih sessionov za to vajo.</div>';document.getElementById('ex-hist-pop').classList.add('on');return;}const best=Math.max(...hist.map(x=>x.e1rm)),heavy=Math.max(...hist.map(x=>x.topKg)),rpes=hist.map(x=>x.avgRpe).filter(Boolean),pains=hist.map(x=>x.pain).filter(Boolean),rests=hist.map(x=>x.avgRest).filter(Boolean),rec=progressionForExerciseV6(di,ei,name);sum.innerHTML=`<div class="v6-hist-metrics"><div class="v6-hist-metric"><strong>${Math.round(best)}kg</strong><span>best e1RM</span></div><div class="v6-hist-metric"><strong>${heavy}kg</strong><span>najtežje</span></div><div class="v6-hist-metric"><strong>${rpes.length?(rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1):'—'}</strong><span>povp. RPE</span></div><div class="v6-hist-metric"><strong>${pains.length?(pains.reduce((a,b)=>a+b,0)/pains.length).toFixed(1):'0'}</strong><span>povp. bolečina</span></div><div class="v6-hist-metric"><strong>${rests.length?fmtRest(Math.round(rests.reduce((a,b)=>a+b,0)/rests.length)):'—'}</strong><span>povp. počitek</span></div><div class="v6-hist-metric"><strong>${hist.length}</strong><span>sessionov</span></div></div><div class="prog-v6 ${rec.action}"><div class="prog-v6-title">${safeHtml(rec.label)}</div><div class="prog-v6-reasons">${rec.reasons.map(x=>`<div>• ${safeHtml(x)}</div>`).join('')}</div></div><div class="v6-hist-chart"><canvas id="v6-ex-history-chart"></canvas></div>`;content.innerHTML=hist.slice(0,10).map(h=>`<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:8px;${h.e1rm===best?'border:1px solid var(--green);':''}"><div style="display:flex;justify-content:space-between;gap:8px;"><strong style="font-size:12px;">${h.date?new Date(h.date).toLocaleDateString('sl-SI'):`C${h.cycle} T${h.week+1}`}</strong><span style="font-size:10px;color:var(--text3);">${Math.round(h.tonnage)}kg vol</span></div><div style="font-size:12px;color:var(--text2);margin-top:4px;">${h.sets.map(s=>`${s.kg}×${s.reps}${s.rpe?'@'+s.rpe:''}`).join(' · ')}</div><div style="font-size:10px;color:var(--text3);margin-top:4px;">e1RM ${Math.round(h.e1rm)}kg${h.avgRpe?' · RPE '+h.avgRpe.toFixed(1):''}${h.pain?' · bolečina '+h.pain+'/10':''}${h.avgRest?' · počitek '+fmtRest(Math.round(h.avgRest)):''}</div>${h.notes?.length?`<div style="font-size:10px;color:var(--amber-text);margin-top:4px;">📝 ${safeHtml(h.notes.join(' · '))}</div>`:''}</div>`).join('');document.getElementById('ex-hist-pop').classList.add('on');setTimeout(()=>{const c=document.getElementById('v6-ex-history-chart');if(!c||typeof Chart==='undefined')return;if(v6ExHistoryChart)v6ExHistoryChart.destroy();const data=[...hist].reverse().slice(-12);v6ExHistoryChart=new Chart(c.getContext('2d'),{type:'line',data:{labels:data.map(x=>x.date?new Date(x.date).toLocaleDateString('sl-SI',{day:'numeric',month:'numeric'}):`C${x.cycle}T${x.week+1}`),datasets:[{data:data.map(x=>Math.round(x.e1rm)),borderColor:chartThemeV22().line,backgroundColor:chartThemeV22().fill,tension:.25,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false},x:{grid:{display:false}}}}});},80);};
 
 /* ---------- Backup center ---------- */
 const _buildBackupJSONV5=buildBackupJSON;
@@ -6303,8 +6303,8 @@ function renderTonnageChart(){
   const isDark=document.documentElement.getAttribute('data-theme')!=='light';
   tonnageChart=new Chart(canvas.getContext('2d'),{
     type:'bar',
-    data:{labels:hist.slice(-20).map(h=>h.date.slice(5)),datasets:[{label:'Tonaža (kg)',data:hist.slice(-20).map(h=>h.tonnage),backgroundColor:'#378add'}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{color:isDark?'#2e3035':'#eee'}},x:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{display:false}}}}
+    data:{labels:hist.slice(-20).map(h=>h.date.slice(5)),datasets:[{label:'Tonaža (kg)',data:hist.slice(-20).map(h=>h.tonnage),backgroundColor:chartThemeV22().line}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:chartThemeV22().tick},grid:{color:chartThemeV22().grid}},x:{ticks:{color:chartThemeV22().tick},grid:{display:false}}}}
   });
 }
 
@@ -7011,10 +7011,10 @@ function renderStrengthChart(){
   const labels=[],vals=[];
   for(let c=1;c<=cn;c++){const v=getPeakForExercise(c,di,ei);labels.push('C'+c);vals.push(v>0?v:null);}
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-  const gc=isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)',tc=isDark?'#9da3ae':'#666';
+  const gc=chartThemeV22().grid,tc=chartThemeV22().tick;
   const ctx=document.getElementById('strength-chart')?.getContext('2d');if(!ctx)return;
   if(strengthChart)strengthChart.destroy();
-  strengthChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:vals,borderColor:'#7f77dd',backgroundColor:'rgba(127,119,221,0.1)',tension:0.3,pointRadius:5,pointBackgroundColor:'#7f77dd',borderWidth:2,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:11}},grid:{display:false},border:{color:gc}}}}});
+  strengthChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:vals,borderColor:chartThemeV22().line,backgroundColor:chartThemeV22().fill,tension:0.3,pointRadius:5,pointBackgroundColor:chartThemeV22().line,borderWidth:2,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:11}},grid:{display:false},border:{color:gc}}}}});
 }
 
 async function confirmNext(){
@@ -7218,8 +7218,8 @@ function renderDurationChart(){
   const recent=sessions.slice(-20);
   durationChart=new Chart(canvas.getContext('2d'),{
     type:'line',
-    data:{labels:recent.map(s=>s.date.slice(5)),datasets:[{label:'Min',data:recent.map(s=>s.durationMin),borderColor:'#7f77dd',backgroundColor:'rgba(127,119,221,0.1)',fill:true,tension:0.3,pointRadius:3}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{color:isDark?'#2e3035':'#eee'}},x:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{display:false}}}}
+    data:{labels:recent.map(s=>s.date.slice(5)),datasets:[{label:'Min',data:recent.map(s=>s.durationMin),borderColor:chartThemeV22().line,backgroundColor:chartThemeV22().fill,fill:true,tension:0.3,pointRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:chartThemeV22().tick},grid:{color:chartThemeV22().grid}},x:{ticks:{color:chartThemeV22().tick},grid:{display:false}}}}
   });
 }
 
@@ -7375,6 +7375,8 @@ function toggleRestDay(idx){
 }
 
 // BODYWEIGHT
+// V22: barve grafov iz CSS žetonov teme (varno tudi brez DOM, npr. v testih).
+function chartThemeV22(){const fb={line:'#ff5a1f',fill:'#ff5a1f26',tick:'#8c7a6c',grid:'rgba(255,226,196,.09)'};if(typeof getComputedStyle!=='function'||typeof document==='undefined'||!document.documentElement)return fb;const st=getComputedStyle(document.documentElement),v=n=>(st.getPropertyValue(n)||'').trim();const line=v('--green')||fb.line;return {line,fill:line+'26',tick:v('--text3')||fb.tick,grid:v('--border')||fb.grid};}
 function getBWGoal(){const v=parseFloat(localStorage.getItem('wt_bwgoal'));return isNaN(v)?80:v;}
 function saveBWGoal(v){const n=parseFloat(v);if(!isNaN(n)&&n>40&&n<200){localStorage.setItem('wt_bwgoal',n);renderBW();}}
 function initBWGoal(){const g=getBWGoal();const el=document.getElementById('bw-goal');if(el)el.value=g;}
@@ -7447,12 +7449,12 @@ function renderBW(){
   document.getElementById('bw-log').innerHTML=bwHtml;
   const labels=entries.map(e=>e[0].slice(5)),vals=entries.map(e=>parseFloat(e[1]));
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-  const gc=isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)',tc=isDark?'#9da3ae':'#666';
+  const gc=chartThemeV22().grid,tc=chartThemeV22().tick;
   const ctx=document.getElementById('bw-chart').getContext('2d');
   if(bwChart)bwChart.destroy();
   const allVals=[...vals,goal];
   const yMin=Math.floor(Math.min(...allVals)-1),yMax=Math.ceil(Math.max(...allVals)+1);
-  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Teža',data:vals,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.1)',tension:0.3,pointRadius:3,pointBackgroundColor:'#1d9e75',borderWidth:1.5},{label:'7-dnevno povprečje',data:movingAvgDate(entries,7),borderColor:'#7f77dd',backgroundColor:'transparent',tension:0.4,pointRadius:0,borderWidth:2.5},{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#ef9f27',borderDash:[4,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:tc,font:{size:10},boxWidth:12}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false},border:{color:gc}}}}});
+  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Teža',data:vals,borderColor:chartThemeV22().line,backgroundColor:chartThemeV22().fill,tension:0.3,pointRadius:3,pointBackgroundColor:chartThemeV22().line,borderWidth:1.5},{label:'7-dnevno povprečje',data:movingAvgDate(entries,7),borderColor:chartThemeV22().line,backgroundColor:'transparent',tension:0.4,pointRadius:0,borderWidth:2.5},{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#ef9f27',borderDash:[4,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:tc,font:{size:10},boxWidth:12}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false},border:{color:gc}}}}});
   // Statistika + faze
   renderBWStats(entries,goal);
   renderPhases();
@@ -8311,17 +8313,17 @@ function renderE1RMChart(){
       datasets:[{
         label:activeName+' e1RM (kg)',
         data:data.map(d=>d.e1rm),
-        borderColor:'#1d9e75',
-        backgroundColor:'rgba(29,158,117,0.1)',
-        fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#1d9e75'
+        borderColor:chartThemeV22().line,
+        backgroundColor:chartThemeV22().fill,
+        fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:chartThemeV22().line
       }]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
       scales:{
-        y:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{color:isDark?'#2e3035':'#eee'}},
-        x:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{display:false}}
+        y:{ticks:{color:chartThemeV22().tick},grid:{color:chartThemeV22().grid}},
+        x:{ticks:{color:chartThemeV22().tick},grid:{display:false}}
       }
     }
   });

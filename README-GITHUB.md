@@ -1,14 +1,22 @@
-# Workout Tracker 1.1.3 — preglednejši trening
+# Workout Tracker 1.2.0 — Molten UI
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
-2. Prenesi [APK izdaje 1.1.3](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.1.3/Workout-Tracker-v1.1.3.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+2. Prenesi [APK izdaje 1.2.0](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.2.0/Workout-Tracker-v1.2.0.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.1.3 je 62. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.2.0 je 63. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Novo v 1.2.0
+
+- Molten UI: OLED črnina, brez kartic, toplotna letev ob vaji, velike številke, obroč odmora, steklena navigacija, spodnji listi.
+- Trak opravljenih serij, predlog iz zadnjega treninga, koraki ±kg/±pon, haptika ob setu in koncu odmora.
+- Program: pregled tedna, naslednji trening, obnova arhiviranih dni. Napredek: koledar na vrhu, eno prazno stanje, TM in PR na e1RM grafu.
+- Barve grafov se berejo iz teme. Odstranjenih 32 emojijev iz naslovov in mrtvi CSS iz starih plasti.
+- Podrobnosti: `RELEASE_NOTES_1.2.0.md`. versionCode 63.
 
 ## Popravki v 1.1.3
 

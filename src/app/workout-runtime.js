@@ -698,8 +698,8 @@ function renderTonnageChart(){
   const isDark=document.documentElement.getAttribute('data-theme')!=='light';
   tonnageChart=new Chart(canvas.getContext('2d'),{
     type:'bar',
-    data:{labels:hist.slice(-20).map(h=>h.date.slice(5)),datasets:[{label:'Tonaža (kg)',data:hist.slice(-20).map(h=>h.tonnage),backgroundColor:'#378add'}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{color:isDark?'#2e3035':'#eee'}},x:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{display:false}}}}
+    data:{labels:hist.slice(-20).map(h=>h.date.slice(5)),datasets:[{label:'Tonaža (kg)',data:hist.slice(-20).map(h=>h.tonnage),backgroundColor:chartThemeV22().line}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:chartThemeV22().tick},grid:{color:chartThemeV22().grid}},x:{ticks:{color:chartThemeV22().tick},grid:{display:false}}}}
   });
 }
 
@@ -1406,10 +1406,10 @@ function renderStrengthChart(){
   const labels=[],vals=[];
   for(let c=1;c<=cn;c++){const v=getPeakForExercise(c,di,ei);labels.push('C'+c);vals.push(v>0?v:null);}
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-  const gc=isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)',tc=isDark?'#9da3ae':'#666';
+  const gc=chartThemeV22().grid,tc=chartThemeV22().tick;
   const ctx=document.getElementById('strength-chart')?.getContext('2d');if(!ctx)return;
   if(strengthChart)strengthChart.destroy();
-  strengthChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:vals,borderColor:'#7f77dd',backgroundColor:'rgba(127,119,221,0.1)',tension:0.3,pointRadius:5,pointBackgroundColor:'#7f77dd',borderWidth:2,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:11}},grid:{display:false},border:{color:gc}}}}});
+  strengthChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:vals,borderColor:chartThemeV22().line,backgroundColor:chartThemeV22().fill,tension:0.3,pointRadius:5,pointBackgroundColor:chartThemeV22().line,borderWidth:2,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:11}},grid:{display:false},border:{color:gc}}}}});
 }
 
 async function confirmNext(){

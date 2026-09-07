@@ -1,5 +1,5 @@
-/* Workout Tracker service worker v1.1.3 */
-const CACHE_NAME = 'workout-tracker-v1.1.3-workout-ui';
+/* Workout Tracker service worker v1.2.0 */
+const CACHE_NAME = 'workout-tracker-v1.2.0-molten-ui';
 const CORE_FILES = [
   './',
   './index.html',

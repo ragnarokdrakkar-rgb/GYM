@@ -169,8 +169,8 @@ function renderDurationChart(){
   const recent=sessions.slice(-20);
   durationChart=new Chart(canvas.getContext('2d'),{
     type:'line',
-    data:{labels:recent.map(s=>s.date.slice(5)),datasets:[{label:'Min',data:recent.map(s=>s.durationMin),borderColor:'#7f77dd',backgroundColor:'rgba(127,119,221,0.1)',fill:true,tension:0.3,pointRadius:3}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{color:isDark?'#2e3035':'#eee'}},x:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{display:false}}}}
+    data:{labels:recent.map(s=>s.date.slice(5)),datasets:[{label:'Min',data:recent.map(s=>s.durationMin),borderColor:chartThemeV22().line,backgroundColor:chartThemeV22().fill,fill:true,tension:0.3,pointRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:chartThemeV22().tick},grid:{color:chartThemeV22().grid}},x:{ticks:{color:chartThemeV22().tick},grid:{display:false}}}}
   });
 }
 
@@ -326,6 +326,8 @@ function toggleRestDay(idx){
 }
 
 // BODYWEIGHT
+// V22: barve grafov iz CSS žetonov teme (varno tudi brez DOM, npr. v testih).
+function chartThemeV22(){const fb={line:'#ff5a1f',fill:'#ff5a1f26',tick:'#8c7a6c',grid:'rgba(255,226,196,.09)'};if(typeof getComputedStyle!=='function'||typeof document==='undefined'||!document.documentElement)return fb;const st=getComputedStyle(document.documentElement),v=n=>(st.getPropertyValue(n)||'').trim();const line=v('--green')||fb.line;return {line,fill:line+'26',tick:v('--text3')||fb.tick,grid:v('--border')||fb.grid};}
 function getBWGoal(){const v=parseFloat(localStorage.getItem('wt_bwgoal'));return isNaN(v)?80:v;}
 function saveBWGoal(v){const n=parseFloat(v);if(!isNaN(n)&&n>40&&n<200){localStorage.setItem('wt_bwgoal',n);renderBW();}}
 function initBWGoal(){const g=getBWGoal();const el=document.getElementById('bw-goal');if(el)el.value=g;}
@@ -398,12 +400,12 @@ function renderBW(){
   document.getElementById('bw-log').innerHTML=bwHtml;
   const labels=entries.map(e=>e[0].slice(5)),vals=entries.map(e=>parseFloat(e[1]));
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-  const gc=isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)',tc=isDark?'#9da3ae':'#666';
+  const gc=chartThemeV22().grid,tc=chartThemeV22().tick;
   const ctx=document.getElementById('bw-chart').getContext('2d');
   if(bwChart)bwChart.destroy();
   const allVals=[...vals,goal];
   const yMin=Math.floor(Math.min(...allVals)-1),yMax=Math.ceil(Math.max(...allVals)+1);
-  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Teža',data:vals,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.1)',tension:0.3,pointRadius:3,pointBackgroundColor:'#1d9e75',borderWidth:1.5},{label:'7-dnevno povprečje',data:movingAvgDate(entries,7),borderColor:'#7f77dd',backgroundColor:'transparent',tension:0.4,pointRadius:0,borderWidth:2.5},{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#ef9f27',borderDash:[4,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:tc,font:{size:10},boxWidth:12}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false},border:{color:gc}}}}});
+  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Teža',data:vals,borderColor:chartThemeV22().line,backgroundColor:chartThemeV22().fill,tension:0.3,pointRadius:3,pointBackgroundColor:chartThemeV22().line,borderWidth:1.5},{label:'7-dnevno povprečje',data:movingAvgDate(entries,7),borderColor:chartThemeV22().line,backgroundColor:'transparent',tension:0.4,pointRadius:0,borderWidth:2.5},{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#ef9f27',borderDash:[4,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:tc,font:{size:10},boxWidth:12}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false},border:{color:gc}}}}});
   // Statistika + faze
   renderBWStats(entries,goal);
   renderPhases();
@@ -1262,17 +1264,17 @@ function renderE1RMChart(){
       datasets:[{
         label:activeName+' e1RM (kg)',
         data:data.map(d=>d.e1rm),
-        borderColor:'#1d9e75',
-        backgroundColor:'rgba(29,158,117,0.1)',
-        fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#1d9e75'
+        borderColor:chartThemeV22().line,
+        backgroundColor:chartThemeV22().fill,
+        fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:chartThemeV22().line
       }]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
       scales:{
-        y:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{color:isDark?'#2e3035':'#eee'}},
-        x:{ticks:{color:isDark?'#9da3ae':'#666'},grid:{display:false}}
+        y:{ticks:{color:chartThemeV22().tick},grid:{color:chartThemeV22().grid}},
+        x:{ticks:{color:chartThemeV22().tick},grid:{display:false}}
       }
     }
   });
