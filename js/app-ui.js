@@ -123,7 +123,7 @@ async function copyDiagnosticsV18(){
         });
         label.append(input);cell.append(label);
       });
-      text(status,'Serije ('+done+' opravljene) · pregled in popravek');
+      if(!document.documentElement.classList.contains('compact-v26'))text(status,'Serije ('+done+' opravljene) · pregled in popravek');
       const log=card.querySelector('.compact-log-v10');
       if(log&&!log.disabled)text(log,'Zabeleži set');
     });
@@ -234,7 +234,7 @@ async function copyDiagnosticsV18(){
       id:'moltenPalette',
       beforeInit(chart){
         // Weight observations, trend and goal have distinct semantic colors.
-        if(chart.canvas?.id==='bw-chart')return;
+        if(chart.canvas?.id==='bw-chart'||chart.canvas?.id==='cg-strength-chart')return;
         const text3=cssVar('--text3')||'#8c7a6c',border=cssVar('--border')||'rgba(255,226,196,.09)';
         const scales=chart.options&&chart.options.scales||{};
         Object.values(scales).forEach(scale=>{
@@ -416,6 +416,7 @@ async function copyDiagnosticsV18(){
 
   // --- Napredek: eno prazno stanje, koledar na vrh ---
   function progressLayout(){
+    if(document.documentElement.classList.contains('compact-v26'))return;
     const page=document.getElementById('page-gymlog');if(!page)return;
     const summary=document.getElementById('summary-card');
     const calendar=document.getElementById('train-calendar');

@@ -31,9 +31,9 @@ function renderEx(e,ei,di,wk,cn,isExtra){
       sugHtml=`<div class="sug-box">💡 ${lbls[cw]} (${pcts[cw]} od T1): <strong>${sugKg}kg</strong></div>`;
     }
   }
-  const maxKg=Math.max(0,...sets.map(s=>parseFloat(s.kg)||0));
+  const maxKg=Math.max(0,...sets.filter(s=>s.done).map(s=>parseFloat(s.kg)||0));
   const isPR=maxKg>0&&maxKg>cpr;
-  const tv=sets.slice(0,n).reduce((s,x)=>(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0)+s,0);
+  const tv=sets.slice(0,n).filter(s=>s.done).reduce((s,x)=>(parseFloat(x.kg)||0)*(parseFloat(x.reps)||0)+s,0);
   const isBarbell=BARBELL_EX.includes(e.n);
   const firstKg=parseFloat(sets[0]?.kg)||0;
   let plateHtml='';

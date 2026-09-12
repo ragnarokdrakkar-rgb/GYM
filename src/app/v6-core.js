@@ -489,7 +489,7 @@ applyProgramStateV6();
         ?draft.rpe
         :(current.rpe!==undefined&&current.rpe!==null&&current.rpe!==''
           ?String(current.rpe)
-          :String(targetRpeV10(parsed)))
+          :'')
     };
   }
 
@@ -705,11 +705,11 @@ applyProgramStateV6();
     }
 
     if(
-      rpeRaw===''||
+      rpeRaw!==''&&(
       !Number.isFinite(rpe)||
       rpe<5||
       rpe>10||
-      Math.abs(rpe*2-Math.round(rpe*2))>.001
+      Math.abs(rpe*2-Math.round(rpe*2))>.001)
     ){
       toast('RPE mora biti 5\u201310 v koraku 0,5.','err');
       rpeInput?.focus();
@@ -760,7 +760,7 @@ applyProgramStateV6();
       setRpe(
         key,
         state.setIndex,
-        Math.round(rpe*2)/2,
+        rpeRaw===''?null:Math.round(rpe*2)/2,
         parsed.day,
         parsed.exercise,
         parsed.cycle
@@ -780,7 +780,7 @@ applyProgramStateV6();
       if(storageHasPendingWrites())throw new Error('Set has pending storage writes');
       draftByKeyV10.delete(key);
       toast(
-        `\u2713 ${displayNumberV10(kg)}kg \u00d7 ${reps} @ RPE ${displayNumberV10(rpe)}`,
+        `\u2713 ${displayNumberV10(kg)}kg \u00d7 ${reps}${rpeRaw!==''?' @ RPE '+displayNumberV10(rpe):''}`,
         'ok'
       );
     }catch(error){
@@ -1527,6 +1527,12 @@ applyProgramStateV6();
   window.logCompactSetV10=logCompactSetV10;
   window.WTFocusPatchV10={
     version:PATCH_VERSION,
+    syncFromStorage:key=>{
+      draftByKeyV10.delete(key);
+      const card=document.getElementById('ec-'+key),box=card?.querySelector('.quick-log-v6');
+      if(box)box.classList.remove('compact-log-box-v10');
+      if(card)installLoggerV10(card,true);
+    },
     refresh:()=>processCardsV10(true),
     repairText:repairElementV10,
     setFocus:setGymFocusV10,

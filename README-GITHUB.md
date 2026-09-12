@@ -1,14 +1,23 @@
-# Workout Tracker 1.2.3 — Molten UI
+# Workout Tracker 1.3.0 — Compact Gym
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
-2. Prenesi [APK izdaje 1.2.3](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.2.3/Workout-Tracker-v1.2.3.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+2. Prenesi [APK izdaje 1.3.0](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.3.0/Workout-Tracker-v1.3.0.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.2.3 je 66. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.3.0 je 67. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Novo v 1.3.0
+
+- Compact Gym: manjše kontrole, mirnejša postavitev, razširjena ena vaja, nastavitve v skupinah.
+- Barvni koledar z imeni treningov in izborom točnega datuma, treninga ter vaje za popravek.
+- Načrt kg in ponovitev za vsako serijo, dodajanje več serij in odstranjevanje načrtovane serije v fokusu in zunaj.
+- Moč vsebuje vse aktivne vaje programa; klik odpre graf dejansko dvignjene teže in izvorni trening.
+- Nova gym-fire Android ikona z ročko. Podatki, program in podpis APK ostajajo združljivi.
+- Podrobnosti: `RELEASE_NOTES_1.3.0.md`.
 
 ## Novo v 1.2.3
 

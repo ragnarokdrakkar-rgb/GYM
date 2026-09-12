@@ -1,7 +1,7 @@
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Drawing
 $iconRoot=Split-Path -Parent $PSScriptRoot
-$master=[System.Drawing.Image]::FromFile((Join-Path $iconRoot 'assets/darkfire-icon-master.png'))
+$master=[System.Drawing.Image]::FromFile((Join-Path $iconRoot 'assets/gym-fire-icon-master.png'))
 function Export-Icon([string]$relative,[int]$size,[double]$scale){
   $bitmap=New-Object System.Drawing.Bitmap($size,$size)
   $graphics=[System.Drawing.Graphics]::FromImage($bitmap)

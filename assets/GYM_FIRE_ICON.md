@@ -1,0 +1,5 @@
+# Gym-fire launcher icon
+
+Generated for Workout Tracker on 2026-09-13 with the built-in image generation tool. Master: `gym-fire-icon-master.png`. Existing master artwork is preserved separately. Density-specific Android and web files are reproducible with `tools/build-icons.ps1`.
+
+Prompt: Use case: logo-brand. Create a production Android launcher icon for a gym workout tracker. Square 1024x1024, fully opaque nearly black charcoal background covering the entire square, no rounded outer frame. Main subject: one bold instantly recognizable horizontal dumbbell with chunky weight plates, forged dark steel with vivid orange and vermilion fire edge highlights. A restrained simple flame rises behind the center grip. Modern compact gym identity, high contrast, sculptural graphic emblem, clean silhouette readable at 48 pixels, balanced symmetric composition. Keep the entire emblem in the center 60 percent safe area for Android adaptive icon cropping. No lettering, no numbers, no watermark, no human face, no skull, no mythology characters, no extra objects, no photo scene.
