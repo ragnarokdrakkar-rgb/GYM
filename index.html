@@ -222,7 +222,13 @@
     </div>
     <div id="phase-list" style="margin-top:.5rem;"></div>
   </div>
-  <div class="card" id="bw-chart-card" style="display:none;"><div class="ct">Trend</div><div class="cw"><canvas id="bw-chart"></canvas></div></div>
+  <div class="card" id="bw-chart-card" style="display:none;">
+    <div class="bw-chart-head-v25"><div class="ct">Trend teže</div><label>Obdobje <select id="bw-chart-range-v25" onchange="renderBW()"><option value="30">30 dni</option><option value="90" selected>90 dni</option><option value="0">Vse</option></select></label></div>
+    <p id="bw-chart-description-v25"></p>
+    <div class="bw-chart-key-v25"><span>● Dnevna meritev</span><strong>━ 7-dnevno povprečje</strong><span>┄ Cilj</span></div>
+    <div class="cw"><canvas id="bw-chart" role="img" aria-label="Trend telesne teže: dnevne meritve in sedemdnevno povprečje"></canvas></div>
+    <p class="bw-chart-hint-v25">Dotakni se grafa za datum in točne vrednosti. Celoten dnevnik meritev ostaja spodaj.</p>
+  </div>
   <div class="card" id="bw-log-card" style="display:none;"><div class="ct">Zgodovina</div><div id="bw-log"></div></div>
 </div>
 
@@ -341,7 +347,7 @@
 <div class="note-pop" id="onboarding-pop">
   <div class="note-pop-card onboarding-card">
     <div class="onboarding-icon">🏋️</div>
-    <h3>Workout Tracker 1.2.2</h3>
+    <h3>Workout Tracker 1.2.3</h3>
     <p>Najprej izberi fazo. Svoj seznam vaj nato urediš samo enkrat in ostane enak tudi ob preklopu faze.</p>
     <div class="onboarding-options">
       <button class="onboarding-option cut" onclick="finishOnboarding('cut')"><strong>Cut</strong><span>Ohranjanje moči · manj utrujenosti</span><small>Izbrane vaje ostanejo tvoje</small></button>

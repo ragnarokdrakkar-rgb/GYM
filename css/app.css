@@ -1390,7 +1390,7 @@ html.gym-mode .stp-btn{
   color:var(--blue-text)!important;
 }
 .builder-sheet-v14{
-  z-index:220!important;
+  z-index:1100!important;
   align-items:flex-end!important;
   justify-content:center!important;
   padding:0!important;
@@ -2541,6 +2541,14 @@ html.gym-mode .exercise-actions-v10{padding-bottom:10px;}
 html.gym-mode .compact-set-label-v10{font-size:15px;}
 
 /* 1.2.1: editable focus sets and unclipped selection rings. */
+.bw-chart-head-v25{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
+.bw-chart-head-v25 select{min-height:44px;font-size:16px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px;}
+#bw-chart-card .cw{position:relative;height:320px!important;margin:18px 0 12px;}
+#bw-chart-description-v25,.bw-chart-hint-v25{font-size:13px;line-height:1.6;color:var(--text2);margin:12px 0;}
+.bw-chart-key-v25{display:flex;flex-wrap:wrap;gap:10px 20px;font-size:13px;line-height:1.8;}
+.bw-chart-key-v25 span:first-child{color:#8ca4c4;}.bw-chart-key-v25 strong{color:var(--flare);}.bw-chart-key-v25 span:last-child{color:#b895db;}
+#builder-ex-picker-v14,#builder-custom-ex-v14{z-index:1100!important;}
+#toast-el{z-index:1200;}
 .history-row-v24{padding:16px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere;}
 .history-row-v24 small{display:block;margin:6px 0;color:var(--text2);}
 .history-row-v24 .history-warning-v24{color:#ffb45e;}

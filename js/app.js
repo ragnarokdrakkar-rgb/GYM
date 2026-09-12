@@ -1254,7 +1254,7 @@ getSuggestedDayIndex=function(){const active=activeDayIndicesV6();if(!active.len
 /* ---------- Program builder ---------- */
 let v6BuilderDay=0;
 async function openProgramBuilderV6(){if(stRun){toast('Program med aktivno sesijo ostane zaklenjen.','err');return;}await autoBackupToIDB();applyProgramStateV6();ensureDayLists();v6BuilderDay=activeDayIndicesV6()[0]??0;document.getElementById('v6-builder-pop').classList.add('on');renderProgramBuilderV6();}
-function closeProgramBuilderV6(){document.getElementById('v6-builder-pop').classList.remove('on');applyProgramStateV6();renderDayTabsV6();showDay(activeDayIndicesV6().includes(cd)?cd:(activeDayIndicesV6()[0]||0));}
+function closeProgramBuilderV6(){document.getElementById('v6-builder-pop').classList.remove('on');applyProgramStateV6();renderDayTabsV6();showDay(activeDayIndicesV6().includes(cd)?cd:(activeDayIndicesV6()[0]||0));if(typeof renderProgramPageV18==='function')renderProgramPageV18();}
 function renderProgramBuilderV6(){applyProgramStateV6();ensureDayLists();const meta=getProgramMetaV6(),prof=getActiveProfile();document.getElementById('v6-builder-profile').textContent=`Skupni program · ${prof==='bulk'?'Bulk':'Cut'} faza`;const days=document.getElementById('v6-builder-days');days.innerHTML=meta.days.map((d,i)=>`<button class="v6-builder-day${i===v6BuilderDay?' active':''}${d.active===false?' off':''}" onclick="v6BuilderDay=${i};renderProgramBuilderV6()">${safeHtml(d.name||`Dan ${i+1}`)}${d.active===false?' · off':''}</button>`).join('');renderProgramBuilderDayV6(v6BuilderDay);}
 function renderProgramBuilderDayV6(di){const meta=getProgramMetaV6(),d=meta.days[di];if(!d)return;const all=getDayLists()||{},list=all[di]||[],opts=[...new Set([...EXERCISE_DB.map(x=>x.n),...getCustomExercises().map(x=>x.n)])].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${safeHtml(n)}"></option>`).join('');
   const exHtml=list.map((it,i)=>{const nm=dispNameForItem(it,getCyc().num,cw),off=!!it.programDisabled;return `<div class="v6-ex-edit${off?' off':''}"><div class="v6-ex-edit-head"><div class="v6-ex-edit-name">${safeHtml(nm)}</div><button class="v6-mini-btn" onclick="moveBuilderExerciseV6(${di},${i},-1)">↑</button><button class="v6-mini-btn" onclick="moveBuilderExerciseV6(${di},${i},1)">↓</button><button class="v6-mini-btn" onclick="toggleBuilderExerciseV6(${di},${i})">${off?'↺':'×'}</button></div><div class="v6-builder-grid">
@@ -1508,6 +1508,16 @@ applyProgramStateV6();
   let observerV10=null;
   let renderPendingV10=false;
   let timerFinishedUntilV10=0;
+  let timerDismissV25=null;
+  function showTimerFinishedV25(duration){
+    clearTimeout(timerDismissV25);
+    timerFinishedUntilV10=Date.now()+duration;
+    renderGlobalTimerV10();
+    timerDismissV25=setTimeout(()=>{
+      timerFinishedUntilV10=0;
+      renderGlobalTimerV10();
+    },duration+50);
+  }
   let batchPersistDepthV10=0;
 
   const CP1252_SPECIAL_V10=new Map([
@@ -2262,6 +2272,11 @@ applyProgramStateV6();
     element.querySelector('[data-action="stop"]')?.addEventListener('click',()=>{
       const timer=currentTimerV6();
       if(timer)stopT(timer.key);
+      else{
+        clearTimeout(timerDismissV25);
+        timerFinishedUntilV10=0;
+        renderGlobalTimerV10();
+      }
     });
 
     return element;
@@ -2349,8 +2364,7 @@ applyProgramStateV6();
       logRestV6(timer,'completed');
     }catch(error){}
 
-    timerFinishedUntilV10=Date.now()+3500;
-    renderGlobalTimerV10();
+    showTimerFinishedV25(2500);
 
     if(foregroundAlert&&!document.hidden){
       alertEnd(timer.key);
@@ -2517,8 +2531,7 @@ applyProgramStateV6();
         logRestV6(timer,'completed');
       }catch(error){}
 
-      timerFinishedUntilV10=Date.now()+2500;
-      renderGlobalTimerV10();
+      showTimerFinishedV25(2500);
       return;
     }
 
@@ -4698,7 +4711,9 @@ applyProgramStateV6();
     };
 
     input.addEventListener('click',open);
-    input.addEventListener('focus',open);
+    input.addEventListener('keydown',event=>{
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();open(event);}
+    });
 
     document.getElementById('v6-ex-options')?.remove();
 
@@ -4711,6 +4726,8 @@ applyProgramStateV6();
       ?.querySelector('.v6-builder-actions');
 
     if(actions){
+      const add=actions.querySelector('button');
+      if(add){add.removeAttribute('onclick');add.textContent='+ Izberi in dodaj vajo';add.addEventListener('click',()=>openExerciseChooserV14(dayIndex));}
       const create=document.createElement('button');
       create.type='button';
       create.className='sb builder-create-v14';
@@ -4842,6 +4859,7 @@ applyProgramStateV6();
   window.addProgramDayV6=addProgramDayV6;
 
   duplicateProgramDayV6=async function(dayIndex){
+    if(stRun||window.v6RecoveryPending){toast('Najprej zaključi trening.','err');return;}
     const meta=getProgramMetaV6();
     const visible=visibleBuilderDaysV14(meta);
 
@@ -4869,9 +4887,6 @@ applyProgramStateV6();
       active:true
     });
 
-    baseSaveProgramMetaV14(meta,profileV14());
-    applyProgramStateV6();
-
     const all=getDayLists()||{};
     const sourceList=Array.isArray(all[dayIndex])
       ?all[dayIndex]
@@ -4882,8 +4897,10 @@ applyProgramStateV6();
       id:_newExId(item.n0||item.n||'vaja')
     }));
 
-    saveDayLists(all);
-
+    try{
+      commitStorageBatch([[V6_KEYS.metaShared,JSON.stringify({...meta,version:2,shared:true})],[_dlKey(),JSON.stringify(all)]]);
+    }catch(error){toast(error.message,'err');return;}
+    applyProgramStateV6();
     v6BuilderDay=newIndex;
     renderProgramBuilderV6();
     toast('Kopija dneva je ustvarjena.','ok');
@@ -5055,6 +5072,7 @@ applyProgramStateV6();
   }
 
   function openExerciseChooserV14(dayIndex){
+    if(stRun||window.v6RecoveryPending){toast('Najprej zaključi trening.','err');return;}
     if(!Number.isInteger(Number(dayIndex)))return;
 
     chooserDayV14=Number(dayIndex);
@@ -5071,7 +5089,7 @@ applyProgramStateV6();
     syncViewportV14();
 
     window.setTimeout(()=>{
-      search?.focus();
+      if(popup.classList.contains('on'))search?.focus();
     },80);
   }
 
@@ -5136,9 +5154,11 @@ applyProgramStateV6();
     };
   }
 
-  function addExerciseToDayV14(dayIndex,option){
+  function addExerciseToDayV14(dayIndex,option,customs=null){
+    if(stRun||window.v6RecoveryPending){toast('Najprej zaključi trening.','err');return;}
     const di=Number(dayIndex);
-    if(!Number.isInteger(di)||!option?.name)return;
+    const day=getProgramMetaV6().days[di];
+    if(!Number.isInteger(di)||!option?.name||!day||day.deleted===true)return;
 
     ensureDayLists();
 
@@ -5163,7 +5183,7 @@ applyProgramStateV6();
       if(existing.programDisabled){
         existing.programDisabled=false;
         all[di]=list;
-        saveDayLists(all);
+        if(!saveDayLists(all))return;
 
         closeExerciseChooserV14();
         closeCustomExerciseV14();
@@ -5178,9 +5198,12 @@ applyProgramStateV6();
 
     const item=exerciseItemV14(option);
 
-    mutateDayList(di,items=>{
-      items.push(item);
-    });
+    list.push(item);all[di]=list;
+    try{
+      const changes=[[_dlKey(),JSON.stringify(all)]];
+      if(customs)changes.push([CUST_KEY,JSON.stringify(customs)]);
+      commitStorageBatch(changes);
+    }catch(error){toast(error.message,'err');return;}
 
     if(typeof option.plateDefault==='boolean'){
       setPlatePreferenceV14(
@@ -5356,6 +5379,7 @@ applyProgramStateV6();
   }
 
   function openCustomExerciseV14(dayIndex){
+    if(stRun||window.v6RecoveryPending){toast('Najprej zaključi trening.','err');return;}
     const di=Number(dayIndex);
     if(!Number.isInteger(di))return;
 
@@ -5379,7 +5403,7 @@ applyProgramStateV6();
     syncViewportV14();
 
     window.setTimeout(()=>{
-      popup.querySelector('#builder-custom-name-v14')?.focus();
+      if(popup.classList.contains('on'))popup.querySelector('#builder-custom-name-v14')?.focus();
     },80);
   }
 
@@ -5494,7 +5518,6 @@ applyProgramStateV6();
 
     const customs=getCustomExercises();
     customs.push(custom);
-    saveCustomExercises(customs);
 
     addExerciseToDayV14(dayIndex,{
       name,
@@ -5509,7 +5532,7 @@ applyProgramStateV6();
       main,
       plateDefault,
       custom:true
-    });
+    },customs);
   }
 
   window.openCustomExerciseV14=openCustomExerciseV14;
@@ -7414,6 +7437,11 @@ function isBWGoalAligned(phase,goal){
   const baseline=parseFloat(phase.entries[0][1]);
   return phase.type==='bulk'?goal>=baseline:goal<=baseline;
 }
+function bwChartWindowV25(entries,days){
+  if(!entries.length||!days)return entries;
+  const end=Date.parse(entries[entries.length-1][0]+'T12:00:00Z');
+  return entries.filter(e=>Date.parse(e[0]+'T12:00:00Z')>=end-(days-1)*86400000);
+}
 function renderBW(){
   const data=getBW(),entries=Object.entries(data).sort((a,b)=>a[0].localeCompare(b[0]));
   if(entries.length===0){
@@ -7447,14 +7475,22 @@ function renderBW(){
     <button class="sb" onclick="const r=document.getElementById('bw-log-rest');const open=r.style.display!=='none';r.style.display=open?'none':'block';this.textContent=open?'▾ Prikaži vse (${bwRev.length})':'▴ Skrij';" style="width:100%;margin-top:.5rem;background:var(--bg3);font-size:12px;">▾ Prikaži vse (${bwRev.length})</button>`;
   }
   document.getElementById('bw-log').innerHTML=bwHtml;
-  const labels=entries.map(e=>e[0].slice(5)),vals=entries.map(e=>parseFloat(e[1]));
+  const chartEntries=bwChartWindowV25(entries,Number(document.getElementById('bw-chart-range-v25')?.value??90));
+  const labels=chartEntries.map(e=>e[0]),vals=chartEntries.map(e=>parseFloat(e[1]));
+  const averages=movingAvgDate(entries,7).slice(entries.length-chartEntries.length);
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
   const gc=chartThemeV22().grid,tc=chartThemeV22().tick;
   const ctx=document.getElementById('bw-chart').getContext('2d');
   if(bwChart)bwChart.destroy();
-  const allVals=[...vals,goal];
-  const yMin=Math.floor(Math.min(...allVals)-1),yMax=Math.ceil(Math.max(...allVals)+1);
-  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Teža',data:vals,borderColor:chartThemeV22().line,backgroundColor:chartThemeV22().fill,tension:0.3,pointRadius:3,pointBackgroundColor:chartThemeV22().line,borderWidth:1.5},{label:'7-dnevno povprečje',data:movingAvgDate(entries,7),borderColor:chartThemeV22().line,backgroundColor:'transparent',tension:0.4,pointRadius:0,borderWidth:2.5},{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#ef9f27',borderDash:[4,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:tc,font:{size:10},boxWidth:12}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false},border:{color:gc}}}}});
+  const yMin=Math.floor((Math.min(...vals,...averages)-.5)*2)/2,yMax=Math.ceil((Math.max(...vals,...averages)+.5)*2)/2;
+  const goalVisible=goal>=yMin&&goal<=yMax;
+  const description=document.getElementById('bw-chart-description-v25');
+  if(description)description.textContent=`${labels[0]} – ${labels[labels.length-1]} · ${vals.length} meritev · cilj ${goal} kg${goalVisible?'':' (zunaj prikazanega razpona)'}`;
+  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[
+    {label:'Dnevna meritev',data:vals,borderColor:'#8ca4c4',pointBackgroundColor:'#8ca4c4',pointRadius:vals.length>45?1:3,borderWidth:1,tension:.15},
+    {label:'7-dnevno povprečje',data:averages,borderColor:chartThemeV22().line,pointRadius:0,borderWidth:3,tension:.3},
+    ...(goalVisible?[{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#b895db',borderDash:[5,5],borderWidth:1.5,pointRadius:0}]:[])
+  ]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{titleFont:{size:14},bodyFont:{size:14},padding:12,callbacks:{label:context=>`${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)} kg`}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:12},maxTicksLimit:6,padding:8,callback:value=>value+' kg'},grid:{color:gc},border:{display:false}},x:{ticks:{color:tc,font:{size:12},maxTicksLimit:5,maxRotation:0,autoSkip:true,callback:function(value){return this.getLabelForValue(value).slice(5).replace('-','.');}},grid:{display:false},border:{display:false}}}}});
   // Statistika + faze
   renderBWStats(entries,goal);
   renderPhases();

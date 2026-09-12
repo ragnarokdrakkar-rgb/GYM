@@ -7,7 +7,7 @@ const path=require('node:path');
 const childProcess=require('node:child_process');
 
 const root=path.resolve(__dirname,'..');
-const version='1.2.2';
+const version='1.2.3';
 
 function read(relativePath){
   return fs.readFileSync(path.join(root,relativePath),'utf8');

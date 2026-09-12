@@ -365,6 +365,11 @@ function isBWGoalAligned(phase,goal){
   const baseline=parseFloat(phase.entries[0][1]);
   return phase.type==='bulk'?goal>=baseline:goal<=baseline;
 }
+function bwChartWindowV25(entries,days){
+  if(!entries.length||!days)return entries;
+  const end=Date.parse(entries[entries.length-1][0]+'T12:00:00Z');
+  return entries.filter(e=>Date.parse(e[0]+'T12:00:00Z')>=end-(days-1)*86400000);
+}
 function renderBW(){
   const data=getBW(),entries=Object.entries(data).sort((a,b)=>a[0].localeCompare(b[0]));
   if(entries.length===0){
@@ -398,14 +403,22 @@ function renderBW(){
     <button class="sb" onclick="const r=document.getElementById('bw-log-rest');const open=r.style.display!=='none';r.style.display=open?'none':'block';this.textContent=open?'▾ Prikaži vse (${bwRev.length})':'▴ Skrij';" style="width:100%;margin-top:.5rem;background:var(--bg3);font-size:12px;">▾ Prikaži vse (${bwRev.length})</button>`;
   }
   document.getElementById('bw-log').innerHTML=bwHtml;
-  const labels=entries.map(e=>e[0].slice(5)),vals=entries.map(e=>parseFloat(e[1]));
+  const chartEntries=bwChartWindowV25(entries,Number(document.getElementById('bw-chart-range-v25')?.value??90));
+  const labels=chartEntries.map(e=>e[0]),vals=chartEntries.map(e=>parseFloat(e[1]));
+  const averages=movingAvgDate(entries,7).slice(entries.length-chartEntries.length);
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
   const gc=chartThemeV22().grid,tc=chartThemeV22().tick;
   const ctx=document.getElementById('bw-chart').getContext('2d');
   if(bwChart)bwChart.destroy();
-  const allVals=[...vals,goal];
-  const yMin=Math.floor(Math.min(...allVals)-1),yMax=Math.ceil(Math.max(...allVals)+1);
-  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Teža',data:vals,borderColor:chartThemeV22().line,backgroundColor:chartThemeV22().fill,tension:0.3,pointRadius:3,pointBackgroundColor:chartThemeV22().line,borderWidth:1.5},{label:'7-dnevno povprečje',data:movingAvgDate(entries,7),borderColor:chartThemeV22().line,backgroundColor:'transparent',tension:0.4,pointRadius:0,borderWidth:2.5},{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#ef9f27',borderDash:[4,4],borderWidth:1.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:tc,font:{size:10},boxWidth:12}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:gc}},x:{ticks:{color:tc,font:{size:10},maxRotation:45},grid:{display:false},border:{color:gc}}}}});
+  const yMin=Math.floor((Math.min(...vals,...averages)-.5)*2)/2,yMax=Math.ceil((Math.max(...vals,...averages)+.5)*2)/2;
+  const goalVisible=goal>=yMin&&goal<=yMax;
+  const description=document.getElementById('bw-chart-description-v25');
+  if(description)description.textContent=`${labels[0]} – ${labels[labels.length-1]} · ${vals.length} meritev · cilj ${goal} kg${goalVisible?'':' (zunaj prikazanega razpona)'}`;
+  bwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[
+    {label:'Dnevna meritev',data:vals,borderColor:'#8ca4c4',pointBackgroundColor:'#8ca4c4',pointRadius:vals.length>45?1:3,borderWidth:1,tension:.15},
+    {label:'7-dnevno povprečje',data:averages,borderColor:chartThemeV22().line,pointRadius:0,borderWidth:3,tension:.3},
+    ...(goalVisible?[{label:'Cilj',data:Array(labels.length).fill(goal),borderColor:'#b895db',borderDash:[5,5],borderWidth:1.5,pointRadius:0}]:[])
+  ]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{titleFont:{size:14},bodyFont:{size:14},padding:12,callbacks:{label:context=>`${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)} kg`}}},scales:{y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:12},maxTicksLimit:6,padding:8,callback:value=>value+' kg'},grid:{color:gc},border:{display:false}},x:{ticks:{color:tc,font:{size:12},maxTicksLimit:5,maxRotation:0,autoSkip:true,callback:function(value){return this.getLabelForValue(value).slice(5).replace('-','.');}},grid:{display:false},border:{display:false}}}}});
   // Statistika + faze
   renderBWStats(entries,goal);
   renderPhases();

@@ -1,5 +1,5 @@
-/* Workout Tracker service worker v1.2.2 */
-const CACHE_NAME = 'workout-tracker-v1.2.2-focus-fix';
+/* Workout Tracker service worker v1.2.3 */
+const CACHE_NAME = 'workout-tracker-v1.2.3-focus-fix';
 const CORE_FILES = [
   './',
   './index.html',

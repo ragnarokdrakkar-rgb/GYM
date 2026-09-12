@@ -53,7 +53,7 @@ getSuggestedDayIndex=function(){const active=activeDayIndicesV6();if(!active.len
 /* ---------- Program builder ---------- */
 let v6BuilderDay=0;
 async function openProgramBuilderV6(){if(stRun){toast('Program med aktivno sesijo ostane zaklenjen.','err');return;}await autoBackupToIDB();applyProgramStateV6();ensureDayLists();v6BuilderDay=activeDayIndicesV6()[0]??0;document.getElementById('v6-builder-pop').classList.add('on');renderProgramBuilderV6();}
-function closeProgramBuilderV6(){document.getElementById('v6-builder-pop').classList.remove('on');applyProgramStateV6();renderDayTabsV6();showDay(activeDayIndicesV6().includes(cd)?cd:(activeDayIndicesV6()[0]||0));}
+function closeProgramBuilderV6(){document.getElementById('v6-builder-pop').classList.remove('on');applyProgramStateV6();renderDayTabsV6();showDay(activeDayIndicesV6().includes(cd)?cd:(activeDayIndicesV6()[0]||0));if(typeof renderProgramPageV18==='function')renderProgramPageV18();}
 function renderProgramBuilderV6(){applyProgramStateV6();ensureDayLists();const meta=getProgramMetaV6(),prof=getActiveProfile();document.getElementById('v6-builder-profile').textContent=`Skupni program · ${prof==='bulk'?'Bulk':'Cut'} faza`;const days=document.getElementById('v6-builder-days');days.innerHTML=meta.days.map((d,i)=>`<button class="v6-builder-day${i===v6BuilderDay?' active':''}${d.active===false?' off':''}" onclick="v6BuilderDay=${i};renderProgramBuilderV6()">${safeHtml(d.name||`Dan ${i+1}`)}${d.active===false?' · off':''}</button>`).join('');renderProgramBuilderDayV6(v6BuilderDay);}
 function renderProgramBuilderDayV6(di){const meta=getProgramMetaV6(),d=meta.days[di];if(!d)return;const all=getDayLists()||{},list=all[di]||[],opts=[...new Set([...EXERCISE_DB.map(x=>x.n),...getCustomExercises().map(x=>x.n)])].sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${safeHtml(n)}"></option>`).join('');
   const exHtml=list.map((it,i)=>{const nm=dispNameForItem(it,getCyc().num,cw),off=!!it.programDisabled;return `<div class="v6-ex-edit${off?' off':''}"><div class="v6-ex-edit-head"><div class="v6-ex-edit-name">${safeHtml(nm)}</div><button class="v6-mini-btn" onclick="moveBuilderExerciseV6(${di},${i},-1)">↑</button><button class="v6-mini-btn" onclick="moveBuilderExerciseV6(${di},${i},1)">↓</button><button class="v6-mini-btn" onclick="toggleBuilderExerciseV6(${di},${i})">${off?'↺':'×'}</button></div><div class="v6-builder-grid">
@@ -307,6 +307,16 @@ applyProgramStateV6();
   let observerV10=null;
   let renderPendingV10=false;
   let timerFinishedUntilV10=0;
+  let timerDismissV25=null;
+  function showTimerFinishedV25(duration){
+    clearTimeout(timerDismissV25);
+    timerFinishedUntilV10=Date.now()+duration;
+    renderGlobalTimerV10();
+    timerDismissV25=setTimeout(()=>{
+      timerFinishedUntilV10=0;
+      renderGlobalTimerV10();
+    },duration+50);
+  }
   let batchPersistDepthV10=0;
 
   const CP1252_SPECIAL_V10=new Map([
@@ -1061,6 +1071,11 @@ applyProgramStateV6();
     element.querySelector('[data-action="stop"]')?.addEventListener('click',()=>{
       const timer=currentTimerV6();
       if(timer)stopT(timer.key);
+      else{
+        clearTimeout(timerDismissV25);
+        timerFinishedUntilV10=0;
+        renderGlobalTimerV10();
+      }
     });
 
     return element;
@@ -1148,8 +1163,7 @@ applyProgramStateV6();
       logRestV6(timer,'completed');
     }catch(error){}
 
-    timerFinishedUntilV10=Date.now()+3500;
-    renderGlobalTimerV10();
+    showTimerFinishedV25(2500);
 
     if(foregroundAlert&&!document.hidden){
       alertEnd(timer.key);
@@ -1316,8 +1330,7 @@ applyProgramStateV6();
         logRestV6(timer,'completed');
       }catch(error){}
 
-      timerFinishedUntilV10=Date.now()+2500;
-      renderGlobalTimerV10();
+      showTimerFinishedV25(2500);
       return;
     }
 
@@ -3497,7 +3510,9 @@ applyProgramStateV6();
     };
 
     input.addEventListener('click',open);
-    input.addEventListener('focus',open);
+    input.addEventListener('keydown',event=>{
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();open(event);}
+    });
 
     document.getElementById('v6-ex-options')?.remove();
 
@@ -3510,6 +3525,8 @@ applyProgramStateV6();
       ?.querySelector('.v6-builder-actions');
 
     if(actions){
+      const add=actions.querySelector('button');
+      if(add){add.removeAttribute('onclick');add.textContent='+ Izberi in dodaj vajo';add.addEventListener('click',()=>openExerciseChooserV14(dayIndex));}
       const create=document.createElement('button');
       create.type='button';
       create.className='sb builder-create-v14';
@@ -3641,6 +3658,7 @@ applyProgramStateV6();
   window.addProgramDayV6=addProgramDayV6;
 
   duplicateProgramDayV6=async function(dayIndex){
+    if(stRun||window.v6RecoveryPending){toast('Najprej zaključi trening.','err');return;}
     const meta=getProgramMetaV6();
     const visible=visibleBuilderDaysV14(meta);
 
@@ -3668,9 +3686,6 @@ applyProgramStateV6();
       active:true
     });
 
-    baseSaveProgramMetaV14(meta,profileV14());
-    applyProgramStateV6();
-
     const all=getDayLists()||{};
     const sourceList=Array.isArray(all[dayIndex])
       ?all[dayIndex]
@@ -3681,8 +3696,10 @@ applyProgramStateV6();
       id:_newExId(item.n0||item.n||'vaja')
     }));
 
-    saveDayLists(all);
-
+    try{
+      commitStorageBatch([[V6_KEYS.metaShared,JSON.stringify({...meta,version:2,shared:true})],[_dlKey(),JSON.stringify(all)]]);
+    }catch(error){toast(error.message,'err');return;}
+    applyProgramStateV6();
     v6BuilderDay=newIndex;
     renderProgramBuilderV6();
     toast('Kopija dneva je ustvarjena.','ok');
@@ -3854,6 +3871,7 @@ applyProgramStateV6();
   }
 
   function openExerciseChooserV14(dayIndex){
+    if(stRun||window.v6RecoveryPending){toast('Najprej zaključi trening.','err');return;}
     if(!Number.isInteger(Number(dayIndex)))return;
 
     chooserDayV14=Number(dayIndex);
@@ -3870,7 +3888,7 @@ applyProgramStateV6();
     syncViewportV14();
 
     window.setTimeout(()=>{
-      search?.focus();
+      if(popup.classList.contains('on'))search?.focus();
     },80);
   }
 
@@ -3935,9 +3953,11 @@ applyProgramStateV6();
     };
   }
 
-  function addExerciseToDayV14(dayIndex,option){
+  function addExerciseToDayV14(dayIndex,option,customs=null){
+    if(stRun||window.v6RecoveryPending){toast('Najprej zaključi trening.','err');return;}
     const di=Number(dayIndex);
-    if(!Number.isInteger(di)||!option?.name)return;
+    const day=getProgramMetaV6().days[di];
+    if(!Number.isInteger(di)||!option?.name||!day||day.deleted===true)return;
 
     ensureDayLists();
 
@@ -3962,7 +3982,7 @@ applyProgramStateV6();
       if(existing.programDisabled){
         existing.programDisabled=false;
         all[di]=list;
-        saveDayLists(all);
+        if(!saveDayLists(all))return;
 
         closeExerciseChooserV14();
         closeCustomExerciseV14();
@@ -3977,9 +3997,12 @@ applyProgramStateV6();
 
     const item=exerciseItemV14(option);
 
-    mutateDayList(di,items=>{
-      items.push(item);
-    });
+    list.push(item);all[di]=list;
+    try{
+      const changes=[[_dlKey(),JSON.stringify(all)]];
+      if(customs)changes.push([CUST_KEY,JSON.stringify(customs)]);
+      commitStorageBatch(changes);
+    }catch(error){toast(error.message,'err');return;}
 
     if(typeof option.plateDefault==='boolean'){
       setPlatePreferenceV14(
@@ -4155,6 +4178,7 @@ applyProgramStateV6();
   }
 
   function openCustomExerciseV14(dayIndex){
+    if(stRun||window.v6RecoveryPending){toast('Najprej zaključi trening.','err');return;}
     const di=Number(dayIndex);
     if(!Number.isInteger(di))return;
 
@@ -4178,7 +4202,7 @@ applyProgramStateV6();
     syncViewportV14();
 
     window.setTimeout(()=>{
-      popup.querySelector('#builder-custom-name-v14')?.focus();
+      if(popup.classList.contains('on'))popup.querySelector('#builder-custom-name-v14')?.focus();
     },80);
   }
 
@@ -4293,7 +4317,6 @@ applyProgramStateV6();
 
     const customs=getCustomExercises();
     customs.push(custom);
-    saveCustomExercises(customs);
 
     addExerciseToDayV14(dayIndex,{
       name,
@@ -4308,7 +4331,7 @@ applyProgramStateV6();
       main,
       plateDefault,
       custom:true
-    });
+    },customs);
   }
 
   window.openCustomExerciseV14=openCustomExerciseV14;
