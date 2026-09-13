@@ -47,7 +47,7 @@ function compactPlanChangeV26(rows,target,action){
   return {rows:next,target:count};
 }
 
-if(typeof document!=='undefined') (function(){
+if(typeof document!=='undefined'&&document.documentElement.dataset.ui!=='compact-shell') (function(){
   'use strict';
   const esc=safeHtml,$=s=>document.querySelector(s),fmt=n=>Number(n).toLocaleString('sl-SI',{maximumFractionDigits:2});
   const dayKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;

@@ -1,0 +1,645 @@
+<div id="cg-preview" aria-label="Compact Gym — klikljiv predogled">
+  <div class="cg-shell">
+    <header class="cg-header"><div class="cg-brand"><i data-lucide="dumbbell" aria-hidden="true"></i><span>GYM<span class="cg-brand-detail"> / COMPACT</span></span></div><span class="cg-demo">PREDOGLED 3</span></header>
+    <main class="cg-main"></main>
+    <nav class="cg-nav" aria-label="Glavna navigacija"></nav>
+    <div class="cg-message" aria-live="polite"></div>
+    <div class="cg-layer" hidden></div>
+  </div>
+  <div class="cg-caption">Vzorčni podatki · brez sprememb v tvoji aplikaciji</div>
+</div>
+<style>
+#cg-preview{--cg-bg:#121416;--cg-panel:#1c1f22;--cg-raised:#24282c;--cg-line:#30353a;--cg-text:#f0f2f3;--cg-muted:#a4adb6;--cg-accent:#ff883e;--cg-ok:#4fd29a;--cg-partial:#66a9ff;--cg-pending:#f77777;--cg-round:12px;--cg-space:14px;font:14px/1.45 Inter,system-ui,sans-serif;color:var(--cg-text);color-scheme:dark;width:100%;}
+#cg-preview *{box-sizing:border-box;}
+#cg-preview [hidden]{display:none!important;}
+#cg-preview .cg-shell{position:relative;background:var(--cg-bg);max-width:414px;margin:auto;border:1px solid var(--cg-line);border-radius:20px;overflow:clip;}
+#cg-preview button,#cg-preview input,#cg-preview select{font:inherit;color:inherit;}
+#cg-preview button{cursor:pointer;touch-action:manipulation;}
+#cg-preview button:disabled{opacity:.35;cursor:default;}
+#cg-preview button{border:0;}
+#cg-preview h1,#cg-preview h2,#cg-preview p{margin:0;}
+#cg-preview h1{font-size:23px;line-height:1.25;font-weight:650;letter-spacing:-.6px;}
+#cg-preview h2{font-size:16px;line-height:1.35;font-weight:600;letter-spacing:-.2px;}
+#cg-preview .cg-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--cg-line);gap:8px;}
+#cg-preview .cg-brand{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:650;letter-spacing:1px;}
+#cg-preview .cg-brand svg{color:var(--cg-accent);width:21px;height:21px;}
+#cg-preview .cg-brand-detail{color:var(--cg-muted);font-size:11px;font-weight:500;letter-spacing:1.3px;}
+#cg-preview .cg-demo{font-size:10px;letter-spacing:1.2px;color:var(--cg-muted);}
+#cg-preview .cg-main{padding:18px 16px 12px;min-height:532px;}
+#cg-preview .cg-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px;}
+#cg-preview .cg-sub{font-size:12px;color:var(--cg-muted);margin-top:4px;}
+#cg-preview .cg-small{font-size:12px;color:var(--cg-muted);}
+#cg-preview .cg-action{background:var(--cg-accent);color:#17120c;font-weight:650;border-radius:9px;min-height:44px;padding:9px 14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;}
+#cg-preview .cg-quiet{background:var(--cg-raised);color:var(--cg-text);border-radius:9px;min-height:40px;padding:9px 12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;}
+#cg-preview .cg-icon{background:transparent;display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:40px;border-radius:8px;color:var(--cg-muted);}
+#cg-preview button svg{width:18px;height:18px;flex:none;}
+#cg-preview .cg-session{display:flex;gap:12px;align-items:center;background:var(--cg-panel);border-radius:var(--cg-round);padding:10px 12px;margin-bottom:17px;}
+#cg-preview .cg-session strong{font-size:16px;font-variant-numeric:tabular-nums;font-weight:550;}
+#cg-preview .cg-session .cg-spacer{flex:1;}
+#cg-preview .cg-section-label{display:flex;justify-content:space-between;align-items:center;color:var(--cg-muted);font-size:11px;text-transform:uppercase;letter-spacing:1.1px;margin:14px 0 8px;}
+#cg-preview .cg-workrow{border-bottom:1px solid var(--cg-line);}
+#cg-preview .cg-rowbutton{display:flex;align-items:center;gap:10px;background:transparent;width:100%;text-align:left;padding:var(--cg-space) 1px;}
+#cg-preview .cg-rowname{flex:1;min-width:0;font-size:13px;font-weight:550;}
+#cg-preview .cg-count{font-size:12px;font-variant-numeric:tabular-nums;color:var(--cg-muted);white-space:nowrap;}
+#cg-preview .cg-status{width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex:none;color:var(--cg-pending);font-size:15px;}
+#cg-preview .cg-status.done{color:var(--cg-ok);}
+#cg-preview .cg-status.partial{color:var(--cg-partial);}
+#cg-preview .cg-workrow.open{background:var(--cg-panel);border:1px solid var(--cg-line);border-radius:var(--cg-round);padding:0 11px;margin:8px 0;}
+#cg-preview .cg-workrow.open .cg-rowname{color:var(--cg-text);}
+#cg-preview .cg-logger{padding:0 0 12px;}
+#cg-preview .cg-last{font-size:12px;color:var(--cg-muted);margin-bottom:12px;}
+#cg-preview .cg-fields{display:grid;grid-template-columns:1.2fr 1fr .9fr;gap:9px;}
+#cg-preview label{display:block;font-size:11px;color:var(--cg-muted);}
+#cg-preview .cg-fields input{width:100%;height:46px;border:1px solid var(--cg-line);background:var(--cg-bg);border-radius:8px;text-align:center;font-size:21px;font-weight:550;color:var(--cg-text);margin-top:5px;font-variant-numeric:tabular-nums;}
+#cg-preview .cg-log-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:11px;}
+#cg-preview .cg-log-footer .cg-action{flex:1;}
+#cg-preview .cg-plates{margin-top:10px;font-size:11px;color:var(--cg-muted);}
+#cg-preview .cg-rest{display:flex;align-items:center;gap:8px;background:#272a24;border-left:3px solid var(--cg-accent);padding:7px 10px;border-radius:7px;margin-bottom:14px;font-variant-numeric:tabular-nums;}
+#cg-preview .cg-rest span{flex:1;font-size:12px;color:var(--cg-muted);}
+#cg-preview .cg-rest strong{font-weight:550;}
+#cg-preview .cg-nav{display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px 10px;border-top:1px solid var(--cg-line);background:var(--cg-panel);gap:4px;}
+#cg-preview .cg-nav button{display:flex;flex-direction:column;align-items:center;gap:5px;min-height:49px;font-size:10px;background:transparent;color:var(--cg-muted);border-radius:8px;}
+#cg-preview .cg-nav button[aria-current="page"]{color:var(--cg-accent);background:color-mix(in srgb,var(--cg-accent) 9%,transparent);}
+#cg-preview .cg-nav svg{width:20px;height:20px;}
+#cg-preview .cg-caption{text-align:center;font:11px/1.5 system-ui,sans-serif;color:light-dark(#59636e,#a4adb6);margin:10px 0 0;}
+#cg-preview .cg-message{font-size:12px;text-align:center;background:var(--cg-panel);color:var(--cg-ok);padding:0 12px;}
+#cg-preview .cg-message:not(:empty){padding:9px 12px;border-top:1px solid var(--cg-line);}
+#cg-preview .cg-segments{display:flex;gap:5px;background:var(--cg-panel);padding:4px;border-radius:10px;margin-bottom:18px;}
+#cg-preview .cg-segments button{min-height:38px;flex:1;padding:7px 4px;background:transparent;color:var(--cg-muted);border-radius:7px;font-size:12px;}
+#cg-preview .cg-segments button.selected{background:var(--cg-raised);color:var(--cg-text);}
+#cg-preview .cg-days{display:flex;gap:6px;margin-bottom:15px;}
+#cg-preview .cg-days button{flex:1;min-height:43px;padding:5px 1px;border-radius:8px;background:var(--cg-panel);color:var(--cg-muted);font-size:11px;}
+#cg-preview .cg-days button.selected{background:var(--cg-accent);color:#17120c;font-weight:600;}
+#cg-preview .cg-programrow{display:flex;gap:9px;align-items:center;padding:11px 0;border-bottom:1px solid var(--cg-line);}
+#cg-preview .cg-programrow .cg-order{width:20px;flex:none;font-size:12px;color:var(--cg-muted);}
+#cg-preview .cg-programrow .cg-grow{flex:1;min-width:0;}
+#cg-preview .cg-programrow strong{font-size:13px;font-weight:550;display:block;}
+#cg-preview .cg-programrow small{display:block;font-size:11px;color:var(--cg-muted);margin-top:3px;}
+#cg-preview .cg-add{width:100%;margin:15px 0 0;border:1px dashed var(--cg-line);background:transparent;color:var(--cg-text);border-radius:10px;padding:12px;min-height:44px;}
+#cg-preview .cg-footnote{font-size:11px;color:var(--cg-muted);margin-top:16px;line-height:1.6;}
+#cg-preview .cg-metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0 21px;}
+#cg-preview .cg-metrics>div+div{border-left:1px solid var(--cg-line);padding-left:18px;}
+#cg-preview .cg-metrics strong{display:block;font-size:28px;line-height:1.2;font-weight:550;letter-spacing:-1px;margin-top:4px;}
+#cg-preview .cg-metrics strong small{font-size:14px;color:var(--cg-muted);letter-spacing:0;}
+#cg-preview .cg-chart{width:100%;height:auto;display:block;margin:14px 0;}
+#cg-preview .cg-chart text{font-family:inherit;font-size:14px;fill:var(--cg-muted);}
+#cg-preview .cg-chart line{stroke:var(--cg-line);stroke-width:1;}
+#cg-preview .cg-latest{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:14px 0;border-bottom:1px solid var(--cg-line);gap:10px;}
+#cg-preview .cg-focus-steps{display:flex;align-items:center;justify-content:space-between;margin-top:22px;gap:10px;}
+#cg-preview .cg-dots{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+#cg-preview .cg-dots button{background:transparent;padding:4px;color:var(--cg-pending);min-height:36px;min-width:30px;border-radius:8px;}
+#cg-preview .cg-dots button.done{color:var(--cg-ok);}
+#cg-preview .cg-dots button.partial{color:var(--cg-partial);}
+#cg-preview .cg-dots button.selected{background:var(--cg-raised);box-shadow:inset 0 -2px var(--cg-text);}
+#cg-preview .cg-settable{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;}
+#cg-preview .cg-settable td,#cg-preview .cg-settable th{padding:9px 5px;border-bottom:1px solid var(--cg-line);text-align:left;}
+#cg-preview .cg-settable th{font-size:11px;color:var(--cg-muted);font-weight:400;}
+#cg-preview .cg-settable button{background:transparent;color:var(--cg-accent);padding:5px;}
+#cg-preview details summary{cursor:pointer;color:var(--cg-muted);font-size:12px;padding:12px 0;}
+#cg-preview .cg-layer{position:absolute;inset:0;background:rgba(0,0,0,.76);z-index:5;padding:72px 12px 12px;}
+#cg-preview .cg-sheet{background:var(--cg-panel);border:1px solid var(--cg-line);border-radius:16px;padding:18px;width:100%;}
+#cg-preview .cg-sheet input{width:100%;min-height:44px;background:var(--cg-bg);color:var(--cg-text);border:1px solid var(--cg-line);padding:10px;border-radius:8px;margin:7px 0 12px;font-size:16px;}
+#cg-preview .cg-sheet-actions{display:flex;gap:8px;margin-top:8px;}
+#cg-preview .cg-sheet-actions button{flex:1;}
+#cg-preview .cg-settingsrow{width:100%;background:transparent;display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--cg-line);text-align:left;font-size:13px;gap:12px;}
+#cg-preview .cg-settingsrow span+span{color:var(--cg-muted);font-size:12px;}
+#cg-preview .cg-pill{font-size:11px;background:var(--cg-raised);color:var(--cg-muted);border-radius:6px;padding:5px 8px;}
+@media(max-width:350px){#cg-preview .cg-main{padding:16px 12px 10px;}#cg-preview .cg-brand-detail{display:none;}#cg-preview .cg-rowname{font-size:12px;}#cg-preview .cg-fields{gap:6px;}#cg-preview .cg-fields input{font-size:19px;}#cg-preview .cg-session{gap:8px;padding:9px;}#cg-preview .cg-quiet{padding:8px;}}
+#cg-preview .cg-demo,#cg-preview .cg-nav button{font-size:11px;}
+#cg-preview .cg-main{min-height:500px;}
+#cg-preview .cg-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:6px;background:transparent;color:var(--cg-muted);font-size:12px;border-radius:7px;}
+#cg-preview .cg-link:hover{color:var(--cg-text);background:var(--cg-raised);}
+#cg-preview .cg-icon{min-width:44px;min-height:44px;}
+#cg-preview .cg-exercise-controls{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:-6px;margin-bottom:4px;}
+#cg-preview .cg-success{color:var(--cg-ok);}
+#cg-preview .cg-danger{color:var(--cg-pending);}
+#cg-preview .cg-focus-meta{display:flex;justify-content:space-between;gap:10px;color:var(--cg-muted);font-size:12px;margin-bottom:14px;}
+#cg-preview .cg-focus-meta strong{font-weight:500;}
+#cg-preview .cg-rest{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 4px;padding:8px;}
+#cg-preview .cg-rest strong{grid-column:1;font-size:18px;padding-left:8px;}
+#cg-preview .cg-rest>span{grid-column:2 / 5;text-align:right;padding-right:8px;}
+#cg-preview .cg-rest .cg-icon{width:100%;min-width:0;}
+#cg-preview .cg-rest-tools{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--cg-line);margin-top:5px;}
+#cg-preview .cg-set-tools{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+#cg-preview .cg-set-tools .cg-link:first-child{color:var(--cg-accent);}
+#cg-preview .cg-set-tools .cg-small{white-space:nowrap;}
+#cg-preview .cg-setrows{margin-top:2px;}
+#cg-preview .cg-setrow{display:flex;align-items:center;gap:5px;min-height:52px;border-bottom:1px solid var(--cg-line);font-size:12px;}
+#cg-preview .cg-setnum{width:20px;color:var(--cg-muted);flex:none;}
+#cg-preview .cg-setvalue{flex:1;min-width:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;}
+#cg-preview .cg-setvalue small{display:block;color:var(--cg-muted);font-size:11px;margin-top:2px;}
+#cg-preview .cg-setrow>.cg-link{padding:5px;}
+#cg-preview .cg-setrow .cg-icon svg{width:16px;height:16px;}
+#cg-preview .cg-plates .cg-link{min-height:32px;color:var(--cg-accent);padding:3px 0;}
+#cg-preview .cg-dots{gap:4px;margin:4px 0;}
+#cg-preview .cg-dots button{min-width:44px;min-height:44px;}
+#cg-preview .cg-rest-presets{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0;}
+#cg-preview .cg-rest-presets .cg-quiet{flex:1;min-width:55px;}
+#cg-preview .cg-two-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+#cg-preview .cg-form-error{color:var(--cg-pending);font-size:12px;margin-top:8px;}
+#cg-preview .cg-checkline{display:flex;align-items:center;gap:9px;min-height:44px;color:var(--cg-text);font-size:12px;margin:8px 0;}
+#cg-preview .cg-checkline input[type=checkbox]{width:19px;height:19px;min-height:0;padding:0;margin:0;accent-color:var(--cg-accent);flex:none;}
+#cg-preview .cg-field-label{margin:12px 0;font-size:12px;}
+#cg-preview .cg-field-label input,#cg-preview .cg-field-label select,#cg-preview .cg-plate-option>input{display:block;width:100%;min-width:0;min-height:44px;padding:9px;background:var(--cg-panel);border:1px solid var(--cg-line);border-radius:8px;color:var(--cg-text);font-size:16px;margin-top:6px;}
+#cg-preview .cg-field-label input[readonly]{color:var(--cg-muted);}
+#cg-preview .cg-calendar{padding-bottom:12px;border-bottom:1px solid var(--cg-line);}
+#cg-preview .cg-calendar-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;}
+#cg-preview .cg-calendar-heading strong{font-size:14px;font-weight:500;text-transform:capitalize;}
+#cg-preview .cg-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0;margin-bottom:10px;}
+#cg-preview .cg-calendar-grid .cg-weekday{text-align:center;color:var(--cg-muted);font-size:11px;padding:7px 0;}
+#cg-preview .cg-calendar-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:44px;min-width:0;width:100%;padding:4px 0;background:transparent;color:var(--cg-muted);font-size:13px;border-radius:8px;}
+#cg-preview .cg-calendar-grid button>span{height:8px;line-height:8px;font-size:9px;color:var(--cg-ok);}
+#cg-preview .cg-calendar-grid button.has-session{color:var(--cg-text);background:color-mix(in srgb,var(--cg-ok) 7%,transparent);}
+#cg-preview .cg-calendar-grid button.selected{background:var(--cg-accent);color:var(--cg-bg);}
+#cg-preview .cg-calendar-grid button.selected>span{color:var(--cg-bg);}
+#cg-preview .cg-date-label{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+#cg-preview .cg-date-label input{width:170px;max-width:65%;margin:0;}
+#cg-preview .cg-history-summary{border-top:1px solid var(--cg-line);padding:15px 0 2px;margin-top:14px;}
+#cg-preview .cg-history-summary .cg-link{color:var(--cg-accent);padding-left:0;}
+#cg-preview .cg-history-exercise{border-bottom:1px solid var(--cg-line);}
+#cg-preview .cg-history-exercise>summary{padding:16px 0;}
+#cg-preview .cg-history-exercise>summary strong{font-size:13px;font-weight:500;color:var(--cg-text);}
+#cg-preview .cg-history-exercise>summary span{display:block;margin-left:15px;font-size:11px;margin-top:2px;}
+#cg-preview .cg-history-exercise>.cg-link{color:var(--cg-accent);}
+#cg-preview .cg-empty{padding:14px 0;}
+#cg-preview .cg-plate-option{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--cg-line);}
+#cg-preview .cg-plate-option>input{width:72px;text-align:center;margin:6px 0;}
+#cg-preview .cg-plate-option>input:disabled{opacity:.4;}
+#cg-preview .cg-equipment-form .cg-full{width:100%;margin-top:15px;}
+#cg-preview .cg-sheet{max-height:none;}
+#cg-preview .cg-sheet .cg-small{overflow-wrap:anywhere;}
+#cg-preview .cg-sheet .cg-modal-fields{margin-top:16px;}
+#cg-preview .cg-sheet .cg-modal-fields label{font-size:12px;}
+@media(max-width:350px){
+  #cg-preview .cg-date-label input{font-size:14px;}
+  #cg-preview .cg-session .cg-link{font-size:11px;}
+  #cg-preview .cg-calendar-grid button{font-size:12px;}
+  #cg-preview .cg-history-summary .cg-sub{line-height:1.6;}
+}
+
+#cg-preview .cg-logger{padding-top:3px;}
+#cg-preview .cg-plan-labels,#cg-preview .cg-plan-row{display:grid;grid-template-columns:27px minmax(0,1fr) minmax(0,.8fr) 44px;align-items:center;gap:6px;}
+#cg-preview .cg-plan-labels{font-size:11px;color:var(--cg-muted);text-align:center;padding-bottom:5px;}
+#cg-preview .cg-plan-row{min-height:54px;border-bottom:1px solid var(--cg-line);font-size:13px;text-align:center;}
+#cg-preview .cg-plan-row input{width:100%;min-width:0;min-height:44px;padding:7px 3px;text-align:center;font-size:16px;border:1px solid var(--cg-line);border-radius:7px;background:var(--cg-bg);color:var(--cg-text);}
+#cg-preview .cg-plan-row input:invalid{border-color:var(--cg-pending);}
+#cg-preview .cg-plan-number{font-size:12px;color:var(--cg-muted);}
+#cg-preview .cg-plan-row.logged .cg-plan-number{color:var(--cg-ok);}
+#cg-preview .cg-plan .cg-small{font-size:11px;margin:10px 0;}
+#cg-preview .cg-plan-add{color:var(--cg-accent);padding-left:0;}
+#cg-preview .cg-calendar-grid{gap:3px 2px;}
+#cg-preview .cg-calendar-grid button{min-height:66px;justify-content:flex-start;padding:8px 1px 5px;gap:5px;}
+#cg-preview .cg-calendar-grid button>span.cg-cal-day{height:auto;line-height:1.2;font-size:13px;color:inherit;}
+#cg-preview .cg-calendar-grid button>span.cg-cal-name{display:block;max-width:100%;height:auto;line-height:1.25;font-size:11px;color:inherit;overflow-wrap:anywhere;}
+#cg-preview .cg-calendar-grid button>span.cg-cal-more{height:auto;line-height:1.25;font-size:11px;color:inherit;}
+#cg-preview .cg-plate-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+#cg-preview .cg-plate-choices .cg-checkline{margin:0;padding:10px;background:var(--cg-panel);border-radius:8px;font-size:14px;}
+#cg-preview .cg-strength-list{border-top:1px solid var(--cg-line);}
+#cg-preview .cg-strength-row{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;width:100%;background:transparent;color:var(--cg-text);padding:14px 0;border-bottom:1px solid var(--cg-line);}
+#cg-preview .cg-strength-row>span{flex:1;min-width:0;}
+#cg-preview .cg-strength-row strong{font-size:13px;font-weight:500;display:block;}
+#cg-preview .cg-strength-row small{display:block;font-size:11px;color:var(--cg-muted);margin-top:3px;}
+#cg-preview .cg-strength-row svg{width:18px;height:18px;color:var(--cg-muted);}
+#cg-preview .cg-strength-title{margin-top:9px;font-size:18px;}
+#cg-preview .cg-strength-chart{width:100%;min-width:0;}
+#cg-preview .cg-strength-svg{width:100%;height:auto;display:block;}
+#cg-preview .cg-strength-svg text{font-size:12px;fill:var(--cg-muted);font-family:inherit;}
+#cg-preview .cg-strength-svg line{stroke:var(--cg-line);stroke-width:1;}
+#cg-preview .cg-strength-svg [data-strength-point]{cursor:pointer;}
+#cg-preview .cg-strength-result{display:flex;flex-direction:column;gap:4px;padding:12px 0;}
+#cg-preview .cg-strength-result strong{font-size:20px;font-weight:500;}
+#cg-preview .cg-strength-result>span{font-size:12px;color:var(--cg-muted);}
+
+</style>
+<script>
+// Pure preview logic, also exercised by compact-gym-v3.test.cjs.
+function cgStatus(exercise) {
+  return exercise.sets.length >= exercise.target ? 'done' : exercise.sets.length ? 'partial' : '';
+}
+function cgRemaining(rest, now = Date.now()) {
+  if (!rest) return 0;
+  return Math.max(0, rest.paused ? rest.left : Math.ceil((rest.deadline - now) / 1000));
+}
+function cgMonthDays(year, month) {
+  return { offset: (new Date(year, month, 1).getDay() + 6) % 7, count: new Date(year, month + 1, 0).getDate() };
+}
+function cgPlatePlan(total, bar, stock) {
+  if (!Number.isFinite(total) || total < bar) return { invalid: true, plates: [], actual: bar };
+  const target = Math.min(4000, Math.floor((total - bar) * 2 + 0.0001));
+  const sizes=[...new Set(stock.filter(x=>x.enabled&&x.kg>0).map(x=>Math.round(x.kg*4)))].sort((a,b)=>b-a);
+  const counts=Array(target+1).fill(Infinity),used=Array(target+1).fill(0);counts[0]=0;
+  for(let amount=1;amount<=target;amount++)for(const size of sizes){
+    if(amount>=size&&counts[amount-size]+1<counts[amount]){counts[amount]=counts[amount-size]+1;used[amount]=size;}
+  }
+  let best=target;while(best>0&&!Number.isFinite(counts[best]))best--;
+  const parts=new Map();for(let remaining=best;remaining>0;remaining-=used[remaining])parts.set(used[remaining],(parts.get(used[remaining])||0)+1);
+  return {invalid:false,plates:[...parts].sort((a,b)=>b[0]-a[0]).map(([size,count])=>({kg:size/4,count})),actual:bar+best/2};
+}
+function cgNameKey(name) {return String(name).normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase('sl-SI');}
+function cgActiveExercises(rosters,dayActive,dayNames) {
+  const result=new Map();
+  rosters.forEach((list,day)=>{if(dayActive[day]===false)return;list.forEach(ex=>{
+    if(ex.active===false)return;const key=cgNameKey(ex.name);if(!key)return;
+    if(!result.has(key))result.set(key,{key,name:ex.name,days:[]});
+    const entry=result.get(key);if(!entry.days.includes(dayNames[day]))entry.days.push(dayNames[day]);
+  });});return [...result.values()];
+}
+function cgStrengthSeries(history,key) {
+  return history.flatMap(session=>{
+    const sets=session.exercises.filter(e=>cgNameKey(e.name)===key).flatMap(e=>e.sets)
+      .filter(s=>Number.isFinite(s.kg)&&s.kg>=0&&Number.isFinite(s.reps)&&s.reps>0);
+    if(!sets.length)return [];
+    const best=sets.reduce((a,b)=>b.kg>a.kg||(b.kg===a.kg&&b.reps>a.reps)?b:a);
+    return [{id:session.id,date:session.date,time:session.time,name:session.name,kg:best.kg,reps:best.reps,
+      sets:sets.length,volume:sets.reduce((n,s)=>n+s.kg*s.reps,0),flagged:sets.some(s=>s.kg>250||s.reps>30)}];
+  }).sort((a,b)=>(a.date+'T'+a.time).localeCompare(b.date+'T'+b.time));
+}
+function cgPendingPlan(exercise) {return exercise.plan.find(p=>!exercise.sets.some(s=>s.planId===p.id))||null;}
+function cgPlannedCount(exercise) {return exercise.plan.length;}
+function cgRemovePlan(exercise,id) {
+  if(exercise.plan.length<=1||exercise.sets.some(s=>s.planId===id))return false;
+  const index=exercise.plan.findIndex(p=>p.id===id);if(index<0)return false;
+  exercise.plan.splice(index,1);exercise.target=exercise.plan.length;return true;
+}
+// UI: all data are demo-only and stay in memory.
+(() => {
+  const root = document.getElementById('cg-preview');
+  const main = root.querySelector('.cg-main'), nav = root.querySelector('.cg-nav');
+  const layer = root.querySelector('.cg-layer'), header = root.querySelector('.cg-header');
+  const message = root.querySelector('.cg-message');
+  const design = {accent:'#ff883e', spacing:'Kompaktno', corners:12};
+  const fmt = n => Number(n).toLocaleString('sl-SI', {maximumFractionDigits:2});
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const clock = seconds => `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
+  const dateKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const dateLabel = key => new Date(key+'T12:00:00').toLocaleDateString('sl-SI',{day:'numeric',month:'long',year:'numeric'});
+  const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
+  const button = (act,label,kind='cg-link',extra='') => `<button type="button" class="${kind}" data-act="${act}" ${extra}>${label}</button>`;
+  const uid = () => 'demo-'+(++sequence);
+  let sequence=100, modalReturn=null, undo=null, renderedRoute=null;
+  const state = {page:'Trening',focus:false,active:2,day:0,progress:'Teža',settingsView:'',equipmentReturn:null,
+    selectedDate:'2026-09-12',month:8,year:2026,historySession:'h-12',historyExercise:'',flagged:false,
+    lastWeight:79.9,phase:'Bulk',rest:null,message:'',strengthKey:'',strengthSession:'',session:{running:false,started:0,elapsed:0,completed:false}};
+  const equipment = {barKind:'20',bar:20,show:true,plates:[
+    {kg:25,enabled:false},{kg:20,enabled:true},{kg:15,enabled:false},
+    {kg:10,enabled:true},{kg:5,enabled:true},{kg:2.5,enabled:true},
+    {kg:1.25,enabled:true},{kg:0.5,enabled:false}]};
+  function exercise(name,kg,reps,count=0,target=3) {
+    const plan=Array.from({length:target},()=>({id:uid(),kg,reps,rpe:null}));
+    return {id:uid(),name,target,plan,draft:plan[Math.min(count,target-1)],last:{kg,reps,rpe:8},restSeconds:120,
+      setsOpen:false,planOpen:false,sets:plan.slice(0,count).map(p=>({id:uid(),planId:p.id,kg,reps,rpe:8}))};
+  }
+  const exercises=[exercise('Barbell bench press',100,5,3),exercise('Incline bench press',70,8,1),
+    exercise('Seated DB shoulder press',28,8),exercise('Lateral raises',12,12),exercise('Tricep pushdown — rope',22.5,10)];
+  const days=['Push A','Pull A','Noge','Push B','Pull B'];
+  const dayActive=days.map(()=>true);
+  const rosters=[exercises.map(e=>({name:e.name,target:e.target,reps:e.draft.reps})),
+    [{name:'Weighted pull-ups',target:3,reps:6},{name:'Barbell row',target:3,reps:8},{name:'Face pulls',target:3,reps:12}],
+    [{name:'Barbell squat',target:3,reps:5},{name:'Romanian deadlift',target:3,reps:8},{name:'Leg curl',target:3,reps:12}],
+    [{name:'Overhead press',target:3,reps:5},{name:'Dumbbell bench press',target:3,reps:8}],
+    [{name:'Deadlift',target:3,reps:5},{name:'Lat pulldown',target:3,reps:10}]];
+  const historicExercise = (name,kg,reps,count=3) => ({id:uid(),name,sets:Array.from({length:count},()=>({id:uid(),kg,reps,rpe:8}))});
+  const history=[
+    {id:'h-12',date:'2026-09-12',time:'18:30',name:'Pull A',minutes:54,exercises:[historicExercise('Weighted pull-ups',25,6),historicExercise('Barbell row',70,8),historicExercise('Face pulls',30,12)]},
+    {id:'h-09',date:'2026-09-09',time:'17:10',name:'Noge',minutes:62,exercises:[historicExercise('Barbell squat',125,5),historicExercise('Romanian deadlift',110,8),historicExercise('Leg curl',45,12)]},
+    {id:'h-07',date:'2026-09-07',time:'19:00',name:'Push A',minutes:48,exercises:[historicExercise('Barbell bench press',100,5),historicExercise('Incline bench press',70,8),historicExercise('Lateral raises',12,12)]},
+    {id:'h-07b',date:'2026-09-07',time:'08:15',name:'Kratek trening',minutes:18,exercises:[historicExercise('Barbell curl',30,10,2)]},
+    {id:'h-31',date:'2026-08-31',time:'18:00',name:'Push A',minutes:45,exercises:[historicExercise('Barbell bench press',284,1,1),historicExercise('Incline bench press',70,8)]}
+  ];
+  // Earlier sample sessions let each active exercise demonstrate its graph. Not user data.
+  const sampleLoads=[[90,60,24,10,20],[20,60,25],[110,95,40],[55,32],[140,55]];
+  for(let week=0;week<3;week++)for(let day=0;day<days.length;day++){
+    history.push({id:'sample-'+week+'-'+day,date:dateKey(new Date(2026,7,10+week*7+day)),time:'18:00',name:days[day],minutes:45+day*3,
+      exercises:rosters[day].map((e,i)=>historicExercise(e.name,sampleLoads[day][i]+week*(sampleLoads[day][i]>=50?2.5:1),e.reps,e.target))});
+  }
+  const countSets = session => session.exercises.reduce((n,e)=>n+e.sets.length,0);
+  const volume = session => session.exercises.reduce((n,e)=>n+e.sets.reduce((v,s)=>v+s.kg*s.reps,0),0);
+  const suspicious = s => s.kg>250 || s.reps>30 || s.kg<0 || s.reps<1 || (s.rpe!==null&&(s.rpe<1||s.rpe>10));
+  const suspiciousCount = () => history.reduce((n,h)=>n+h.exercises.reduce((v,e)=>v+e.sets.filter(suspicious).length,0),0);
+  const selectedSession = () => history.find(h=>h.id===state.historySession && h.date===state.selectedDate);
+  const currentExercise = () => exercises[state.active];
+  function notify(text) {state.message=text;message.textContent=text;}
+  function elapsedSession(now=Date.now()) {return Math.floor((state.session.elapsed+(state.session.running?now-state.session.started:0))/1000);}
+  function beginSession() {if(!state.session.running){state.session.running=true;state.session.started=Date.now();state.session.completed=false;}}
+  function pauseSession() {if(state.session.running){state.session.elapsed+=Date.now()-state.session.started;state.session.running=false;}}
+  function startRest(e) {state.rest={exerciseId:e.id,deadline:Date.now()+e.restSeconds*1000,left:e.restSeconds,paused:false};}
+  function statusMark(e) {return `<span class="cg-status ${cgStatus(e)}">${cgStatus(e)==='done'?'✓':'●'}</span>`;}
+  function setRows(e,historyMode=false,flagged=false) {
+    if(!e.sets.length)return '<p class="cg-small cg-empty">Še ni zabeleženih serij.</p>';
+    const indexed=e.sets.map((s,i)=>({s,i:historyMode?i:e.plan.findIndex(p=>p.id===s.planId)})).sort((a,b)=>a.i-b.i).filter(({s})=>!flagged||suspicious(s));
+    return `<div class="cg-setrows">${indexed.map(({s,i})=>`<div class="cg-setrow"><span class="cg-setnum">${i+1}</span><span class="cg-setvalue">${fmt(s.kg)} kg × ${s.reps}<small>RPE ${s.rpe??'—'}${suspicious(s)?' · preveri vrednost':''}</small></span><button class="cg-link" data-edit-set="${s.id}" data-source="${historyMode?'history':'workout'}" data-exercise-id="${e.id}">Uredi</button><button class="cg-icon cg-danger" data-delete-set="${s.id}" data-source="${historyMode?'history':'workout'}" data-exercise-id="${e.id}" aria-label="Odstrani serijo ${i+1}">${icon('trash-2')}</button></div>`).join('')}</div>`;
+  }
+  function logger(e) {
+    const pending=cgPendingPlan(e);e.draft=pending||e.plan.at(-1);const index=pending?e.plan.indexOf(pending)+1:0;
+    return `<div class="cg-logger">
+      <div class="cg-last">Zadnjič ${fmt(e.last.kg)} kg × ${e.last.reps} · RPE ${e.last.rpe}</div>
+      ${pending?`<div class="cg-fields"><label>KG<input aria-label="Kilogrami" data-field="kg" type="number" inputmode="decimal" min="0" max="1000" step="0.25" value="${esc(e.draft.kg)}" required></label><label>PONOVITVE<input aria-label="Ponovitve" data-field="reps" type="number" inputmode="numeric" min="1" max="100" value="${esc(e.draft.reps)}" required></label><label>RPE<input aria-label="RPE" data-field="rpe" type="number" inputmode="decimal" min="1" max="10" step="0.5" placeholder="—" value="${esc(e.draft.rpe??'')}"></label></div>
+      <div class="cg-log-footer"><span class="cg-small">Serija ${index}/${e.target}</span>${button('log',icon('check')+' Zabeleži','cg-action')}</div>`:
+      `<p class="cg-small cg-success">✓ Vseh ${e.target} serij je zabeleženih.</p>`}
+      ${/barbell|bench/i.test(e.name)&&!/dumbbell/i.test(e.name)?'<div class="cg-plates" aria-live="polite"></div>':''}
+      <div class="cg-rest-tools">${button('rest-settings',icon('timer')+' Počitek '+clock(e.restSeconds))}${button('rest-start',icon('play'),'cg-icon','aria-label="Začni počitek"')}</div>
+      <details data-plan-details ${e.planOpen?'open':''}><summary>Načrt serij · vpiši težo vnaprej</summary>${planRows(e)}</details>
+      ${button('plan-add','+ Dodaj serije','cg-link cg-plan-add',e.target>=20?'disabled':'')}
+      <details data-set-details ${e.setsOpen?'open':''}><summary>Serije · ${e.sets.length} zabeleženih · uredi</summary>${setRows(e)}</details></div>`;
+  }
+  function planRows(e) {
+    return `<div class="cg-plan"><div class="cg-plan-labels"><span>Ser.</span><span>kg</span><span>Pon.</span><span></span></div>${e.plan.map((p,i)=>{
+      const logged=e.sets.find(s=>s.planId===p.id);
+      return `<div class="cg-plan-row ${logged?'logged':''}" data-plan-row="${p.id}"><span class="cg-plan-number">${i+1}${logged?' ✓':''}</span>
+        ${logged?`<span>${fmt(logged.kg)}</span><span>${logged.reps}</span><button class="cg-link" data-edit-set="${logged.id}" data-source="workout" data-exercise-id="${e.id}">Uredi</button>`:
+        `<input aria-label="Serija ${i+1} kg" data-plan-id="${p.id}" data-plan-field="kg" type="number" min="0" max="1000" step="0.25" inputmode="decimal" value="${esc(p.kg)}" required><input aria-label="Serija ${i+1} ponovitve" data-plan-id="${p.id}" data-plan-field="reps" type="number" min="1" max="100" inputmode="numeric" value="${esc(p.reps)}" required><button class="cg-icon cg-danger" data-remove-plan="${p.id}" aria-label="Odstrani načrtovano serijo ${i+1}" ${e.plan.length<=1?'disabled':''}>${icon('x')}</button>`}</div>`;
+    }).join('')}<p class="cg-small">Načrtovane serije še niso opravljene.</p></div>`;
+  }
+  function addPlannedSets() {
+    const e=currentExercise(),last=e.plan.at(-1)||e.last;
+    sheet('Dodaj načrtovane serije',`<p class="cg-small">${esc(e.name)} · vpis vnaprej</p><label>Število novih serij<input name="count" type="number" min="1" max="${20-e.plan.length}" value="1" required></label><label>Teža za nove serije (kg)<input name="kg" type="number" min="0" max="1000" step="0.25" value="${esc(last.kg)}" required></label><label>Ponovitve<input name="reps" type="number" min="1" max="100" value="${esc(last.reps)}" required></label>`,data=>{
+      for(let i=0;i<Number(data.get('count'));i++)e.plan.push({id:uid(),kg:Number(data.get('kg')),reps:Number(data.get('reps')),rpe:null});
+      e.target=e.plan.length;e.planOpen=true;notify('Serije pripravljene. Vsako težo lahko še spremeniš.');
+    },'Dodaj');
+  }
+  function restBar() {
+    if(!state.rest)return '';
+    const left=cgRemaining(state.rest);
+    return `<div class="cg-rest"><strong data-rest-clock>${clock(left)}</strong><span>Počitek${state.rest.paused?' · premor':''}</span>
+      ${button('rest-minus','−30','cg-icon','aria-label="Skrajšaj počitek za 30 sekund"')}${button('rest-toggle',icon(state.rest.paused?'play':'pause'),'cg-icon',`aria-label="${state.rest.paused?'Nadaljuj počitek':'Pavziraj počitek'}"`)}${button('rest-plus','+30','cg-icon','aria-label="Podaljšaj počitek za 30 sekund"')}${button('rest-stop',icon('x'),'cg-icon','aria-label="Zapri počitek"')}</div>`;
+  }
+  function workout() {
+    const total=exercises.reduce((n,e)=>n+e.sets.length,0),target=exercises.reduce((n,e)=>n+e.target,0),active=currentExercise();
+    const title=`<div class="cg-title-row"><div><h1>${state.focus?'Fokus':'Push A'}</h1><p class="cg-sub">${state.focus?`${state.active+1} od ${exercises.length} vaj`:'Teden 2 · prsa, ramena, tricepsi'}</p></div>${button('focus',icon(state.focus?'minimize-2':'scan-line')+(state.focus?' Izhod':' Fokus'),'cg-quiet')}</div>`;
+    const session=state.focus?`<div class="cg-focus-meta"><span>Trening <strong data-session-clock>${clock(elapsedSession())}</strong></span><span>${total}/${target} serij</span></div>`:
+      `<div class="cg-session"><div><strong data-session-clock>${clock(elapsedSession())}</strong><div class="cg-small">${total}/${target} serij</div></div><span class="cg-spacer"></span>${button('session-toggle',icon(state.session.running?'pause':'play'),'cg-icon',`aria-label="${state.session.running?'Premor treninga':'Začni oziroma nadaljuj trening'}"`)}${button(state.session.completed?'session-toggle':'session-finish',state.session.completed?'Nadaljuj':'Zaključi trening')}</div>`;
+    const rows=exercises.map((e,i)=>`<section class="cg-workrow ${i===state.active?'open':''}"><button class="cg-rowbutton" data-ex="${i}">${statusMark(e)}<span class="cg-rowname">${esc(e.name)}</span><span class="cg-count">${e.sets.length}/${e.target}</span>${icon(i===state.active?'chevron-up':'chevron-down')}</button>${i===state.active?logger(e):''}</section>`).join('');
+    const focus=`<section class="cg-workrow open"><div class="cg-rowbutton">${statusMark(active)}<h2 class="cg-rowname">${esc(active.name)}</h2></div>${logger(active)}</section>
+      <div class="cg-focus-steps">${button('prev',icon('chevron-left'),'cg-quiet',`aria-label="Prejšnja vaja" ${state.active===0?'disabled':''}`)}<div class="cg-small">${state.active+1} / ${exercises.length}</div>${button('next',icon('chevron-right'),'cg-quiet',`aria-label="Naslednja vaja" ${state.active===exercises.length-1?'disabled':''}`)}</div>
+      <div class="cg-dots">${exercises.map((e,i)=>`<button class="${cgStatus(e)} ${i===state.active?'selected':''}" data-ex="${i}" aria-label="${esc(e.name)}: ${e.sets.length}/${e.target}">${cgStatus(e)==='done'?'✓':'●'}</button>`).join('')}</div>`;
+    return title+session+'<div class="cg-rest-host">'+restBar()+'</div>'+(state.focus?focus:`<div class="cg-section-label"><span>Današnje vaje</span><span>${exercises.filter(e=>cgStatus(e)==='done').length}/${exercises.length} opravljeno</span></div>${rows}`);
+  }
+  function program() {
+    return `<div class="cg-title-row"><div><h1>Program</h1><p class="cg-sub">${dayActive.filter(Boolean).length} aktivnih dni · tvoj seznam vaj</p></div><span class="cg-pill">Po meri</span></div><div class="cg-days">${days.map((d,i)=>`<button class="${i===state.day?'selected':''}" data-day="${i}">${d}</button>`).join('')}</div><div class="cg-section-label"><span>${days[state.day]}</span><span>${rosters[state.day].filter(e=>e.active!==false).length}/${rosters[state.day].length} aktivnih vaj</span></div>${rosters[state.day].map((e,i)=>`<div class="cg-programrow"><span class="cg-order">${i+1}</span><div class="cg-grow"><strong>${esc(e.name)}</strong><small>${e.target} serije · ${e.reps} ponovitev${e.active===false?' · Neaktivna':''}</small></div><button class="cg-icon" data-program-edit="${i}" aria-label="Uredi ${esc(e.name)}">${icon('sliders-horizontal')}</button><button class="cg-icon" data-move="${i}" aria-label="Premakni vajo navzgor" ${i===0?'disabled':''}>${icon('arrow-up')}</button></div>`).join('')}<button class="cg-add" data-act="program-add">+ Dodaj vajo</button><p class="cg-footnote">Fazo Cut / Bulk urejaš v Nastavitvah. Tvoj seznam vaj ostane isti.</p>`;
+  }
+  function selectDate(key) {
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(key))return;
+    const date=new Date(key+'T12:00:00');if(!Number.isFinite(date.getTime()))return;
+    state.selectedDate=key;state.month=date.getMonth();state.year=date.getFullYear();
+    state.historySession=history.find(h=>h.date===key)?.id||'';state.historyExercise='';
+  }
+  function calendar() {
+    const {offset,count}=cgMonthDays(state.year,state.month),monthName=new Date(state.year,state.month,1).toLocaleDateString('sl-SI',{month:'long',year:'numeric'});
+    const cells=Array.from({length:offset},()=>'<span></span>');
+    for(let day=1;day<=count;day++) {
+      const key=dateKey(new Date(state.year,state.month,day)),sessions=history.filter(h=>h.date===key).sort((a,b)=>a.time.localeCompare(b.time));
+      const names=sessions.map(h=>h.name);
+      cells.push(`<button data-date="${key}" class="${key===state.selectedDate?'selected':''} ${sessions.length?'has-session':''}" aria-pressed="${key===state.selectedDate}" aria-label="${dateLabel(key)} · ${names.length?esc(names.join(', ')):'brez treninga'}"><span class="cg-cal-day">${day}</span>${names.slice(0,2).map(name=>`<span class="cg-cal-name">${esc(name)}</span>`).join('')}${names.length>2?`<span class="cg-cal-more">+${names.length-2}</span>`:''}</button>`);
+    }
+    return `<div class="cg-calendar"><div class="cg-calendar-heading">${button('month-prev',icon('chevron-left'),'cg-icon','aria-label="Prejšnji mesec"')}<strong>${monthName}</strong>${button('month-next',icon('chevron-right'),'cg-icon','aria-label="Naslednji mesec"')}</div><div class="cg-calendar-grid">${['P','T','S','Č','P','S','N'].map(d=>`<span class="cg-weekday">${d}</span>`).join('')}${cells.join('')}</div></div>`;
+  }
+  function historyView() {
+    const daySessions=history.filter(h=>h.date===state.selectedDate).sort((a,b)=>a.time.localeCompare(b.time));
+    const session=selectedSession();
+    let detail='<p class="cg-small cg-empty">Ta dan ni zabeleženega treninga.</p>';
+    if(session) {
+      const visible=session.exercises.filter(e=>(!state.historyExercise||e.id===state.historyExercise)&&(!state.flagged||e.sets.some(suspicious)));
+      detail=`<div class="cg-history-summary"><div><h2>${esc(session.name)}</h2><p class="cg-sub">${session.time} · ${session.minutes} min · ${countSets(session)} serij · ${fmt(volume(session))} kg</p></div>${button('history-meta','Uredi trening')}</div>
+        <label class="cg-field-label">Vaja<select data-history-exercise><option value="">Vse vaje (${session.exercises.length})</option>${session.exercises.map(e=>`<option value="${e.id}" ${e.id===state.historyExercise?'selected':''}>${esc(e.name)}</option>`).join('')}</select></label>
+        ${visible.length?visible.map((e,i)=>`<details class="cg-history-exercise" ${i===0?'open':''}><summary><strong>${esc(e.name)}</strong><span>${e.sets.length} serij</span></summary>${setRows(e,true,state.flagged)}<button class="cg-link" data-history-add="${e.id}">+ Dodaj zabeleženo serijo</button></details>`).join(''):'<p class="cg-small cg-empty">Ni serij za izbran filter.</p>'}`;
+    }
+    return `${calendar()}<label class="cg-field-label cg-date-label">Izberi datum<input type="date" data-history-date value="${state.selectedDate}" min="1900-01-01" max="2100-12-31"></label>
+      <div class="cg-section-label"><span>${dateLabel(state.selectedDate)}</span><span>${daySessions.length} treningov</span></div>
+      ${daySessions.length>1?`<label class="cg-field-label">Trening tega dne<select data-history-session>${daySessions.map(h=>`<option value="${h.id}" ${h.id===state.historySession?'selected':''}>${h.time} · ${esc(h.name)}</option>`).join('')}</select></label>`:''}
+      <label class="cg-checkline"><input type="checkbox" data-flagged ${state.flagged?'checked':''}> Samo vrednosti za pregled</label>
+      ${suspiciousCount()?button('find-flagged',`Poišči naslednjo sumljivo serijo (${suspiciousCount()})`):''}
+      ${detail}${button('undo','Razveljavi zadnjo spremembo','cg-link',undo?'':'disabled')}
+      <p class="cg-footnote">Vzorčna zgodovina. Označbe so namigi za pregled, ne samodejno brisanje. Sprememba velja samo za izbrani trening.</p>`;
+  }
+  function chart() {
+    return `<svg class="cg-chart" viewBox="0 0 360 200" role="img" aria-label="Vzorčni trend telesne teže od 79,2 do 79,8 kilograma, avgust in september"><line x1="43" y1="27" x2="343" y2="27"/><line x1="43" y1="84" x2="343" y2="84"/><line x1="43" y1="142" x2="343" y2="142"/><text x="0" y="31">80,0</text><text x="0" y="88">79,5</text><text x="0" y="146">79,0</text><text x="43" y="183">17. avg.</text><text x="142" y="183">31. avg.</text><text x="299" y="183">12. sep.</text><path d="M44 129 L61 116 L78 139 L95 104 L112 117 L129 93 L146 119 L163 99 L180 75 L197 92 L214 65 L231 87 L248 53 L265 70 L282 37 L299 62 L316 40 L340 51" fill="none" stroke="#75808b" stroke-width="1.3"/><path d="M44 129 C91 127 112 114 151 108 S208 83 245 72 S307 50 340 51" fill="none" stroke="var(--cg-accent)" stroke-width="3"/></svg>`;
+  }
+  function progress() {
+    const tabs=`<div class="cg-title-row"><div><h1>Napredek</h1><p class="cg-sub">Tvoj pregled treninga.</p></div></div><div class="cg-segments">${['Moč','Teža','Zgodovina'].map(x=>`<button data-progress="${x}" class="${state.progress===x?'selected':''}">${x}</button>`).join('')}</div>`;
+    if(state.progress==='Zgodovina')return tabs+historyView();
+    if(state.progress==='Moč')return tabs+strengthView();
+    return tabs+`<div class="cg-metrics"><div><span class="cg-small">7-dnevno povprečje</span><strong>79,8 <small>kg</small></strong></div><div><span class="cg-small">Tedenska sprememba</span><strong>+0,2 <small>kg</small></strong></div></div><div class="cg-section-label"><span>Telesna teža · kg</span><span>Zadnjih 30 dni</span></div>${chart()}<div class="cg-small">— Meritve <span style="color:var(--cg-accent);margin-left:15px">━ 7-dnevno povprečje</span></div><div class="cg-latest"><span>Zadnja meritev</span><strong>${fmt(state.lastWeight)} kg</strong></div><button class="cg-add" data-act="weight">+ Vnesi težo</button>`;
+  }
+  function strengthView() {
+    const active=cgActiveExercises(rosters,dayActive,days),selected=active.find(e=>e.key===state.strengthKey);
+    if(!selected){
+      state.strengthKey='';
+      return `<div class="cg-section-label"><span>Aktivne vaje programa</span><span>${active.length}</span></div><div class="cg-strength-list">${active.map(e=>{
+        const series=cgStrengthSeries(history,e.key),last=series.at(-1);
+        return `<button class="cg-strength-row" data-strength="${esc(e.key)}"><span><strong>${esc(e.name)}</strong><small>${esc(e.days.join(' · '))}</small><small>${last?`${fmt(last.kg)} kg × ${last.reps} · ${dateLabel(last.date)}`:'Še brez zabeleženih serij'}</small></span>${icon('chevron-right')}</button>`;
+      }).join('')}</div><p class="cg-footnote">Izberi vajo za graf. Neaktivne vaje in dnevi niso vključeni.</p>`;
+    }
+    const series=cgStrengthSeries(history,selected.key);
+    const heading=`${button('strength-back',icon('arrow-left')+' Vse aktivne vaje')}<h2 class="cg-strength-title">${esc(selected.name)}</h2><p class="cg-sub">${esc(selected.days.join(' · '))}</p>`;
+    if(!series.length)return heading+'<p class="cg-small cg-empty">Za to vajo še ni zabeleženih treningov. Graf se prikaže po prvem vnosu.</p>';
+    const point=series.find(p=>p.id===state.strengthSession)||series.at(-1);state.strengthSession=point.id;
+    return heading+`<div class="cg-section-label"><span>Največja teža v treningu · kg</span></div><div class="cg-strength-chart" data-strength-chart></div>
+      ${series.length===1?'<p class="cg-small">Prvi zapis. Naslednji trening doda drugo točko grafa.</p>':''}
+      <label class="cg-field-label">Trening na grafu<select aria-label="Trening na grafu" data-strength-date>${series.map(p=>`<option value="${p.id}" ${p.id===point.id?'selected':''}>${dateLabel(p.date)} · ${p.time}</option>`).join('')}</select></label>
+      <div class="cg-strength-result"><strong>${fmt(point.kg)} kg × ${point.reps}</strong><span>${point.sets} serij · volumen ${fmt(point.volume)} kg</span></div>
+      ${point.flagged?'<p class="cg-small cg-danger">Ta trening vsebuje vrednost za pregled.</p>':''}
+      ${button('strength-history','Odpri ta trening v zgodovini')}
+      <p class="cg-footnote">Zabeležena teža, ne ocenjeni 1RM. Vzorčni podatki predogleda.</p>`;
+  }
+  function drawStrengthChart() {
+    const host=main.querySelector('[data-strength-chart]');if(!host)return;
+    const series=cgStrengthSeries(history,state.strengthKey);if(!series.length)return;
+    const width=Math.floor(host.clientWidth);if(width<120)return;
+    const signature=JSON.stringify([width,state.strengthKey,state.strengthSession,series]);
+    if(host.dataset.signature===signature)return;host.dataset.signature=signature;
+    const height=220,left=64,right=12,top=18,bottom=44;
+    const times=series.map(p=>new Date(p.date+'T'+p.time).getTime()),values=series.map(p=>p.kg);
+    const minTime=Math.min(...times),maxTime=Math.max(...times),minValue=Math.min(...values),maxValue=Math.max(...values);
+    const pad=Math.max(2.5,(maxValue-minValue)*.15),low=Math.max(0,minValue-pad),high=maxValue+pad;
+    const x=t=>minTime===maxTime?(left+width-right)/2:left+(t-minTime)/(maxTime-minTime)*(width-left-right);
+    const y=v=>height-bottom-(v-low)/(high-low)*(height-top-bottom);
+    const chosen=series.findIndex(p=>p.id===state.strengthSession),selected=series[Math.max(0,chosen)];
+    const ticks=[0,1,2,3].map(i=>{const value=low+(high-low)*i/3,yy=y(value);return `<line x1="${left}" x2="${width-right}" y1="${yy}" y2="${yy}"/><text x="${left-9}" y="${yy+4}" text-anchor="end">${value.toLocaleString('sl-SI',{maximumFractionDigits:1})}</text>`;}).join('');
+    const indices=[...new Set([0,Math.floor((series.length-1)/2),series.length-1])];
+    const dateTicks=indices.map((i,n)=>`<text x="${x(times[i])}" y="${height-22}" text-anchor="${indices.length===1?'middle':n===0?'start':n===indices.length-1?'end':'middle'}">${new Date(series[i].date+'T12:00').toLocaleDateString('sl-SI',{day:'numeric',month:'numeric'})}</text>`).join('');
+    host.innerHTML=`<svg class="cg-strength-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Graf zabeležene teže za ${esc(state.strengthKey)}; ${series.length} treningov, od ${fmt(minValue)} do ${fmt(maxValue)} kg"><title>Napredek teže po treningih</title>${ticks}<text x="10" y="14">kg</text><polyline points="${series.map((p,i)=>`${x(times[i])},${y(p.kg)}`).join(' ')}" fill="none" stroke="var(--cg-accent)" stroke-width="2.5"/>${series.map((p,i)=>`<g data-strength-point="${p.id}"><circle cx="${x(times[i])}" cy="${y(p.kg)}" r="13" fill="transparent"/><circle cx="${x(times[i])}" cy="${y(p.kg)}" r="${p.id===selected.id?6:4}" fill="${p.flagged?'var(--cg-pending)':'var(--cg-accent)'}" stroke="${p.id===selected.id?'var(--cg-text)':'var(--cg-bg)'}" stroke-width="2"/></g>`).join('')}${dateTicks}</svg>`;
+  }
+  function equipmentView() {
+    const presets=[['20','Olimpijska palica · 20 kg'],['15','Olimpijska palica · 15 kg'],['10','Kratka palica · 10 kg'],['8','EZ palica · 8 kg'],['custom','Teža po meri']];
+    return `<div class="cg-title-row"><h1>Oprema in plošče</h1>${button('settings-back','Nazaj')}</div><form class="cg-equipment-form">
+      <label class="cg-checkline"><input type="checkbox" name="show" ${equipment.show?'checked':''}> Pokaži kalkulator pri vaji s palico</label>
+      <label class="cg-field-label">Vrsta palice<select name="barKind">${presets.map(([v,t])=>`<option value="${v}" ${equipment.barKind===v?'selected':''}>${t}</option>`).join('')}</select></label>
+      <label class="cg-field-label">Teža palice (kg)<input name="bar" type="number" min="0" max="50" step="0.25" value="${equipment.bar}" ${equipment.barKind!=='custom'?'readonly':''} required></label>
+      <div class="cg-section-label"><span>Razpoložljive plošče</span></div>
+      <div class="cg-plate-choices">${equipment.plates.map((p,i)=>`<label class="cg-checkline"><input type="checkbox" name="plate-${i}" ${p.enabled?'checked':''}> ${fmt(p.kg)} kg</label>`).join('')}</div>
+      <p class="cg-footnote">Označi teže plošč, ki so na voljo v tvojem fitnesu.</p>
+      ${button('equipment-save','Shrani opremo','cg-action cg-full')}</form>`;
+  }
+  function settings() {
+    if(state.settingsView==='equipment')return equipmentView();
+    if(state.settingsView==='history')return `<div class="cg-title-row"><div><h1>Zgodovina</h1><p class="cg-sub">Datum → trening → vaja → serija</p></div>${button('settings-back','Nazaj')}</div>`+historyView();
+    return `<div class="cg-title-row"><div><h1>Nastavitve</h1><p class="cg-sub">Nastavi enkrat. Treniraj po svoje.</p></div></div><div class="cg-section-label"><span>Trening</span></div><button class="cg-settingsrow" data-act="phase"><span>Faza telesne sestave</span><span>${state.phase} ⇄</span></button><button class="cg-settingsrow" data-act="program"><span>Program in vaje</span>${icon('chevron-right')}</button><button class="cg-settingsrow" data-act="equipment"><span>Oprema in plošče</span><span>${fmt(equipment.bar)} kg · ${equipment.show?'vklopljeno':'izklopljeno'}</span></button><div class="cg-section-label"><span>Podatki</span></div><button class="cg-settingsrow" data-act="history"><span>Pregled in urejanje zgodovine</span>${icon('calendar-days')}</button><button class="cg-settingsrow" data-act="backup"><span>Varnostna kopija</span>${icon('chevron-right')}</button><p class="cg-footnote">Vzorčni podatki. Spremembe v tem predogledu veljajo do ponovnega odpiranja datoteke.</p>`;
+  }
+  function render() {
+    root.style.setProperty('--cg-accent',design.accent);root.style.setProperty('--cg-space',design.spacing==='Kompaktno'?'12px':'17px');root.style.setProperty('--cg-round',design.corners+'px');
+    main.innerHTML=({Trening:workout,Program:program,Napredek:progress,Nastavitve:settings}[state.page])();
+    nav.hidden=state.focus&&state.page==='Trening';
+    nav.innerHTML=[['Trening','dumbbell'],['Program','list-checks'],['Napredek','chart-no-axes-combined'],['Nastavitve','settings-2']].map(([name,ic])=>`<button data-page="${name}" ${state.page===name?'aria-current="page"':''}>${icon(ic)}${name}</button>`).join('');
+    message.textContent=state.message;updatePlates();
+    const details=main.querySelector('[data-set-details]');if(details)details.ontoggle=()=>{currentExercise().setsOpen=details.open;};
+    const planDetails=main.querySelector('[data-plan-details]');if(planDetails)planDetails.ontoggle=()=>{currentExercise().planOpen=planDetails.open;};
+    if(window.lucide)lucide.createIcons({attrs:{width:18,height:18}});
+    drawStrengthChart();
+    const route=state.page+'|'+state.settingsView+'|'+state.focus+'|'+state.strengthKey;
+    if(renderedRoute!==null&&renderedRoute!==route)root.scrollIntoView({block:'start'});
+    renderedRoute=route;
+  }
+  function updatePlates() {
+    const el=main.querySelector('.cg-plates');if(!el)return;
+    if(!equipment.show){el.innerHTML=button('equipment','Kalkulator plošč je izklopljen · nastavi');return;}
+    const value=Number(currentExercise().draft.kg),plan=cgPlatePlan(value,equipment.bar,equipment.plates);
+    el.innerHTML=`${plan.invalid?'Teža je nižja od teže palice.':`Na stran: ${plan.plates.map(p=>`${p.count} × ${fmt(p.kg)} kg`).join(' + ')||'brez plošč'}<br>Palica ${fmt(equipment.bar)} kg · skupaj ${fmt(plan.actual)} kg${Math.abs(plan.actual-value)>.01?` · do vnosa manjka ${fmt(value-plan.actual)} kg`:''}`} ${button('equipment','Oprema')}`;
+  }
+  function closeSheet() {
+    layer.hidden=true;main.inert=false;nav.inert=false;header.inert=false;
+    if(modalReturn?.isConnected)modalReturn.focus();
+  }
+  function sheet(title,html,onSave,saveText='Shrani') {
+    modalReturn=document.activeElement;layer.hidden=false;main.inert=true;nav.inert=true;header.inert=true;
+    layer.innerHTML=`<section class="cg-sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="cg-title-row"><h2>${esc(title)}</h2>${button('modal-close',icon('x'),'cg-icon','aria-label="Zapri"')}</div><form>${html}<div class="cg-sheet-actions">${button('modal-close','Prekliči','cg-quiet')}<button type="button" data-modal-save class="cg-action">${saveText}</button></div></form></section>`;
+    const form=layer.querySelector('form');
+    const save=()=>{if(!form.reportValidity())return;if(onSave(new FormData(form))===false)return;closeSheet();render();};
+    form.onsubmit=event=>event.preventDefault();
+    form.onkeydown=event=>{if(event.key==='Enter'&&event.target.tagName==='INPUT'){event.preventDefault();save();}};
+    layer.querySelector('[data-modal-save]').onclick=save;
+    layer.querySelector('input,select,button')?.focus();
+    if(window.lucide)lucide.createIcons({attrs:{width:18,height:18}});
+    root.querySelector('.cg-sheet').scrollIntoView({block:'nearest'});
+  }
+  function setFields(s) {
+    return `<div class="cg-modal-fields"><label>Teža (kg)<input name="kg" type="number" min="0" max="1000" step="0.25" value="${s.kg}" required></label><label>Ponovitve<input name="reps" type="number" min="1" max="100" value="${s.reps}" required></label><label>RPE (neobvezno)<input name="rpe" type="number" min="1" max="10" step="0.5" value="${s.rpe??''}"></label></div>`;
+  }
+  const readSet = data => ({kg:Number(data.get('kg')),reps:Number(data.get('reps')),rpe:data.get('rpe')===''?null:Number(data.get('rpe'))});
+  function rememberUndo(text,fn) {undo=fn;notify(text+' · možnost razveljavitve v zgodovini.');}
+  function resolveExercise(b) {return (b.dataset.source==='history'?selectedSession()?.exercises:exercises)?.find(e=>e.id===b.dataset.exerciseId);}
+  function editSet(b) {
+    const e=resolveExercise(b),s=e?.sets.find(s=>s.id===b.dataset.editSet);if(!s)return;
+    const previous={...s},session=selectedSession();
+    const context=b.dataset.source==='history'?`${dateLabel(session.date)} · ${session.time} · ${esc(session.name)}<br>`:'';
+    const ordinal=b.dataset.source==='history'?e.sets.indexOf(s)+1:e.plan.findIndex(p=>p.id===s.planId)+1;
+    sheet('Popravi serijo',`<p class="cg-small">${context}${esc(e.name)} · serija ${ordinal}</p>${setFields(s)}`,data=>{
+      Object.assign(s,readSet(data));rememberUndo('Serija popravljena',()=>Object.assign(s,previous));
+    });
+  }
+  function deleteSet(b) {
+    const e=resolveExercise(b),index=e?.sets.findIndex(s=>s.id===b.dataset.deleteSet);if(index===undefined||index<0)return;
+    const set=e.sets[index];
+    const ordinal=b.dataset.source==='history'?index+1:e.plan.findIndex(p=>p.id===set.planId)+1;
+    sheet('Odstrani zabeleženo serijo?',`<p class="cg-small">${esc(e.name)} · serija ${ordinal}<br>${fmt(set.kg)} kg × ${set.reps} · RPE ${set.rpe??'—'}<br>Odstrani se samo ta testna serija.</p>`,()=>{
+      e.sets.splice(index,1);
+      rememberUndo('Serija odstranjena',()=>{e.sets.splice(index,0,set);});
+    },'Odstrani');
+  }
+  function restSettings() {
+    const e=currentExercise();
+    sheet('Počitek za vajo',`<p class="cg-small">${esc(e.name)}</p><div class="cg-rest-presets">${[60,90,120,180,300].map(s=>`<button type="button" class="cg-quiet" data-rest-preset="${s}">${clock(s)}</button>`).join('')}</div><div class="cg-two-fields"><label>Minute<input name="minutes" type="number" min="0" max="30" value="${Math.floor(e.restSeconds/60)}" required></label><label>Sekunde<input name="seconds" type="number" min="0" max="59" value="${e.restSeconds%60}" required></label></div><label class="cg-checkline"><input name="all" type="checkbox"> Uporabi za vse vaje</label><p class="cg-small">Če počitek teče, se novo trajanje začne od začetka.</p><p class="cg-form-error" role="alert"></p>`,data=>{
+      const seconds=Number(data.get('minutes'))*60+Number(data.get('seconds'));
+      if(seconds<1||seconds>1800){layer.querySelector('.cg-form-error').textContent='Izberi od 1 sekunde do 30 minut.';return false;}
+      (data.has('all')?exercises:[e]).forEach(x=>x.restSeconds=seconds);
+      if(state.rest&&(state.rest.exerciseId===e.id||data.has('all')))startRest(exercises.find(x=>x.id===state.rest.exerciseId)||e);
+      notify('Počitek nastavljen na '+clock(seconds)+'.');
+    });
+  }
+  function logSet() {
+    const e=currentExercise(),values={},pending=cgPendingPlan(e);if(!pending)return;
+    for(const field of ['kg','reps','rpe']){const input=main.querySelector(`[data-field="${field}"]`);if(!input?.reportValidity())return;values[field]=input.value===''?null:Number(input.value);}
+    beginSession();Object.assign(pending,values);e.sets.push({id:uid(),planId:pending.id,...values});
+    e.draft=cgPendingPlan(e)||e.plan.at(-1);startRest(e);notify('Testna serija zabeležena.');render();
+  }
+  function saveEquipment() {
+    const form=main.querySelector('.cg-equipment-form');if(!form.reportValidity())return;
+    const data=new FormData(form);equipment.barKind=data.get('barKind');equipment.bar=Number(data.get('bar'));equipment.show=data.has('show');
+    equipment.plates.forEach((p,i)=>{p.enabled=data.has('plate-'+i);});
+    notify('Oprema shranjena v predogledu.');backFromSettings();render();
+  }
+  function backFromSettings() {
+    if(state.equipmentReturn){Object.assign(state,state.equipmentReturn);state.equipmentReturn=null;}else state.settingsView='';
+  }
+  function finishSession() {
+    if(state.focus)return;
+    const total=exercises.reduce((n,e)=>n+e.sets.length,0);
+    sheet('Zaključi testni trening?',`<p class="cg-small">${total} zabeleženih serij. Trening se doda v koledar današnjega dne.</p>`,()=>{
+      pauseSession();state.rest=null;state.session.completed=true;
+      const now=new Date(),key=dateKey(now),record={id:'current-demo',date:key,time:now.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'}),name:'Push A',minutes:Math.max(1,Math.round(elapsedSession()/60)),exercises:exercises.filter(e=>e.sets.length).map(e=>({id:uid(),name:e.name,sets:e.sets.map(s=>({...s,id:uid()}))}))};
+      const index=history.findIndex(h=>h.id===record.id);if(index>=0)history[index]=record;else history.push(record);
+      selectDate(key);state.historySession=record.id;state.historyExercise='';state.flagged=false;state.page='Napredek';state.progress='Zgodovina';notify('Testni trening je v koledarju.');
+    },'Zaključi');
+  }
+  root.addEventListener('input',event=>{
+    const el=event.target,e=currentExercise();
+    if(el.dataset.field){e.draft[el.dataset.field]=el.value;const matching=main.querySelector(`[data-plan-id="${e.draft.id}"][data-plan-field="${el.dataset.field}"]`);if(matching)matching.value=el.value;updatePlates();}
+    if(el.dataset.planId){const plan=e.plan.find(p=>p.id===el.dataset.planId);if(!plan)return;plan[el.dataset.planField]=el.value;
+      if(plan.id===cgPendingPlan(e)?.id){e.draft=plan;const matching=main.querySelector(`[data-field="${el.dataset.planField}"]`);if(matching)matching.value=el.value;updatePlates();}}
+  });
+  root.addEventListener('change',event=>{
+    const el=event.target;
+    if(el.hasAttribute('data-history-date')){selectDate(el.value);render();}
+    else if(el.hasAttribute('data-history-session')){state.historySession=el.value;state.historyExercise='';render();}
+    else if(el.hasAttribute('data-history-exercise')){state.historyExercise=el.value;render();}
+    else if(el.hasAttribute('data-flagged')){state.flagged=el.checked;render();}
+    else if(el.hasAttribute('data-strength-date')){state.strengthSession=el.value;render();}
+    else if(el.name==='barKind'){const input=main.querySelector('[name="bar"]');input.readOnly=el.value!=='custom';if(el.value!=='custom')input.value=el.value;}
+  });
+  root.addEventListener('keydown',event=>{if(event.key==='Escape'&&!layer.hidden){event.preventDefault();closeSheet();}});
+  root.addEventListener('click',event=>{
+    const point=event.target.closest('[data-strength-point]');if(point){state.strengthSession=point.dataset.strengthPoint;render();return;}
+    const b=event.target.closest('button');if(!b||b.disabled)return;
+    if(b.dataset.strength){state.strengthKey=b.dataset.strength;state.strengthSession='';render();return;}
+    if(b.dataset.removePlan){if(cgRemovePlan(currentExercise(),b.dataset.removePlan))notify('Odstranjena načrtovana serija. Zabeležene ostanejo.');render();return;}
+    if(b.dataset.restPreset){const seconds=Number(b.dataset.restPreset);layer.querySelector('[name="minutes"]').value=Math.floor(seconds/60);layer.querySelector('[name="seconds"]').value=seconds%60;return;}
+    if(b.dataset.editSet){editSet(b);return;}if(b.dataset.deleteSet){deleteSet(b);return;}
+    if(b.dataset.page){state.page=b.dataset.page;state.settingsView='';state.equipmentReturn=null;state.message='';render();return;}
+    if(b.dataset.ex!==undefined){state.active=Number(b.dataset.ex);render();return;}
+    if(b.dataset.day!==undefined){state.day=Number(b.dataset.day);render();return;}
+    if(b.dataset.progress){state.progress=b.dataset.progress;render();return;}
+    if(b.dataset.date){selectDate(b.dataset.date);render();return;}
+    if(b.dataset.historyAdd){const e=selectedSession()?.exercises.find(e=>e.id===b.dataset.historyAdd);if(!e)return;sheet('Dodaj serijo v zgodovino',`<p class="cg-small">${dateLabel(state.selectedDate)} · ${esc(e.name)}</p>${setFields(e.sets.at(-1)||{kg:0,reps:8,rpe:8})}`,data=>{const set={id:uid(),...readSet(data)};e.sets.push(set);rememberUndo('Serija dodana',()=>{e.sets=e.sets.filter(s=>s.id!==set.id);});},'Dodaj');return;}
+    if(b.dataset.move!==undefined){const i=Number(b.dataset.move),list=rosters[state.day];if(i>0)[list[i-1],list[i]]=[list[i],list[i-1]];render();return;}
+    if(b.dataset.programEdit!==undefined){const e=rosters[state.day][Number(b.dataset.programEdit)];sheet('Uredi vajo',`<label>Ime vaje<input name="name" value="${esc(e.name)}" maxlength="70" required></label><label>Serije<input name="target" type="number" min="1" max="20" value="${e.target}" required></label><label>Ponovitve<input name="reps" type="number" min="1" max="100" value="${e.reps}" required></label><label class="cg-checkline"><input name="active" type="checkbox" ${e.active!==false?'checked':''}> Aktivna vaja</label>`,d=>{Object.assign(e,{name:d.get('name'),target:Number(d.get('target')),reps:Number(d.get('reps')),active:d.has('active')});notify('Program posodobljen v predogledu.');});return;}
+    const act=b.dataset.act;if(!act)return;
+    if(act==='modal-close'){closeSheet();return;}
+    if(act==='focus')state.focus=!state.focus;
+    else if(act==='prev')state.active=Math.max(0,state.active-1);
+    else if(act==='next')state.active=Math.min(exercises.length-1,state.active+1);
+    else if(act==='session-toggle'){if(state.session.running)pauseSession();else beginSession();}
+    else if(act==='session-finish'){finishSession();return;}
+    else if(act==='plan-add'){if(currentExercise().plan.length<20)addPlannedSets();return;}
+    else if(act==='log'){logSet();return;}
+    else if(act==='rest-settings'){restSettings();return;}
+    else if(act==='rest-start')startRest(currentExercise());
+    else if(act==='rest-stop')state.rest=null;
+    else if(act==='rest-toggle'&&state.rest){const r=state.rest;if(r.paused){r.deadline=Date.now()+r.left*1000;r.paused=false;}else{r.left=cgRemaining(r);r.paused=true;}}
+    else if((act==='rest-minus'||act==='rest-plus')&&state.rest){const r=state.rest,left=Math.max(0,cgRemaining(r)+(act==='rest-plus'?30:-30));if(!left){state.rest=null;notify('Počitek končan.');}else{r.left=left;r.deadline=Date.now()+left*1000;}}
+    else if(act==='month-prev'||act==='month-next'){const d=new Date(state.year,state.month+(act==='month-next'?1:-1),1);selectDate(dateKey(d));}
+    else if(act==='history-meta'){const h=selectedSession();if(!h)return;const previous={date:h.date,time:h.time,name:h.name,minutes:h.minutes};sheet('Uredi trening',`<label>Datum<input name="date" type="date" value="${h.date}" min="1900-01-01" max="2100-12-31" required></label><label>Ura<input name="time" type="time" value="${h.time}" required></label><label>Ime treninga<input name="name" value="${esc(h.name)}" maxlength="70" required></label><label>Trajanje (minute)<input name="minutes" type="number" min="1" max="600" value="${h.minutes}" required></label>`,d=>{Object.assign(h,{date:d.get('date'),time:d.get('time'),name:d.get('name'),minutes:Number(d.get('minutes'))});selectDate(h.date);state.historySession=h.id;rememberUndo('Trening popravljen',()=>{Object.assign(h,previous);selectDate(h.date);state.historySession=h.id;});});return;}
+    else if(act==='find-flagged'){const records=history.filter(h=>h.exercises.some(e=>e.sets.some(suspicious)));if(records.length){const next=records[(records.findIndex(h=>h.id===state.historySession)+1)%records.length];selectDate(next.date);state.historySession=next.id;state.flagged=true;}}
+    else if(act==='undo'&&undo){const fn=undo;undo=null;fn();notify('Zadnja sprememba razveljavljena.');}
+    else if(act==='strength-back'){state.strengthKey='';state.strengthSession='';}
+    else if(act==='strength-history'){const point=cgStrengthSeries(history,state.strengthKey).find(p=>p.id===state.strengthSession);if(point){selectDate(point.date);state.historySession=point.id;state.historyExercise=history.find(h=>h.id===point.id)?.exercises.find(e=>cgNameKey(e.name)===state.strengthKey)?.id||'';state.progress='Zgodovina';state.flagged=false;}}
+    else if(act==='phase'){state.phase=state.phase==='Bulk'?'Cut':'Bulk';notify('Faza spremenjena. Vaje ostanejo iste.');}
+    else if(act==='program')state.page='Program';
+    else if(act==='history'){state.settingsView='history';state.flagged=false;}
+    else if(act==='equipment'){state.equipmentReturn={page:state.page,settingsView:state.settingsView};state.page='Nastavitve';state.settingsView='equipment';}
+    else if(act==='equipment-save'){saveEquipment();return;}
+    else if(act==='settings-back')backFromSettings();
+    else if(act==='program-add'){sheet('Dodaj vajo',`<label>Ime vaje<input name="name" placeholder="Npr. Pec deck" maxlength="70" required></label><label>Število serij<input name="sets" type="number" min="1" max="20" value="3" required></label>`,d=>{rosters[state.day].push({name:d.get('name'),target:Number(d.get('sets')),reps:10});notify('Vaja dodana v program.');},'Dodaj');return;}
+    else if(act==='weight'){sheet('Nova meritev',`<label>Telesna teža (kg)<input name="weight" type="number" step="0.1" min="30" max="300" value="${state.lastWeight}" required></label>`,d=>{state.lastWeight=Number(d.get('weight'));notify('Testna meritev shranjena.');});return;}
+    else if(act==='backup'){sheet('Varnostna kopija','<p class="cg-small">Predogled ne dostopa do pravih datotek in ne ustvarja varnostne kopije aplikacije.</p>',()=>{},'Razumem');return;}
+    render();
+  });
+  function tick() {
+    if(!root.isConnected){clearInterval(ticker);return;}
+    main.querySelectorAll('[data-session-clock]').forEach(el=>el.textContent=clock(elapsedSession()));
+    if(state.rest){const left=cgRemaining(state.rest);if(left<=0){state.rest=null;const host=main.querySelector('.cg-rest-host');if(host)host.innerHTML='';notify('Počitek končan. Nadaljuj, ko si pripravljen.');}else main.querySelectorAll('[data-rest-clock]').forEach(el=>el.textContent=clock(left));}
+  }
+  render();const ticker=setInterval(tick,500);document.addEventListener('visibilitychange',tick);
+  if(window.ResizeObserver){const observer=new ResizeObserver(()=>{if(!root.isConnected){observer.disconnect();return;}drawStrengthChart();});observer.observe(root);}
+  if(window.Tweak){const tweak=new Tweak({container:root,onChange:render});tweak.addSelect(design,'spacing',{label:'Gostota',options:['Kompaktno','Zračno']});tweak.addColorPicker(design,'accent',{label:'Poudarek',reference:'--cg-accent'});tweak.addSlider(design,'corners',{label:'Zaobljenost',min:4,max:20,unit:'px'});}
+})();
+
+</script>

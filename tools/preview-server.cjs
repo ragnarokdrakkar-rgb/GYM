@@ -4,6 +4,11 @@ const root=path.resolve(__dirname,'..');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp','.woff2':'font/woff2'};
 http.createServer((req,res)=>{
   const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+  if(pathname==='/__approved-ui'){
+    const approved=fs.readFileSync(path.join(root,'design/compact-gym-v3-reference.html'),'utf8');
+    res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+    res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#121416}#cg-preview .cg-shell{border:0;border-radius:0}</style>'+approved);return;
+  }
   const relative=pathname==='/'?'index.html':pathname.replace(/^\//,'');
   const file=path.resolve(root,relative);
   if(!file.startsWith(root+path.sep)||!(/^(index\.html|manifest\.json|icon[^/]*\.png|sw\.js|(?:css|js|assets|vendor)\/)/.test(relative))){res.writeHead(404).end();return;}

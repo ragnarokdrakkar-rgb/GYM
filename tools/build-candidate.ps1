@@ -3,6 +3,8 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
 $version = (Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json).version
 function Assert-NativeExit([string]$step) { if ($LASTEXITCODE -ne 0) { throw "$step failed ($LASTEXITCODE)" } }
+& node.exe '.\tools\build-compact-reference.cjs'
+Assert-NativeExit 'Approved compact design'
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\build-app-bundle.ps1' -Quiet
 Assert-NativeExit 'Bundle'
 & npm.cmd test

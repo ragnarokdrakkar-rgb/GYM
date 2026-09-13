@@ -234,7 +234,7 @@ async function copyDiagnosticsV18(){
       id:'moltenPalette',
       beforeInit(chart){
         // Weight observations, trend and goal have distinct semantic colors.
-        if(chart.canvas?.id==='bw-chart'||chart.canvas?.id==='cg-strength-chart')return;
+        if(chart.canvas?.id==='bw-chart'||chart.canvas?.id==='cg-strength-chart'||chart.canvas?.id?.startsWith('cg-shell-'))return;
         const text3=cssVar('--text3')||'#8c7a6c',border=cssVar('--border')||'rgba(255,226,196,.09)';
         const scales=chart.options&&chart.options.scales||{};
         Object.values(scales).forEach(scale=>{

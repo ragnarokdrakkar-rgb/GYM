@@ -1,0 +1,42 @@
+/* Production-only necessities: safe areas, native dialogs, charts and real data.
+   Core spacing, components and hierarchy come unchanged from the approved CSS. */
+:host{display:block;color-scheme:dark;}
+#cg-app .cg-shell{border:0;border-radius:0;min-height:100dvh;overflow:visible;padding-top:env(safe-area-inset-top,0px);}
+#cg-app .cg-main{padding-bottom:90px;min-height:500px;}
+#cg-app .cg-header{padding:16px 18px;}
+#cg-app .cg-header .cg-demo{letter-spacing:0;font-size:11px;}
+#cg-app .cg-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,414px);z-index:10;padding-bottom:max(10px,env(safe-area-inset-bottom,0px));}
+#cg-app[data-focus="true"] .cg-main{padding-bottom:24px;}
+#cg-app .cg-message{position:sticky;top:0;z-index:12;}
+#cg-app .cg-message:empty{display:none;}
+#cg-app .cg-rowbutton svg{width:16px;height:16px;flex:none;color:var(--cg-muted);}
+#cg-app svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+#cg-app .cg-dots{flex-wrap:wrap;}
+#cg-app .cg-workout-picker{margin:0 0 10px;}
+#cg-app .cg-workout-picker summary{font-size:11px;padding:6px 0;}
+#cg-app .cg-days{flex-wrap:wrap;}
+#cg-app .cg-days button{min-width:48px;}
+#cg-app .cg-531{font-size:12px;margin:0 0 10px;}
+#cg-app .cg-531 summary{padding:6px 0;}
+#cg-app .cg-531 table{width:100%;font-size:12px;border-collapse:collapse;}
+#cg-app .cg-531 td{padding:5px 3px;border-bottom:1px solid var(--cg-line);}
+#cg-app .cg-cal-name{border-left:2px solid var(--day-color);color:var(--day-color)!important;background:color-mix(in srgb,var(--day-color) 13%,transparent);padding:3px 1px!important;width:100%;border-radius:3px;}
+#cg-app .cg-calendar-grid button.selected{background:var(--cg-raised);color:var(--cg-text);box-shadow:inset 0 0 0 1px var(--cg-accent);}
+#cg-app .cg-calendar-legend{display:flex;flex-wrap:wrap;gap:7px 12px;font-size:10px;color:var(--cg-muted);}
+#cg-app .cg-calendar-legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;}
+#cg-app .cg-strength-chart{height:230px;position:relative;margin:8px 0;}
+#cg-app .cg-strength-chart canvas{width:100%!important;height:100%!important;}
+#cg-app .cg-strength-svg{stroke:none;}
+#cg-app .cg-sheet{max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;}
+#cg-app dialog{padding:0;border:0;color:var(--cg-text);background:transparent;width:calc(100% - 24px);max-width:390px;margin:auto;color-scheme:dark;}
+#cg-app dialog::backdrop{background:rgba(0,0,0,.76);}
+#cg-app .cg-dialog-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;}
+#cg-app .cg-dialog-title h2{font-size:18px;}
+#cg-app .cg-sheet select,#cg-app .cg-sheet textarea{display:block;box-sizing:border-box;width:100%;min-height:44px;margin:7px 0 12px;background:var(--cg-bg);color:var(--cg-text);border:1px solid var(--cg-line);border-radius:8px;padding:10px;font:inherit;}
+#cg-app .cg-sheet label{font-size:12px;}
+#cg-app .cg-sheet-actions{position:sticky;bottom:-18px;background:var(--cg-panel);padding:10px 0;}
+#cg-app .cg-sheet .cg-checkline input{margin:0;}
+#cg-app .cg-programrow.off{opacity:.6;}
+#cg-app .cg-plan input{height:44px;}
+#cg-app .cg-setrow [data-edit-ref]{white-space:nowrap;}
+#cg-app button:focus-visible,#cg-app input:focus-visible,#cg-app select:focus-visible,#cg-app summary:focus-visible{outline:2px solid var(--cg-accent);outline-offset:2px;}

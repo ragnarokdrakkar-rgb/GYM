@@ -32,5 +32,5 @@ test('Invalid planned entries and overlarge plan are refused',()=>{
 });
 test('Plan and counts commit together; compact files ship in HTML and web offline cache',()=>{
   assert.match(source,/commitStorageBatch\(\[\[LS.sets/);assert.match(source,/WTFocusPatchV10\?\.syncFromStorage\(key\)/);
-  for(const name of ['../index.html','../sw.js']){const text=fs.readFileSync(path.join(__dirname,name),'utf8');assert.ok(text.includes('js/compact-ui.js'));assert.ok(text.includes('css/compact.css'));}
+  for(const name of ['../index.html','../sw.js']){const text=fs.readFileSync(path.join(__dirname,name),'utf8');assert.ok(text.includes('js/compact-ui.js'));assert.ok(text.includes('css/compact-host.css'));assert.ok(text.includes('js/compact-shell.js'));}
 });

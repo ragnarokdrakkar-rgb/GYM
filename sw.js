@@ -1,5 +1,5 @@
-/* Workout Tracker service worker v1.3.0 */
-const CACHE_NAME = 'workout-tracker-v1.3.0-compact';
+/* Workout Tracker service worker v1.3.1 */
+const CACHE_NAME = 'workout-tracker-v1.3.1-compact-shell';
 const CORE_FILES = [
   './',
   './index.html',
@@ -16,8 +16,11 @@ const CORE_FILES = [
   './js/ui-safe-v1.js',
   './js/workout/set-log.js',
   './css/app.css',
-  './css/compact.css',
+  './css/compact-host.css',
+  './css/compact-reference.css',
+  './css/compact-shell.css',
   './js/compact-ui.js',
+  './js/compact-shell.js',
   './vendor/chart.umd.js',
   './manifest.json',
   './icon-192.png',
