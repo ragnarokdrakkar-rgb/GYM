@@ -4,7 +4,8 @@ if(isCompact())document.body.classList.add('compact-cards');
 const _lastWeek=parseInt(localStorage.getItem('wt_last_week'));
 const _lastDay=parseInt(localStorage.getItem('wt_last_day'));
 if(!isNaN(_lastWeek)&&_lastWeek>=0&&_lastWeek<=3){cw=_lastWeek;document.querySelectorAll('.wt').forEach((t,i)=>t.classList.toggle('active',i===_lastWeek));}
-const _initDay=(!isNaN(_lastDay)&&_lastDay>=0&&_lastDay<=4)?_lastDay:0;
+const _initialDays=getProgramMetaV6().days;
+const _initDay=Number.isInteger(_lastDay)&&_initialDays[_lastDay]&&_initialDays[_lastDay].active!==false&&!_initialDays[_lastDay].deleted?_lastDay:(activeDayIndicesV6()[0]??0);
 try{const _av=document.getElementById('app-ver');if(_av)_av.textContent='v'+APP_VERSION;}catch(e){}
 try{migrateSwaps();}catch(e){}
 // Enkratna migracija: "Deadlift — capped..." → "Deadlift" (ohrani zgodovino, PR-je, red, swape)

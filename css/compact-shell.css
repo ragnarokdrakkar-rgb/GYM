@@ -12,10 +12,6 @@
 #cg-app .cg-rowbutton svg{width:16px;height:16px;flex:none;color:var(--cg-muted);}
 #cg-app svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 #cg-app .cg-dots{flex-wrap:wrap;}
-#cg-app .cg-workout-picker{margin:0 0 10px;}
-#cg-app .cg-workout-picker summary{font-size:11px;padding:6px 0;}
-#cg-app .cg-days{flex-wrap:wrap;}
-#cg-app .cg-days button{min-width:48px;}
 #cg-app .cg-531{font-size:12px;margin:0 0 10px;}
 #cg-app .cg-531 summary{padding:6px 0;}
 #cg-app .cg-531 table{width:100%;font-size:12px;border-collapse:collapse;}
@@ -40,3 +36,25 @@
 #cg-app .cg-plan input{height:44px;}
 #cg-app .cg-setrow [data-edit-ref]{white-space:nowrap;}
 #cg-app button:focus-visible,#cg-app input:focus-visible,#cg-app select:focus-visible,#cg-app summary:focus-visible{outline:2px solid var(--cg-accent);outline-offset:2px;}
+/* Always-visible, one-tap workout navigation. Status color is independent of selection. */
+#cg-app .cg-quick-nav{margin:0 0 14px;}
+#cg-app .cg-cycle-context{display:flex;align-items:center;gap:5px;min-height:34px;font-size:12px;color:var(--cg-muted);}
+#cg-app .cg-cycle-context strong{color:var(--cg-text);}
+#cg-app .cg-cycle-context .cg-link{margin-left:auto;min-height:34px;padding:5px 0 5px 10px;}
+#cg-app .cg-quick-weeks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:3px 0 10px;}
+#cg-app .cg-quick-weeks button,#cg-app .cg-quick-days button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:48px;padding:7px 3px;border:1px solid var(--cg-line);border-radius:8px;background:var(--cg-panel);color:var(--cg-text);font-size:11px;line-height:1.25;}
+#cg-app .cg-quick-weeks button small{font-size:9px;color:var(--cg-muted);overflow-wrap:anywhere;}
+#cg-app .cg-quick-weeks button.selected,#cg-app .cg-quick-days button.selected{border-color:var(--cg-accent);box-shadow:inset 0 -2px var(--cg-accent);}
+#cg-app .cg-quick-weeks button.done strong{color:var(--cg-ok);}
+#cg-app .cg-quick-weeks button.partial small{color:var(--cg-partial);}
+#cg-app .cg-quick-progress{display:flex;justify-content:space-between;gap:6px;color:var(--cg-muted);font-size:10px;margin:0 0 7px;}
+#cg-app .cg-quick-days{display:grid;grid-template-columns:repeat(var(--day-columns),minmax(0,1fr));gap:5px;}
+#cg-app .cg-quick-days strong{overflow-wrap:anywhere;font-weight:550;}
+#cg-app .cg-quick-days small{font-size:12px;line-height:1;color:var(--cg-pending);}
+#cg-app .cg-quick-days .done{background:color-mix(in srgb,var(--cg-ok) 9%,var(--cg-panel));}
+#cg-app .cg-quick-days .done small{color:var(--cg-ok);font-size:16px;}
+#cg-app .cg-quick-days .partial small,#cg-app .cg-quick-days .active small{color:var(--cg-partial);}
+#cg-app .cg-next-workout{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:34px;margin-top:5px;padding:6px 0;background:transparent;color:var(--cg-accent);font-size:11px;text-align:left;}
+#cg-app .cg-next-workout svg{width:14px;height:14px;}
+#cg-app .cg-quick-note{font-size:10px;color:var(--cg-muted);margin:8px 0 0;line-height:1.4;}
+#cg-app .cg-quick-nav button:disabled{opacity:.55;}

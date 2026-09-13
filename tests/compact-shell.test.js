@@ -40,5 +40,5 @@ test('Weight trend needs three measurements spanning a week and does not fabrica
 test('All shadow styles and script are precached and logging uses the guarded existing logger',()=>{
   const sw=read('sw.js');for(const file of ['css/compact-host.css','css/compact-reference.css','css/compact-shell.css','js/compact-shell.js'])assert.ok(sw.includes(file));
   assert.match(shell,/WTFocusPatchV10.logValues/);assert.match(read('src/app/v6-core.js'),/await logCompactSetV10\(box\)/);
-  assert.match(shell,/setWeek\(Number\(el.value\)\)/);assert.doesNotMatch(shell,/showWeek\(/);
+  assert.match(shell,/if\(week!==cw\)setWeek\(week\)/);assert.doesNotMatch(shell,/showWeek\(/);
 });

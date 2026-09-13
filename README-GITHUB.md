@@ -1,14 +1,24 @@
-# Workout Tracker 1.3.1 — Compact Gym v3
+# Workout Tracker 1.3.2 — Hitra izbira treninga
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
-2. Prenesi [APK izdaje 1.3.1](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.3.1/Workout-Tracker-v1.3.1.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+2. Prenesi [APK izdaje 1.3.2](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.3.2/Workout-Tracker-v1.3.2.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.3.1 je 68. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.3.2 je 69. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Novo v 1.3.2
+
+- Neposredni gumbi za tedne in aktivne treninge, brez skritega okna ali spustnih seznamov.
+- Viden cikel, izbrani teden, opravljeni treningi in naslednji neopravljeni trening.
+- Zeleno: opravljeno, modro: delno/v teku, rdeče: še ni opravljeno. Oranžen rob označuje izbiro, ne statusa.
+- Kljukice so vezane na točen cikel, teden in dan; neaktivni/izbrisani dnevi niso vključeni.
+- Nov cikel s potrditvijo; stare serije, zgodovina, program in Training Max ostanejo.
+- Fokus ostane kompakten. Ob ponovnem odprtju se pravilno obnovita tudi šesti in sedmi aktivni dan.
+- Podrobnosti: [release notes](RELEASE_NOTES_1.3.2.md).
 
 ## Novo v 1.3.1
 
