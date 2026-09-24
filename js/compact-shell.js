@@ -62,6 +62,8 @@ function weightVerdictV30(phaseType,weeklyKgOrNull){
 }
 // Moves the selected point in the strength chart to the previous/next session
 // in the (date-sorted) series, clamped at the ends. Pure, unit-tested directly.
+// Toast timing: success messages self-clear, errors stay until tapped or replaced.
+function compactToastTimingV32(error){return error?null:3500;}
 function compactStrengthNavV30(series,currentSi,dir){
   const idx=(series||[]).findIndex(p=>p.si===currentSi);
   if(idx<0)return currentSi;
@@ -82,7 +84,13 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   const state={page:'Trening',focus:false,active:'',day:0,progress:'Teža',settings:'',date:dateKey(new Date()),month:new Date().getMonth(),year:new Date().getFullYear(),session:-1,exercise:'',flagged:false,strength:'',point:-1,limit:50,query:'',weightDays:30,cycleMenu:false,openRow:''};
   const draft=new Map(),prescriptionOpen=new Set();
   const $=s=>root.querySelector(s),$$=s=>[...root.querySelectorAll(s)];
-  function notify(text,error=false){message.textContent=text;message.style.color=error?'var(--cg-pending)':'var(--cg-ok)';clearTimeout(message._timer);if(!error)message._timer=setTimeout(()=>{message.textContent='';},4000);}
+  function notify(text,error=false){
+    message.textContent=text;message.setAttribute('role',error?'alert':'status');
+    message.classList.toggle('cg-message-error',!!error);
+    clearTimeout(message._timer);
+    const delay=compactToastTimingV32(error);
+    if(text&&delay!=null)message._timer=setTimeout(()=>{message.textContent='';},delay);
+  }
   function guardProgram(){if(stRun||window.v6RecoveryPending||localStorage.getItem(LS_SESS))throw Error('Najprej zaključi ali obnovi aktivni trening.');}
   function currentRows(){
     const all=getSets(),history=sessions();return activeWorkoutEntriesV19(getCyc().num,cw,cd).map(({item,exerciseIndex,key})=>{
@@ -348,7 +356,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     if(strength){const series=compactStrengthSeriesV26(sessions(),state.strength),options=chartOptions();options.onClick=(_,points)=>{if(points.length){state.point=series[points[0].index].si;render();}};options.plugins.tooltip.callbacks.label=c=>`${fmt(c.raw)} kg × ${series[c.dataIndex].reps}`;chart=new Chart(strength,{type:'line',data:{labels:series.map(p=>p.date),datasets:[{data:series.map(p=>p.kg),borderColor:t.accent,backgroundColor:t.accent,pointRadius:series.map(p=>p.si===state.point?6:3),pointHitRadius:16,borderWidth:2.5,tension:.15}]},options});}
     if(weight){const entries=Object.entries(getBW()).sort((a,b)=>a[0].localeCompare(b[0])),view=bwChartWindowV25(entries,state.weightDays),options=chartOptions();options.plugins.tooltip.callbacks.label=c=>`${c.dataset.label}: ${fmt(c.raw)} kg`;chart=new Chart(weight,{type:'line',data:{labels:view.map(p=>p[0]),datasets:[{label:'Meritve',data:view.map(p=>Number(p[1])),borderColor:t.dim,backgroundColor:t.dim,pointRadius:2,pointHitRadius:10,showLine:false},{label:'7-dnevno povprečje',data:view.map(([d])=>avg7d(entries.filter(([date])=>date<=d))),borderColor:t.accent,backgroundColor:t.accent,pointRadius:0,borderWidth:2.5,tension:.2}]},options});}
   }
-  async function renderBackups(){const holder=$('[data-backup-list]');if(!holder)return;try{const list=await getAllBackups();if(!holder.isConnected)return;holder.innerHTML=list.map(b=>`<div class="cg-srow"><span class="cg-srow-text"><strong>${esc(new Date(b.date).toLocaleString('sl-SI'))}</strong><small>${b.sizeKB||'?'} KB · ${esc(b.label||'lokalna kopija')}</small></span>${button('backup-download','Prenesi','cg-link',`data-index="${b.id}"`)}</div>`).join('')||'<p class="cg-small">Ni lokalnih kopij.</p>';}catch(e){holder.textContent=e.message;}}
+  async function renderBackups(){const holder=$('[data-backup-list]');if(!holder)return;try{const list=await getAllBackups();if(!holder.isConnected)return;holder.innerHTML=list.map(b=>`<div class="cg-srow"><span class="cg-srow-text"><strong>${esc(new Date(b.date).toLocaleString('sl-SI'))}</strong><small>${b.sizeKB||'?'} KB · ${esc(b.label||'lokalna kopija')}</small></span>${button('backup-download','Prenesi','cg-link',`data-index="${b.id}"`)}</div>`).join('')||'<p class="cg-small cg-empty">Ni lokalnih kopij.</p>';}catch(e){holder.textContent=e.message;}}
   function render(){
     if(!root)return;if(chart){chart.destroy();chart=null;}
     const oldScroll=window.scrollY,route=[state.page,state.focus,state.settings,state.progress,state.strength].join('|');
@@ -362,9 +370,9 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   function queue(){if(queued||!root)return;queued=true;requestAnimationFrame(()=>{queued=false;const focused=root.getRootNode().activeElement;if(!dialog.open&&!(main.contains(focused)&&focused?.matches('input,textarea,select')))render();});}
   function updatePlates(){const el=$('.cg-plates'),e=activeExercise();if(!el||!e)return;if(getV6Settings().plateCalculator===false){el.innerHTML=button('equipment','Kalkulator plošč je izklopljen · nastavi');return;}const kg=Number($('[data-field="kg"]')?.value||valuesFor(e).kg),p=calcPlatesFor(kg);el.innerHTML=`${p?`Na stran: ${esc(p.each)}<br>Palica ${fmt(p.bar)} kg · skupaj ${fmt(p.total)} kg`:kg>0?'Teže ni mogoče sestaviti z izbranimi ploščami.':'Vnesi težo za izračun plošč.'} ${button('equipment','Oprema')}`;}
   function closeSheet(cancel=true){dialog.close();const callback=modalCancel;modalSave=null;modalCancel=null;if(cancel&&callback)callback();}
-  function sheet(title,body,save,ok='Shrani',cancel){
+  function sheet(title,body,save,ok='Shrani',cancel,soloOk=false){
     if(dialog.open)closeSheet(true);modalSave=save;modalCancel=cancel;
-    dialog.innerHTML=`<form class="cg-sheet"><div class="cg-dialog-title"><h2>${esc(title)}</h2>${button('modal-close',icon('x'),'cg-icon','aria-label="Zapri"')}</div>${body}<p class="cg-form-error" role="alert"></p><div class="cg-sheet-actions">${button('modal-close','Prekliči','cg-quiet')}<button type="submit" class="cg-action">${esc(ok)}</button></div></form>`;
+    dialog.innerHTML=`<form class="cg-sheet"><div class="cg-dialog-title"><h2>${esc(title)}</h2>${soloOk?'':button('modal-close',icon('x'),'cg-icon','aria-label="Zapri"')}</div>${body}<p class="cg-form-error" role="alert"></p><div class="cg-sheet-actions">${soloOk?'':button('modal-close','Prekliči','cg-quiet')}<button type="submit" class="${soloOk?'cg-quiet':'cg-action'}">${esc(ok)}</button></div></form>`;
     dialog.showModal();dialog.querySelector('form').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;if(!form.reportValidity())return;const submit=form.querySelector('[type="submit"]');submit.disabled=true;const fn=modalSave;try{await fn(new FormData(form));if(modalSave===fn){closeSheet(false);render();}}catch(error){form.querySelector('[role="alert"]').textContent=error.message;}finally{submit.disabled=false;}});
   }
   function ask(text,ok='Potrdi'){return new Promise(resolve=>sheet('Potrditev',`<p class="cg-small" style="white-space:pre-wrap">${esc(text)}</p>`,()=>resolve(true),ok,()=>resolve(false)));}
@@ -458,6 +466,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       if(b.dataset.restPreset){const n=Number(b.dataset.restPreset);dialog.querySelector('[name="minutes"]').value=Math.floor(n/60);dialog.querySelector('[name="seconds"]').value=n%60;return;}
       const act=b.dataset.act,index=Number(b.dataset.index),e=activeExercise();if(!act)return;
       if(act==='modal-close'){closeSheet();return;}
+      if(act==='storage-retry'){if(!storageHasPendingWrites())return;const ok=retryPendingStorageWrites();setSaveState(ok?'ok':'error');notify(ok?'Shranjeno.':'Shranjevanje ni uspelo. Izvozi podatke v Nastavitvah → Varnostna kopija.',!ok);return;}
       if(act==='focus'){state.focus=!state.focus;setGymMode(state.focus);}
       else if(act==='cycle-menu'){state.cycleMenu=!state.cycleMenu;}
       else if(act==='quick-next')selectQuickWorkout(cw,index);
@@ -514,6 +523,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   }
   function bind(){
     root.addEventListener('click',click);
+    message.addEventListener('click',()=>{if(message.classList.contains('cg-message-error')){message.textContent='';message.classList.remove('cg-message-error');clearTimeout(message._timer);}});
     root.addEventListener('input',event=>{const el=event.target,e=activeExercise();if(el.dataset.field&&e){const values=valuesFor(e);draft.set(e.key,{...values,[el.dataset.field]:el.value});updatePlates();}});
     root.addEventListener('change',event=>{const el=event.target,e=activeExercise();try{
       if(el.hasAttribute('data-plan-index')){if(!el.reportValidity())return;const index=Number(el.dataset.planIndex),row=e.rows[index]||{};savePlanAction(e,{type:'edit',values:[{index,kg:el.dataset.planField==='kg'?el.value:row.kg??'',reps:el.dataset.planField==='reps'?el.value:row.reps??''}]},false);workoutCache=currentRows();const next=valuesFor(activeExercise());for(const field of ['kg','reps','rpe']){const input=$(`[data-field="${field}"]`);if(input)input.value=next[field]??'';}updatePlates();return;}
@@ -540,7 +550,13 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     const host=$('.cg-rest-host');if(host){const t=currentTimerV6(),signature=t?`${t.id}|${t.paused}`:'';if(host.dataset.timer!==signature){host.dataset.timer=signature;host.innerHTML=restBar();}const left=t?(t.paused?t.remainingSec:Math.max(0,Math.ceil((t.endTs-Date.now())/1000))):0;
       const step=restNotifyStep(t,left,restActiveId,restNotifiedId);restActiveId=step.activeId;restNotifiedId=step.notifiedId;if(step.fire)notify('Počitek končan.');
       if(!left)host.innerHTML='';else host.querySelector('[data-rest-clock]')?.replaceChildren(clock(left));}
-    const saved=$('[data-save-state]');if(saved)saved.textContent=storageHasPendingWrites()?'Čaka shranjevanje':'Shranjeno';
+    setSaveState(storageHasPendingWrites()?'error':'ok');
+  }
+  function setSaveState(state){
+    const btn=$('[data-save-state]');if(!btn)return;
+    if(btn.dataset.saveState===state)return;
+    btn.dataset.saveState=state;
+    const text=$('[data-save-text]');if(text)text.textContent=state==='saving'?'Shranjujem…':state==='error'?'Ni shranjeno':'Shranjeno';
   }
   function showRecovery(){
     if(!window.v6RecoveryPending)return;
@@ -551,15 +567,20 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   async function initialize(){
     const host=document.createElement('div');host.id='wt-compact-host';const shadow=host.attachShadow({mode:'open'});document.body.prepend(host);
     const ready=['css/compact-reference.css','css/compact-shell.css','css/compact-v4.css'].map(path=>new Promise((resolve,reject)=>{const link=document.createElement('link');link.rel='stylesheet';link.href=new URL(path,document.baseURI);link.onload=resolve;link.onerror=()=>reject(Error('Slog novega vmesnika se ni naložil.'));shadow.append(link);}));
-    const app=document.createElement('div');app.id='cg-app';app.innerHTML=`<div class="cg-shell"><header class="cg-header"><div class="cg-brand">${icon('dumbbell')}<span>GYM<span class="cg-brand-detail"> / COMPACT</span></span></div><span class="cg-demo" data-save-state>Shranjeno</span></header><div class="cg-message" role="status" aria-live="polite"></div><main class="cg-main"></main><nav class="cg-nav" aria-label="Glavna navigacija"></nav><dialog aria-label="Urejanje"></dialog></div>`;shadow.append(app);root=app;main=$('.cg-main');nav=$('.cg-nav');header=$('.cg-header');message=$('.cg-message');dialog=$('dialog');
+    const flameSvg=`<svg viewBox="0 0 24 24" aria-hidden="true" class="cg-flame"><path fill="#ff7a1a" d="M12 2c.6 3.4 3.2 5 4.6 7.6a7 7 0 1 1-11.4 5.9C5.2 12.6 8.9 11.3 9.4 7c1.3.9 2.1 2.2 2.4 3.7C12.9 9.2 12.3 5.6 12 2z"/><path fill="#ffd08a" d="M12.2 12.2c.9 1.6 2.6 2.4 2.6 4.3A2.8 2.8 0 0 1 9.2 17c0-1.6 1.5-2.3 1.7-4 .6.5 1 1.2 1.3-.8z"/></svg>`;
+    const app=document.createElement('div');app.id='cg-app';app.innerHTML=`<div class="cg-shell"><header class="cg-header"><div class="cg-brand">${flameSvg}<span>WORKOUT</span></div>${button('storage-retry','<i class="cg-save-dot" aria-hidden="true"></i><span data-save-text>Shranjeno</span>','cg-savebtn','data-save-state="ok" aria-live="polite"')}</header><div class="cg-message" role="status" aria-live="polite"></div><main class="cg-main"></main><nav class="cg-nav" aria-label="Glavna navigacija"></nav><dialog aria-label="Urejanje"></dialog></div>`;shadow.append(app);root=app;main=$('.cg-main');nav=$('.cg-nav');header=$('.cg-header');message=$('.cg-message');dialog=$('dialog');
     try{await Promise.all(ready);}catch(error){host.remove();toast(error.message,'err');return;}
     document.documentElement.classList.add('compact-shell-v27');state.focus=getGymMode();state.day=cd;state.active=localStorage.getItem('wt_active_ex')||'';
     // Legacy settings nodes remain hidden for the existing data integrations.
     bind();
     const originalToast=window.toast;window.toast=function(text,kind){originalToast.apply(this,arguments);notify(text,kind==='err');};
+    const originalMarkSave=window.markSaveStateV15;window.markSaveStateV15=function(state){if(typeof originalMarkSave==='function')originalMarkSave.apply(this,arguments);setSaveState(state==='saved'?'ok':state==='saving'?'saving':'error');};
+    setSaveState(storageHasPendingWrites()?'error':'ok');
     window.uiConfirm=ask;window.uiPrompt=(text,value='')=>new Promise(resolve=>sheet('Vnos',`<label>${esc(text)}<input name="value" value="${esc(value??'')}"></label>`,data=>resolve(data.get('value')),'Shrani',()=>resolve(null)));
     window.chooseImportMode=summary=>new Promise(resolve=>sheet('Obnovi varnostno kopijo',`<p class="cg-small" style="white-space:pre-wrap">${esc(summary)}</p><label>Način obnove<select name="mode"><option value="merge">Združi · obdrži trenutne ob konfliktu</option><option value="replace">Zamenjaj vse z varnostno kopijo</option></select></label>`,data=>resolve(data.get('mode')),'Obnovi',()=>resolve(null)));
-    window.maybeShowOnboarding=()=>{document.getElementById('onboarding-pop')?.classList.remove('on');if(localStorage.getItem('wt_onboarding_done'))return;sheet('Dobrodošel v GYM / Compact',`<p class="cg-small">Izberi fazo. Vaje in zgodovina ostanejo tvoje tudi ob poznejšem preklopu.</p><div class="cg-sheet-actions"><button type="button" class="cg-quiet" data-onboard="cut">Cut</button><button type="button" class="cg-action" data-onboard="bulk">Bulk</button></div>`,()=>{},'Zapri');};
+    window.maybeShowOnboarding=()=>{document.getElementById('onboarding-pop')?.classList.remove('on');if(localStorage.getItem('wt_onboarding_done'))return;
+      const choice=(p,label,sub)=>`<button type="button" class="cg-choice" data-onboard="${p}"><strong>${label}</strong><small>${sub}</small></button>`;
+      sheet('Dobrodošel',`<p class="cg-small">Izberi fazo telesne sestave. Vaje in zgodovina ostanejo tvoje tudi ob poznejšem preklopu.</p><div class="cg-choice-grid">${choice('cut','Cut','Ohranjanje moči · manj utrujenosti')}${choice('bulk','Bulk','Rast mišic · več delovnih serij')}</div>`,()=>{},'Pozneje',undefined,true);};
     const originalDay=window.showDay;window.showDay=function(){const result=originalDay.apply(this,arguments);queue();return result;};
     const originalPage=window.showPage;window.showPage=function(p){const result=originalPage.apply(this,arguments);if(p==='workout')state.page='Trening';else if(p==='program')state.page='Program';else if(p==='tools')state.page='Nastavitve';else if(['gymlog','bodyweight','stats'].includes(p)){state.page='Napredek';state.progress={gymlog:'Zgodovina',bodyweight:'Teža',stats:'Moč'}[p];}queue();return result;};
     const originalOnboarding=window.finishOnboarding;window.finishOnboarding=function(){const result=originalOnboarding.apply(this,arguments);if(!getPhases().length)commitStorageBatch([['wt_phases',JSON.stringify([{type:getActiveProfile(),start:dateKey(new Date()),end:null}])]]);queue();return result;};

@@ -10,6 +10,12 @@
 .compact-shell-v27 #bk-banner,.compact-shell-v27 #pr-banner,.compact-shell-v27 #toast-el,
 .compact-shell-v27 #focus-nav-v10,.compact-shell-v27 #wt-global-timer-v10,
 .compact-shell-v27 #gym-focus-bar,.compact-shell-v27 #fab-active{display:none!important;}
+/* All legacy full-screen popups (onboarding, recovery, builder, backup, confirm,
+   prompt, history/import dialogs, …) are superseded by the compact shell's own
+   shadow-DOM sheet(). A stray reference captured before the shell overrides the
+   relevant globals (e.g. app.js's setTimeout(maybeShowOnboarding,250)) can still
+   flip one of these on; this keeps them invisible regardless of that ".on" class. */
+.compact-shell-v27 .note-pop{display:none!important;}
 #wt-compact-host{display:block;position:relative;isolation:isolate;min-height:100dvh;}
 .compact-shell-v27 #wt-update-banner{background:#1c2024!important;color:#f5f6f7!important;border:1px solid #353b41!important;box-shadow:none!important;}
 .compact-shell-v27 #wt-update-banner button{font-size:12px!important;min-height:44px;}

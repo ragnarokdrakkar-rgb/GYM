@@ -1,7 +1,17 @@
 /* Step 1 of the UI redesign: dark orange/red tokens, cycle header, week/day
    pickers with separated status vs selection, hero card and exercise rings.
    Loaded after compact-shell.css inside the shadow root; overrides its tokens. */
-#cg-app{--cg-bg:#0a0807;--cg-panel:#15110e;--cg-raised:#1f1915;--cg-line:#2f2620;--cg-line2:#40342b;--cg-text:#f6f0ea;--cg-muted:#b4a79b;--cg-dim:#8a7d72;--cg-accent:#ff7a1a;--cg-accent2:#e5381d;--cg-on-accent:#150a04;--cg-ok:#38d97a;--cg-partial:#4ea4ff;--cg-pending:#ff5d5d;--cg-display:"WT Display","Arial Narrow",system-ui,sans-serif;background:var(--cg-bg);}
+#cg-app{--cg-bg:#0a0807;--cg-panel:#15110e;--cg-raised:#1f1915;--cg-line:#2f2620;--cg-line2:#40342b;--cg-text:#f6f0ea;--cg-muted:#b4a79b;--cg-dim:#8a7d72;--cg-accent:#ff7a1a;--cg-accent2:#e5381d;--cg-on-accent:#150a04;--cg-ok:#38d97a;--cg-partial:#4ea4ff;--cg-pending:#ff5d5d;--cg-display:"WT Display","Arial Narrow",system-ui,sans-serif;--cg-fs-h1:30px;--cg-fs-h2:20px;--cg-fs-body:15px;--cg-fs-small:12.5px;--cg-gap:12px;--cg-gutter:16px;background:var(--cg-bg);}
+
+/* Step 7: typography + spacing tokens. Every screen h1 (cycle/program/progress/
+   settings titles incl. subpages) is unified to --cg-fs-h1, replacing the plain
+   23px default from compact-reference.css. Section labels, body text and main
+   gutters are unified too. */
+#cg-app h1{font-family:var(--cg-display);font-weight:700;font-size:var(--cg-fs-h1);line-height:1.08;letter-spacing:.2px;}
+#cg-app h2{font-family:var(--cg-display);font-weight:700;font-size:var(--cg-fs-h2);line-height:1.15;}
+#cg-app .cg-main{font-size:var(--cg-fs-body);padding-left:var(--cg-gutter);padding-right:var(--cg-gutter);box-sizing:border-box;}
+#cg-app .cg-section-label{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--cg-muted);}
+#cg-app .cg-small,#cg-app .cg-sub,#cg-app .cg-footnote{font-size:var(--cg-fs-small);}
 #cg-app .cg-shell{background:var(--cg-bg);}
 
 /* Header brand + nav */
@@ -15,7 +25,7 @@
 #cg-app .cg-cycle-top{display:flex;align-items:center;gap:10px;}
 #cg-app .cg-cycle-info{flex:1;min-width:0;}
 #cg-app .cg-cycle-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--cg-muted);}
-#cg-app .cg-cycle-title{font-family:var(--cg-display);font-weight:700;font-size:34px;line-height:1.05;letter-spacing:.2px;margin-top:2px;}
+#cg-app .cg-cycle-title{font-family:var(--cg-display);font-weight:700;font-size:var(--cg-fs-h1);line-height:1.05;letter-spacing:.2px;margin-top:2px;}
 #cg-app .cg-cycle-total{color:var(--cg-accent);}
 #cg-app .cg-cycle-count{text-align:right;font-variant-numeric:tabular-nums;flex:none;}
 #cg-app .cg-cycle-count strong{display:block;font-family:var(--cg-display);font-size:20px;font-weight:700;}
@@ -189,7 +199,7 @@
 
 /* Step 4: Program screen — title, compact week selector, day chip row, day
    card, and per-exercise rows with reorder + on/off switch. */
-#cg-app .cg-program-title{font-family:var(--cg-display);font-weight:700;font-size:32px;line-height:1.05;margin:0;}
+#cg-app .cg-program-title{font-family:var(--cg-display);font-weight:700;font-size:var(--cg-fs-h1);line-height:1.05;margin:0;}
 #cg-app .cg-weeksel{display:flex;gap:6px;margin:0 0 14px;}
 #cg-app .cg-weeksel button{flex:1;min-height:38px;border-radius:9px;background:var(--cg-panel);border:1px solid var(--cg-line);color:var(--cg-muted);font-family:var(--cg-display);font-weight:700;font-size:13px;}
 #cg-app .cg-weeksel button.selected{background:var(--cg-raised);border-color:var(--cg-accent);color:var(--cg-text);box-shadow:inset 0 0 0 1px var(--cg-accent);}
@@ -226,7 +236,7 @@
 
 /* Step 5: Napredek (Progress) — segmented control, Teža tiles/verdict/chart,
    Moč list/detail/readout, and the Zgodovina calendar + session chips. */
-#cg-app .cg-progress-title{font-family:var(--cg-display);font-weight:700;font-size:28px;}
+#cg-app .cg-progress-title{font-family:var(--cg-display);font-weight:700;font-size:var(--cg-fs-h1);}
 #cg-app .cg-seg{display:flex;gap:5px;background:var(--cg-panel);padding:4px;border-radius:11px;margin-bottom:18px;}
 #cg-app .cg-seg button{min-height:42px;flex:1;padding:0 4px;background:transparent;color:var(--cg-muted);border-radius:8px;font-size:12px;font-weight:600;position:relative;}
 #cg-app .cg-seg button.selected{background:var(--cg-raised);color:var(--cg-text);}
@@ -291,7 +301,7 @@
 #cg-app .cg-shead-back{display:inline-flex;align-items:center;gap:5px;padding:6px 0;margin-bottom:8px;background:transparent;color:var(--cg-muted);font-size:12px;min-height:36px;}
 #cg-app .cg-shead-back svg{width:16px;height:16px;}
 #cg-app .cg-shead-back:hover{color:var(--cg-text);}
-#cg-app .cg-shead-title{font-family:var(--cg-display);font-weight:700;font-size:28px;line-height:1.1;margin:0;}
+#cg-app .cg-shead-title{font-family:var(--cg-display);font-weight:700;font-size:var(--cg-fs-h1);line-height:1.1;margin:0;}
 #cg-app .cg-shead .cg-sub{margin-top:5px;}
 
 #cg-app .cg-card{background:var(--cg-panel);border:1px solid var(--cg-line);border-radius:14px;padding:0 14px;margin:0 0 4px;}
@@ -325,3 +335,71 @@
    .cg-fold cards (handled above by adding the class in the markup). */
 #cg-app .cg-equipment-form .cg-field-label input,#cg-app .cg-equipment-form .cg-field-label select,
 #cg-app [data-advanced-form] .cg-field-label input,#cg-app [data-advanced-form] .cg-field-label select{min-height:48px;}
+
+/* Step 7: header brand + save state, floating toast, unified bottom nav,
+   button states, bottom-sheet dialogs, and the shared empty-state card. */
+#cg-app .cg-header{min-height:52px;padding:8px var(--cg-gutter);gap:10px;}
+#cg-app .cg-brand{gap:8px;font-size:15px;}
+#cg-app .cg-brand .cg-flame{width:24px;height:24px;flex:none;display:block;}
+#cg-app .cg-brand span{font-family:var(--cg-display);font-weight:700;letter-spacing:.06em;font-size:16px;color:var(--cg-text);}
+#cg-app .cg-savebtn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:0;padding:6px 4px;min-height:44px;font-size:11px;color:var(--cg-muted);border-radius:8px;}
+#cg-app .cg-save-dot{width:7px;height:7px;border-radius:50%;flex:none;display:inline-block;background:var(--cg-ok);}
+#cg-app .cg-savebtn[data-save-state="ok"],#cg-app .cg-savebtn[data-save-state="saving"]{pointer-events:none;}
+#cg-app .cg-savebtn[data-save-state="saving"] .cg-save-dot{background:var(--cg-partial);}
+#cg-app .cg-savebtn[data-save-state="saving"]{color:var(--cg-partial);}
+#cg-app .cg-savebtn[data-save-state="error"]{color:var(--cg-pending);}
+#cg-app .cg-savebtn[data-save-state="error"] .cg-save-dot{background:var(--cg-pending);animation:cg-pulse 1.4s ease-in-out infinite;}
+
+/* Floating toast, anchored above the bottom nav (or the screen edge in Focus
+   mode). Empty means no text, so it never reserves layout space; pointer
+   events are scoped to the toast box itself, never the rest of the screen. */
+#cg-app .cg-message{position:fixed;top:auto;left:50%;bottom:calc(56px + max(10px,env(safe-area-inset-bottom,0px)) + 10px);transform:translateX(-50%);z-index:20;width:calc(100% - 32px);max-width:398px;height:auto;margin:0;padding:12px 16px;border-radius:12px;background:var(--cg-raised);border:1px solid color-mix(in srgb,var(--cg-ok) 45%,var(--cg-line));color:var(--cg-text);font-size:13px;line-height:1.4;text-align:center;box-shadow:0 10px 28px rgba(0,0,0,.45);pointer-events:auto;}
+#cg-app .cg-message:empty{display:none;}
+#cg-app .cg-message-error{border-color:color-mix(in srgb,var(--cg-pending) 55%,var(--cg-line));background:color-mix(in srgb,var(--cg-pending) 16%,var(--cg-raised));cursor:pointer;}
+#cg-app[data-focus="true"] .cg-message{bottom:calc(16px + env(safe-area-inset-bottom,0px));}
+
+/* Bottom nav: 56px tabs, translucent + blurred panel with a solid fallback. */
+#cg-app .cg-nav{min-height:56px;background:color-mix(in srgb,var(--cg-panel) 86%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){#cg-app .cg-nav{background:var(--cg-panel);}}
+#cg-app .cg-nav button{min-height:56px;font-size:11.5px;}
+#cg-app .cg-nav svg{width:22px;height:22px;}
+#cg-app .cg-main{padding-bottom:140px;}
+#cg-app[data-focus="true"] .cg-main{padding-bottom:24px;}
+
+/* Button states: pressed, disabled and keyboard focus, applied uniformly to
+   every button-like control (primary/quiet/link/icon/chip). Respect
+   prefers-reduced-motion by dropping the press transform and animations. */
+#cg-app button{-webkit-tap-highlight-color:transparent;}
+#cg-app button:not(:disabled):active{transform:scale(.98);}
+#cg-app .cg-action:not(:disabled):active{filter:brightness(.92);}
+#cg-app .cg-quiet:not(:disabled):active,#cg-app .cg-icon:not(:disabled):active,#cg-app .cg-link:not(:disabled):active,#cg-app .cg-choice:not(:disabled):active,#cg-app .cg-pchip:not(:disabled):active,#cg-app .cg-week:not(:disabled):active,#cg-app .cg-day:not(:disabled):active{background:var(--cg-line);}
+#cg-app button:disabled{opacity:.45;cursor:default;pointer-events:none;}
+#cg-app button:focus-visible,#cg-app input:focus-visible,#cg-app select:focus-visible,#cg-app textarea:focus-visible,#cg-app summary:focus-visible{outline:2px solid var(--cg-accent);outline-offset:2px;}
+@media(prefers-reduced-motion:reduce){#cg-app button:not(:disabled):active{transform:none;}#cg-app *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important;}}
+
+/* 44px minimum touch target for controls whose visible size is smaller: the
+   hit area grows via a centered pseudo-element instead of resizing the mark. */
+#cg-app .cg-switch,#cg-app .cg-dots button,#cg-app .cg-range-seg button,#cg-app .cg-history-chip,
+#cg-app .cg-shead-back,#cg-app .cg-setrow-edit .cg-link,#cg-app .cg-srow .cg-link,#cg-app .cg-plates .cg-link,
+#cg-app .cg-cycle-context .cg-link,#cg-app .cg-next-workout,#cg-app .cg-weeksel button{position:relative;}
+#cg-app .cg-switch::after,#cg-app .cg-dots button::after,#cg-app .cg-range-seg button::after,#cg-app .cg-history-chip::after,
+#cg-app .cg-shead-back::after,#cg-app .cg-setrow-edit .cg-link::after,#cg-app .cg-srow .cg-link::after,#cg-app .cg-plates .cg-link::after,
+#cg-app .cg-cycle-context .cg-link::after,#cg-app .cg-next-workout::after,#cg-app .cg-weeksel button::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:max(100%,44px);height:max(100%,44px);}
+
+/* Bottom-sheet dialogs: anchored to the bottom edge, full width up to 430px,
+   rounded top corners, drag handle, bounded height with its own scroll, and a
+   sticky action row that respects the safe area. Stays a native <dialog>
+   opened with showModal(), so it is still in the top layer above everything,
+   including the nav and the toast. */
+#cg-app dialog{position:fixed;inset:auto 0 0 0;top:auto;margin:0 auto;width:100%;max-width:430px;border-radius:18px 18px 0 0;background:var(--cg-panel);padding:0;}
+#cg-app dialog::before{content:'';display:block;width:40px;height:4px;border-radius:2px;background:var(--cg-line2);margin:10px auto 2px;}
+#cg-app dialog::backdrop{background:rgba(0,0,0,.72);}
+#cg-app .cg-sheet{max-height:calc(88dvh - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;box-sizing:border-box;}
+#cg-app .cg-dialog-title h2{font-family:var(--cg-display);font-weight:700;font-size:22px;}
+#cg-app .cg-sheet-actions{position:sticky;bottom:0;background:var(--cg-panel);padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));margin-top:0;}
+#cg-app .cg-sheet input,#cg-app .cg-field-label input,#cg-app .cg-field-label select,#cg-app .cg-sheet select,#cg-app .cg-sheet textarea{min-height:48px;font-size:16px;}
+
+/* Shared empty-state card: no icon, muted centered text, dashed border. */
+#cg-app .cg-empty{display:block;text-align:center;font-size:14px;color:var(--cg-muted);padding:24px;border:1.5px dashed var(--cg-line2);border-radius:12px;background:var(--cg-panel);margin:10px 0;}
+#cg-app dialog{border-top:1px solid var(--cg-line2);}
+#cg-app dialog .cg-sheet{background:transparent;border:0;border-radius:0;box-shadow:none;}
