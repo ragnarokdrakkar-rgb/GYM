@@ -71,7 +71,7 @@ test('Quick navigation locks during running, saved-pending and recovery sessions
 });
 test('Quick buttons replace the collapsed selectors in Training and Program, while Focus stays compact',()=>{
   assert.doesNotMatch(shell,/data-workout-day|<select data-week|cg-workout-picker/);
-  assert.match(shell,/const picker=state.focus\?'':quickNavigation\(\)/);assert.match(shell,/quickNavigation\(true\)/);assert.match(shell,/data-quick-day="\$\{d.dayIndex\}"/);assert.match(shell,/Cikel \$\{getCyc\(\).num\} · Teden/);
+  assert.match(shell,/const picker=state.focus\?'':quickNavigation\(\)/);assert.match(shell,/quickNavigation\(true\)/);assert.match(shell,/data-quick-day="\$\{d.dayIndex\}"/);assert.match(shell,/cikel \$\{getCyc\(\)\.num\}/);assert.match(shell,/Teden \$\{cw\+1\}/);
   assert.match(shell,/aria-pressed="\$\{d.dayIndex===selected\}"/);assert.match(read('css/compact-shell.css'),/\.cg-quick-days \.partial small/);
 });
 test('Startup restores sixth and seventh active workout days instead of silently falling back to day one',()=>{
@@ -83,8 +83,8 @@ test('Startup restores sixth and seventh active workout days instead of silently
 });
 test('Seven-day quick navigation wraps in four columns, exposes original indexes and handles empty programs honestly',()=>{
   let days=Array.from({length:7},(_,dayIndex)=>({dayIndex,name:'Day '+dayIndex,total:3,completed:false,status:'pending'}));
-  const ctx=harness({PROG:{weeks:[{},{},{},{}]},cw:0,cd:6,state:{day:6},getActiveProfile:()=> 'cut',navigationLocked:()=>false,weekOverview:week=>({cycle:3,week,days,done:0,total:days.length,partial:0,status:'pending'}),esc:s=>s,icon:()=>'',dateLabel:s=>s,button:(act,label,cls,attrs)=>`<button data-act="${act}" ${attrs||''}>${label}</button>`});
-  inner(ctx,'quickNavigation');const html=ctx.quickNavigation();
-  assert.match(html,/--day-columns:4/);assert.match(html,/data-quick-day="6"/);assert.match(html,/Cikel 3/);assert.match(html,/Teden 1 · Moč/);assert.match(html,/Teden 2 · Kontrola/);
+  const ctx=harness({PROG:{weeks:[{},{},{},{}]},cw:0,cd:6,state:{day:6},getActiveProfile:()=> 'cut',navigationLocked:()=>false,getProgramMetaV6:()=>({days:Array.from({length:7},()=>({active:true,deleted:false}))}),weekOverview:week=>({cycle:3,week,days,done:0,total:days.length,partial:0,status:'pending'}),esc:s=>s,icon:()=>'',dateLabel:s=>s,button:(act,label,cls,attrs)=>`<button data-act="${act}" ${attrs||''}>${label}</button>`});
+  inner(ctx,'weekLabel');inner(ctx,'chipWord');inner(ctx,'chip');inner(ctx,'quickNavigation');const html=ctx.quickNavigation();
+  assert.match(html,/--day-columns:4/);assert.match(html,/data-quick-day="6"/);assert.match(html,/Teden 1 · Moč/);assert.match(html,/Teden 2 · Kontrola/);
   days=[];const empty=ctx.quickNavigation();assert.match(empty,/Dodaj aktivne vaje/);assert.doesNotMatch(empty,/Vsi aktivni treningi tega tedna so opravljeni/);
 });
