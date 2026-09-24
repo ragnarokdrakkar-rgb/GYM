@@ -516,6 +516,53 @@ Write-Host "Zaznana verzija: $Version" -ForegroundColor Green
 Write-Host "APK: $($Apk.FullName)"
 Write-Host "SHA: $ShaFile"
 
+# Podpis mora biti isti release kljuc kot pri prejsnjih izdajah; versionCode mora biti visji od objavljenega.
+$VerifyScript = Join-Path $ProjectRoot 'tools\verify-apk-signature.ps1'
+if (-not (Test-Path -LiteralPath $VerifyScript)) {
+    Stop-WithMessage "Skripta za preverjanje podpisa ni najdena: $VerifyScript"
+}
+
+$GradleText = [System.IO.File]::ReadAllText((Join-Path $ProjectRoot 'android\app\build.gradle'))
+$BuiltVersionCode = [int]([regex]::Match($GradleText, 'versionCode\s*(?:=\s*)?(\d+)').Groups[1].Value)
+
+$PublishedTag = (
+    Get-NativeLines `
+        -File $GhExe `
+        -Arguments @('release', 'view', '--repo', $Repository, '--json', 'tagName', '-q', '.tagName') `
+        -FailureMessage 'Zadnje objavljene izdaje ni bilo mogoce prebrati.' |
+    Select-Object -First 1
+)
+
+Invoke-Native `
+    -File 'git' `
+    -Arguments @('fetch', '--tags', 'origin') `
+    -FailureMessage 'Git tagov ni bilo mogoce prenesti.'
+
+$PublishedGradle = (
+    Get-NativeLines `
+        -File 'git' `
+        -Arguments @('show', "$($PublishedTag):android/app/build.gradle") `
+        -FailureMessage "build.gradle objavljene izdaje $PublishedTag ni bilo mogoce prebrati."
+) -join "`n"
+$PublishedVersionCode = [int]([regex]::Match($PublishedGradle, 'versionCode\s*(?:=\s*)?(\d+)').Groups[1].Value)
+
+if ($PublishedVersionCode -le 0 -or $BuiltVersionCode -le $PublishedVersionCode) {
+    Stop-WithMessage "versionCode $BuiltVersionCode ni visji od objavljenega $PublishedVersionCode ($PublishedTag)."
+}
+
+function Test-ReleaseApkSignature {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $VerifyScript `
+        -ApkPath $Apk.FullName `
+        -MinVersionCodeExclusive $PublishedVersionCode `
+        -ExpectedVersionCode $BuiltVersionCode
+    if ($LASTEXITCODE -ne 0) {
+        Stop-WithMessage 'APK ni podpisan z obstojecim release kljucem ali ima napacen paket/versionCode. Objava je ustavljena.'
+    }
+}
+
+Test-ReleaseApkSignature
+$VerifiedApkHash = (Get-FileHash -LiteralPath $Apk.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+
 $FinalFiles = @(Get-ChangedFiles)
 $FinalUntrackedFiles = @(Get-UntrackedFiles)
 $FinalUnsafeFiles = Get-UnsafeFiles `
@@ -642,6 +689,11 @@ $ChangeNote
 - Odpri APK in izberi **Posodobi**.
 - Aplikacije pred posodobitvijo ne odstrani, da lokalni podatki ostanejo.
 
+### Android
+``com.kemal.workouttracker`` · versionCode ``$BuiltVersionCode`` · podpisni certifikat SHA-256 ``b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086``
+
+APK SHA-256: ``$VerifiedApkHash``
+
 ### Datoteke
 - podpisan Android APK
 - SHA-256 kontrolna vsota
@@ -649,6 +701,12 @@ $ChangeNote
 
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($NotesFile, $Notes, $Utf8NoBom)
+
+# Ponovno preveri tik pred objavo: APK se po preverjanju ne sme spremeniti.
+Test-ReleaseApkSignature
+if ((Get-FileHash -LiteralPath $Apk.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $VerifiedApkHash) {
+    Stop-WithMessage 'APK se je po preverjanju spremenil. Objava je ustavljena.'
+}
 
 Write-Host ''
 Write-Host "Objavljam $Tag ..." -ForegroundColor Cyan

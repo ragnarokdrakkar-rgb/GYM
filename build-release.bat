@@ -216,6 +216,14 @@ if errorlevel 1 (
     goto :rollback
 )
 
+echo Preverjam podpis APK (isti release kljuc, paket) ...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ROOT%tools\verify-apk-signature.ps1" -ApkPath "%OUTPUT_APK%"
+if errorlevel 1 (
+    echo NAPAKA: APK ni podpisan z obstojecim release kljucem. APK je odstranjen.
+    del /F /Q "%OUTPUT_APK%" >nul 2>&1
+    goto :rollback
+)
+
 echo [6/6] Racunam SHA-256 ...
 
 certutil -hashfile "%OUTPUT_APK%" SHA256 > "%OUTPUT_HASH%"
