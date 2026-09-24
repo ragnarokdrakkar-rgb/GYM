@@ -104,6 +104,24 @@ test('full storage refuses transaction before changing active data if journal do
   assert.equal(h.data.get('wt_s6'),'old sets');
 });
 
+test('a failed commitStorageBatch keeps storageHasPendingWrites() true (so the header stays "not saved" instead of a periodic status poll flipping it back to "saved") and a retry re-applies the change',()=>{
+  const h=harness({wt_s6:'old sets',wt_sess6:'old sessions'});
+  h.rejectWith((k,v)=>k==='wt_sess6'&&v==='new sessions');
+  assert.throws(()=>h.run("commitStorageBatch(new Map([['wt_s6','new sets'],['wt_sess6','new sessions']]))"));
+  // Data on disk was safely rolled back...
+  assert.equal(h.data.get('wt_s6'),'old sets');
+  assert.equal(h.data.get('wt_sess6'),'old sessions');
+  // ...but the failed write must still be flagged as pending, exactly like any
+  // other polling code (e.g. the compact UI's setInterval(tick,500)) would see it,
+  // so the "not saved" indicator does not silently clear itself before a retry.
+  assert.equal(h.run('storageHasPendingWrites()'),true);
+  h.rejectWith(null);
+  assert.equal(h.run('retryPendingStorageWrites()'),true);
+  assert.equal(h.run('storageHasPendingWrites()'),false);
+  assert.equal(h.data.get('wt_s6'),'new sets');
+  assert.equal(h.data.get('wt_sess6'),'new sessions');
+});
+
 test('interrupted transaction journal is recovered on startup',()=>{
   const h=harness({wt_s6:'partial',wt_new:'partial',wt_storage_journal_v18:JSON.stringify([['wt_s6','original'],['wt_new',null]])});
   assert.equal(h.data.get('wt_s6'),'original');assert.equal(h.data.has('wt_new'),false);

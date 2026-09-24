@@ -2,9 +2,13 @@ let cw=0,cd=0,TM={},stInt=null,stStart=null,stRun=false,bwChart=null,strengthCha
 
 // Failed writes remain available to retry/export, but are never reported as saved.
 const pendingStorageWrites=new Map();
+// The most recent commitStorageBatch() call that failed and was rolled back (an
+// array of [key,value] entries), so a retry can replay it atomically. null when
+// no batch write is awaiting retry.
+let pendingBatchWrites=null;
 const STORAGE_JOURNAL_KEY='wt_storage_journal_v18';
 let storageRecoveryError=false;
-function storageHasPendingWrites(){return pendingStorageWrites.size>0||storageRecoveryError;}
+function storageHasPendingWrites(){return pendingStorageWrites.size>0||pendingBatchWrites!==null||storageRecoveryError;}
 function refreshStorageStatus(state='saved'){
   const failed=storageHasPendingWrites();
   window.__WT_STORAGE_ERROR__=failed;
@@ -59,6 +63,10 @@ function retryPendingStorageWrites(){
   for(const [key,value] of [...pendingStorageWrites]){
     if(value===null)safeRemoveRaw(key);else safeSetRaw(key,value);
   }
+  if(pendingBatchWrites){
+    const batch=pendingBatchWrites;pendingBatchWrites=null;
+    try{commitStorageBatch(new Map(batch));}catch(error){pendingBatchWrites=batch;}
+  }
   refreshStorageStatus();
   return !storageHasPendingWrites();
 }
@@ -100,6 +108,14 @@ function commitStorageBatch(changes){
       try{restoreStorageEntries(before);localStorage.removeItem(STORAGE_JOURNAL_KEY);}
       catch(rollbackError){storageRecoveryError=true;}
     }
+    // The rolled-back keys themselves stay untouched (readers keep seeing the last
+    // confirmed value, not the failed edit) — but the attempt itself must still be
+    // remembered as pending. Otherwise storageHasPendingWrites() reports false and
+    // periodic UI polling (e.g. the compact shell's setInterval(tick,500)) flips
+    // the "not saved" indicator back to "saved" within a second, even though this
+    // edit was silently dropped. retryPendingStorageWrites() replays the same
+    // batch atomically through commitStorageBatch again.
+    pendingBatchWrites=entries;
     refreshStorageStatus('error');
     throw new Error(storageRecoveryError?'Obnova ni dokončana. Ne zapri aplikacije; uporabi Ponovi shranjevanje.':'Zapis ni uspel. Prejšnji podatki so ostali ohranjeni.');
   }
