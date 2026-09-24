@@ -7,7 +7,7 @@ function compactDayProgressV28({cycle,week,dayIndex,entries,sets,records,activeC
   let done=0,total=0;
   for(const entry of entries){
     const target=Math.max(1,Number(entry.target)||1);
-    total+=target;done+=(sets[entry.key]||[]).slice(0,target).filter(s=>s?.done===true).length;
+    total+=target;done+=(sets[entry.key]||[]).filter(s=>s?.type!=='warmup'&&s?.warm!==true).slice(0,target).filter(s=>s?.done===true).length;
   }
   const matches=s=>s&&Number(s.cycle)===cycle&&Number(s.weekIdx??(Number(s.weekNum)-1))===week&&Number(s.dayIdx)===dayIndex;
   const hasWork=s=>Array.isArray(s.exercises)&&s.exercises.length
@@ -235,7 +235,10 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   function program(){
     const meta=getProgramMetaV6();if(!meta.days[state.day]||meta.days[state.day].deleted)state.day=meta.days.findIndex(d=>!d.deleted&&d.active!==false);
     const days=meta.days,locked=navigationLocked(),activeCount=days.filter(d=>!d.deleted&&d.active!==false).length;
-    const selectedDay=days[state.day]||{},list=dayListFor(state.day,getCyc().num,cw),activeEx=list.filter(e=>!e.programDisabled),cyc=getCyc().num,setsOf=(e,i)=>exerciseTargetSetsV19(e,PROG.weeks[cw],sdk(cyc,cw,state.day,i)),totalSets=list.reduce((n,e,i)=>n+(e.programDisabled?0:setsOf(e,i)),0);
+    const selectedDay=days[state.day]||{},list=dayListFor(state.day,getCyc().num,cw),cyc=getCyc().num,hiddenThisWeek=getHiddenEx(),
+      countsThisWeek=(e,i)=>!e.programDisabled&&!hiddenThisWeek[sdk(cyc,cw,state.day,i)],
+      activeEx=list.filter(countsThisWeek),setsOf=(e,i)=>exerciseTargetSetsV19(e,PROG.weeks[cw],sdk(cyc,cw,state.day,i)),
+      totalSets=list.reduce((n,e,i)=>n+(countsThisWeek(e,i)?setsOf(e,i):0),0);
     const title=`<div class="cg-title-row"><div><h1 class="cg-program-title">Program</h1><p class="cg-sub">${activeCount} ${activeDayWordV29(activeCount)} · Cut/Bulk ne spremeni vaj</p></div></div>`;
     const weeks=`<div class="cg-weeksel" role="group" aria-label="Teden za prikaz vaj">${PROG.weeks.map((_,w)=>`<button type="button" data-quick-week="${w}" class="${w===cw?'selected':''}" aria-pressed="${w===cw}" ${locked?'disabled':''}>T${w+1}</button>`).join('')}</div>`;
     const chips=`<div class="cg-pdays" aria-label="Dnevi programa">${days.map((d,i)=>{

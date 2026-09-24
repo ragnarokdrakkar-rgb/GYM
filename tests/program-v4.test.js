@@ -11,7 +11,7 @@ const noopDialog=()=>({querySelector:()=>null,querySelectorAll:()=>[]});
 
 function programCtx(overrides={}){
   const ctx=harness({esc:s=>String(s),icon:()=>'',clock:n=>String(n),button,
-    PROG:{weeks:[{},{},{},{}]},cw:0,state:{day:0},navigationLocked:()=>false,getCyc:()=>({num:1}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,exerciseTargetSetsV19:item=>Number(item?.targetSets)||4,restForEx:(id,n,r)=>r,
+    PROG:{weeks:[{},{},{},{}]},cw:0,state:{day:0},navigationLocked:()=>false,getCyc:()=>({num:1}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,exerciseTargetSetsV19:item=>Number(item?.targetSets)||4,restForEx:(id,n,r)=>r,getHiddenEx:()=>({}),
     ...overrides});
   inner(ctx,'activeDayWordV29');inner(ctx,'program');
   return ctx;
@@ -57,6 +57,23 @@ test('Exercise rows disable the up arrow on the first row and the down arrow on 
   assert.doesNotMatch(rows[2],/data-act="program-up"[^>]*disabled/);assert.match(rows[2],/data-act="program-down"[^>]*disabled/);
   assert.match(rows[2],/^ off"|off"/);assert.match(rows[2],/aria-checked="false"/);
   assert.match(rows[0],/aria-checked="true"/);
+});
+
+test('Day card active-exercise and weekly-set counts exclude a disabled exercise and one hidden for the current week only',()=>{
+  const list=[ex('Bench',{targetSets:3}),ex('Row',{targetSets:2,programDisabled:true}),ex('Curl',{targetSets:4})];
+  // Curl (index 2) is hidden only for this cycle/week via wt_hidden_ex; Bench (index 0) is not.
+  const hidden={'c1w0d0e2':true};
+  const ctx=programCtx({getProgramMetaV6:()=>({days:[day('Push')]}),dayListFor:()=>list,getHiddenEx:()=>hidden});
+  const html=ctx.program();
+  // Only Bench (3 sets) counts: Row is disabled, Curl is hidden this week.
+  assert.match(html,/<strong>1\/3<\/strong><span>aktivnih vaj<\/span>/);
+  assert.match(html,/<strong>3<\/strong><span>serij<\/span>/);
+  // All three rows still render so the exercise can be reordered/re-enabled/un-hidden later.
+  assert.equal(html.split('<div class="cg-prow').length-1,3);
+  // Without any hidden exercise, both Bench and Curl (not disabled) count.
+  const visible=programCtx({getProgramMetaV6:()=>({days:[day('Push')]}),dayListFor:()=>list}).program();
+  assert.match(visible,/<strong>2\/3<\/strong><span>aktivnih vaj<\/span>/);
+  assert.match(visible,/<strong>7<\/strong><span>serij<\/span>/);
 });
 
 test('program-toggle flips programDisabled on a fresh read, saves via saveDayLists, and throws when the exercise is gone',()=>{
