@@ -33,6 +33,15 @@ test('Empty, planned-only and warmup-only saved workouts do not earn completion'
   }
   p.records=[saved({exercises:undefined,setCount:2})];assert.equal(ctx.compactDayProgressV28(p).completed,true);
 });
+test('A warm-up set logged in the live set array does not inflate the done/total progress count',()=>{
+  const ctx=harness(),p=params();
+  p.sets.c2w1d5e0=[{done:true,kg:40,reps:10,warm:true},{done:true,kg:80,reps:8},{done:true,kg:80,reps:8}];
+  const typeWarmup=ctx.compactDayProgressV28({...p,sets:{c2w1d5e0:[{done:true,kg:40,reps:10,type:'warmup'},{done:true,kg:80,reps:8},{done:true,kg:80,reps:8}]}});
+  assert.equal(typeWarmup.done,2);assert.equal(typeWarmup.status,'partial');
+  const result=ctx.compactDayProgressV28(p);
+  assert.equal(result.done,2);assert.equal(result.total,3);assert.equal(result.status,'partial');
+  assert.notEqual(result.status,'done');
+});
 test('An active repeat is blue while previous finished workout remains in the weekly count',()=>{
   const ctx=harness(),p=params();p.records=[saved()];p.activeContext={cycle:2,weekIdx:1,dayIdx:5};
   const result=ctx.compactDayProgressV28(p);assert.equal(result.status,'active');assert.equal(result.completed,true);

@@ -32,6 +32,15 @@ test('focus state keeps each partially completed exercise blue and uses required
   h.sets.c1w0d0e0=[{done:false},...rows(3)];
   assert.equal(h.run("exerciseProgressV20('c1w0d0e0').state"),'partial');
 });
+test('exerciseProgressV20 does not count a warm-up set (warm:true or type:warmup) as done work',()=>{
+  const h=harness([{n:'Bench',targetSets:3}]);
+  h.sets.c1w0d0e0=[{done:true,warm:true,kg:40,reps:10},{done:true,kg:80,reps:8}];
+  let progress=h.run("exerciseProgressV20('c1w0d0e0')");
+  assert.equal(progress.done,1);assert.equal(progress.state,'partial');
+  h.sets.c1w0d0e0=[{done:true,type:'warmup',kg:40,reps:10},{done:true,kg:80,reps:8},{done:true,kg:80,reps:8},{done:true,kg:80,reps:8}];
+  progress=h.run("exerciseProgressV20('c1w0d0e0')");
+  assert.equal(progress.done,3);assert.equal(progress.state,'complete');
+});
 test('final day completion and cards share 531 targets, including deload and set adjustments',()=>{
   const h=harness();
   for(const week of [0,3])for(const extra of [-2,-1,0,2]){

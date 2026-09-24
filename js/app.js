@@ -184,7 +184,7 @@ function exerciseProgressV20(key){
   const week=Number(match[2]),di=Number(match[3]),ei=Number(match[4]);
   const total=nsf(di,ei,PROG.weeks[week],key);
   const rows=getSets()[key]||[];
-  const done=rows.slice(0,total).filter(row=>row?.done===true).length;
+  const done=rows.filter(row=>row?.type!=='warmup'&&row?.warm!==true).slice(0,total).filter(row=>row?.done===true).length;
   return {state:done>=total?'complete':done>0?'partial':'pending',done,total};
 }
 function canonicalMuscleV20(value){
