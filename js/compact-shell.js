@@ -53,7 +53,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   const paths={dumbbell:'M3 9v6M6 6v12M18 6v12M21 9v6M6 12h12',check:'m5 12 4 4L19 6',play:'m8 5 11 7-11 7Z',pause:'M8 5v14M16 5v14',x:'m6 6 12 12M6 18 18 6',left:'m15 5-7 7 7 7',right:'m9 5 7 7-7 7',up:'m5 15 7-7 7 7',down:'m5 9 7 7 7-7',arrow:'M12 19V5m-6 6 6-6 6 6',timer:'M9 2h6M12 8v5l3 2M19 5l1 1',focus:'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5',exit:'M3 8h5V3M16 3v5h5M3 16h5v5M16 21v-5h5',program:'M8 6h12M8 12h12M8 18h12M3 6h1M3 12h1M3 18h1',chart:'M3 3v18h18M6 16l5-6 4 3 5-7',settings:'M4 7h8M16 7h4M4 17h4M12 17h8M14 4v6M10 14v6',calendar:'M8 2v4M16 2v4M3 10h18M4 4h16v17H4Z',trash:'M3 6h18M9 3h6M6 6l1 15h10l1-15M10 10v7M14 10v7'};
   const icon=name=>`<svg viewBox="0 0 24 24" aria-hidden="true">${name==='timer'?'<circle cx="12" cy="14" r="8"/>':''}<path d="${paths[name]||paths.settings}"/></svg>`;
   const button=(act,label,cls='cg-link',attrs='')=>`<button type="button" class="${cls}" data-act="${act}" ${attrs}>${label}</button>`;
-  let root,main,nav,header,message,dialog,chart=null,queued=false,renderedRoute='',modalSave=null,modalCancel=null,busy=false,workoutCache=[];
+  let root,main,nav,header,message,dialog,chart=null,queued=false,renderedRoute='',modalSave=null,modalCancel=null,busy=false,workoutCache=[],restActiveId='',restNotifiedId='';
   const state={page:'Trening',focus:false,active:'',day:0,progress:'Teža',settings:'',date:dateKey(new Date()),month:new Date().getMonth(),year:new Date().getFullYear(),session:-1,exercise:'',flagged:false,strength:'',point:-1,limit:50,query:'',weightDays:30,cycleMenu:false,openRow:''};
   const draft=new Map(),prescriptionOpen=new Set();
   const $=s=>root.querySelector(s),$$=s=>[...root.querySelectorAll(s)];
@@ -66,7 +66,6 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     });
   }
   function activeExercise(){return workoutCache.find(e=>e.key===state.active)||workoutCache[0];}
-  function statusMark(e){return `<span class="cg-status ${e.status==='partial'?'partial':e.status==='done'?'done':''}">${e.status==='done'?'✓':'●'}</span>`;}
   function valuesFor(e){const p=e.pending||{};const saved=draft.get(e.key);return saved&&saved.index===p.setIndex?saved:{index:p.setIndex,kg:p.kg??'',reps:p.reps??'',rpe:p.rpe??''};}
   function lastSetValues(e){
     for(let i=e.target-1;i>=0;i--){const row=e.rows[i];if(row&&row.kg!==undefined&&row.kg!==''&&row.reps!==undefined&&row.reps!=='')return {kg:row.kg,reps:row.reps};}
@@ -92,7 +91,31 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     let prescription='';if(e.item.progMode==='531'){const rows=get531Prescription(e.item.lift531||infer531LiftV16(e.name),cw);prescription=`<details class="cg-531" data-prescription ${prescriptionOpen.has(e.key)?'open':''}><summary>5/3/1 · načrt serij</summary>${rows?`<table>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.pct}%</td><td>${fmt(r.kg)} kg</td><td>× ${esc(r.reps)}</td></tr>`).join('')}</table>`:'Training max nastavi v Nastavitvah → 5/3/1.'}</details>`;}
     return `<div class="cg-logger"><div class="cg-last">${e.last?`Zadnjič ${fmt(e.last.kg)} kg × ${esc(e.last.reps)}${e.last.rpe?' · RPE '+esc(e.last.rpe):''}`:'Še brez prejšnjega vnosa.'}</div>${prescription}${allDone?`<p class="cg-small cg-success">✓ Vseh ${e.target} serij je zabeleženih.</p>`:''}${setTable(e)}${pending&&window.WTReleasePatchV13?.plateEnabled(e.key)?'<div class="cg-plates" aria-live="polite"></div>':''}<div class="cg-rest-tools">${button('rest-settings',icon('timer')+' Počitek '+clock(e.rest))}${button('rest-start',icon('play'),'cg-icon','aria-label="Začni počitek"')}</div>${button('exercise-info','Opis in nastavitve vaje')}</div>`;
   }
-  function restBar(){const t=currentTimerV6();if(!t)return '';const left=t.paused?t.remainingSec:Math.max(0,Math.ceil((t.endTs-Date.now())/1000));if(!left)return '';return `<div class="cg-rest"><strong data-rest-clock>${clock(left)}</strong><span>Počitek${t.paused?' · premor':''}</span>${button('rest-minus','−30','cg-icon','aria-label="Skrajšaj počitek za 30 sekund"')}${button('rest-toggle',icon(t.paused?'play':'pause'),'cg-icon','aria-label="Pavziraj ali nadaljuj počitek"')}${button('rest-plus','+30','cg-icon','aria-label="Podaljšaj počitek za 30 sekund"')}${button('rest-stop',icon('x'),'cg-icon','aria-label="Zapri počitek"')}</div>`;}
+  function restBar(){
+    const t=currentTimerV6();if(!t)return '';const left=t.paused?t.remainingSec:Math.max(0,Math.ceil((t.endTs-Date.now())/1000));if(!left)return '';
+    const ex=workoutCache.find(e=>e.key===t.key),label=(ex?`Počitek · ${esc(ex.name)}`:'Počitek')+(t.paused?' · premor':'');
+    return `<div class="cg-rest"><div class="cg-rest-label">${label}</div><strong data-rest-clock class="cg-rest-clock">${clock(left)}</strong><div class="cg-rest-actions">${button('rest-minus','−30','cg-icon','aria-label="Skrajšaj počitek za 30 sekund"')}${button('rest-toggle',icon(t.paused?'play':'pause'),'cg-icon','aria-label="Pavziraj ali nadaljuj počitek"')}${button('rest-plus','+30','cg-icon','aria-label="Podaljšaj počitek za 30 sekund"')}${button('rest-stop',icon('x'),'cg-icon','aria-label="Zapri počitek"')}</div></div>`;
+  }
+  // Fires "Počitek končan." exactly once per finished rest timer. Pure/testable:
+  // activeId tracks the timer we last saw running, notifiedId the one we already
+  // announced. t is null once the timer is removed (by tick's own expiry or a
+  // manual rest-stop, which pre-sets notifiedId to suppress the announcement).
+  function restNotifyStep(t,left,activeId,notifiedId){
+    const id=t?t.id:(left<=0?activeId:'');
+    const nextActive=t?t.id:'';
+    if(id&&left<=0&&id!==notifiedId)return {activeId:nextActive,notifiedId:id,fire:true};
+    return {activeId:nextActive,notifiedId,fire:false};
+  }
+  function focusHeader(day,index){
+    return `<div class="cg-fhead">${button('focus',icon('x'),'cg-ficon','aria-label="Izhod iz fokusa"')}<div class="cg-fhead-mid"><strong>${esc(day?.name||'Trening')}</strong><small>Cikel ${getCyc().num} · Teden ${cw+1} · vaja ${index+1}/${workoutCache.length}</small></div><div class="cg-fhead-clock"><strong data-session-clock>${clock(stRun?(Date.now()-stStart)/1000:0)}</strong></div></div>`;
+  }
+  function focusDot(e,i){
+    const current=e.key===state.active,label=`${e.name}: ${e.done}/${e.target}`;
+    return `<button type="button" class="${e.status} ${current?'current':''}" data-ex="${e.key}" aria-label="${esc(label)}">${e.status==='done'?'✓':i+1}</button>`;
+  }
+  function focusSteps(index){
+    return `<div class="cg-focus-steps">${button('prev',icon('left'),'cg-quiet',`aria-label="Prejšnja vaja" ${index<=0?'disabled':''}`)}<div class="cg-dots">${workoutCache.map((e,i)=>focusDot(e,i)).join('')}</div>${button('next',icon('right'),'cg-quiet',`aria-label="Naslednja vaja" ${index>=workoutCache.length-1?'disabled':''}`)}</div>`;
+  }
   function navigationLocked(){return !!(stRun||window.v6RecoveryPending||localStorage.getItem(LS_SESS));}
   function weekOverview(week=cw){
     const cycle=Number(getCyc().num),sets=getSets(),records=getSessions(),activeContext=stRun?activeSessionContext:window.v6RecoveryPending?v6RecoveryContext:null;
@@ -150,10 +173,24 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     workoutCache=currentRows();if(!workoutCache.some(e=>e.key===state.active))state.active=workoutCache.find(e=>e.key===localStorage.getItem('wt_active_ex'))?.key||workoutCache[0]?.key||'';
     const active=activeExercise(),index=workoutCache.indexOf(active),total=workoutCache.reduce((n,e)=>n+e.done,0),target=workoutCache.reduce((n,e)=>n+e.target,0),meta=getProgramMetaV6(),day=meta.days[cd];
     if(state.focus){
-      const title=`<div class="cg-title-row"><div><h1>Fokus</h1><p class="cg-sub">Cikel ${getCyc().num} · Teden ${cw+1} · ${index+1}/${workoutCache.length} vaj</p></div>${button('focus',icon('exit')+' Izhod','cg-quiet')}</div>`;
-      const session=`<div class="cg-focus-meta"><span>Trening <strong data-session-clock>${clock(stRun?(Date.now()-stStart)/1000:0)}</strong></span><span>${total}/${target} serij</span></div>`;
-      const focus=active?`<section class="cg-workrow open"><div class="cg-rowbutton">${statusMark(active)}<h2 class="cg-rowname">${esc(active.name)}</h2></div>${logger(active)}</section><div class="cg-focus-steps">${button('prev',icon('left'),'cg-quiet',`aria-label="Prejšnja vaja" ${index<=0?'disabled':''}`)}<div class="cg-small">${index+1} / ${workoutCache.length}</div>${button('next',icon('right'),'cg-quiet',`aria-label="Naslednja vaja" ${index>=workoutCache.length-1?'disabled':''}`)}</div><div class="cg-dots">${workoutCache.map(e=>`<button class="${e.status==='pending'?'':e.status} ${e.key===state.active?'selected':''}" data-ex="${e.key}" aria-label="${esc(e.name)}: ${e.done}/${e.target}">${e.status==='done'?'✓':'●'}</button>`).join('')}</div>`:'<p class="cg-small cg-empty">Ta dan nima aktivnih vaj.</p>';
-      return title+session+'<div class="cg-rest-host">'+restBar()+'</div>'+focus;
+      // The rest card must stay visible while the set table scrolls. Rather than
+      // position:sticky (broken for any descendant here because css/app.css sets
+      // `html,body{overflow-x:hidden}` on BOTH elements, which turns body into an
+      // inert secondary scroll container and stops sticky from ever engaging —
+      // verified with isolated repros, not fixable from this file), the header,
+      // progress strip and rest card sit in a non-scrolling top zone and only the
+      // exercise content below (title/meta/logger, i.e. the set table) scrolls in
+      // its own bounded box. See #cg-app[data-focus] rules in compact-v4.css.
+      const header=focusHeader(day,index);
+      const strip=`<div class="cg-fprog" aria-hidden="true">${workoutCache.map(e=>`<i class="${e.status}${e.key===state.active?' current':''}"></i>`).join('')}</div>`;
+      const restHost=`<div class="cg-rest-host">${restBar()}</div>`;
+      if(!active)return header+strip+restHost+'<div class="cg-fscroll"><p class="cg-small cg-empty">Ta dan nima aktivnih vaj.</p></div>';
+      const title=`<h1 class="cg-fname">${esc(active.name)}</h1>`;
+      const focusMeta=`<div class="cg-focus-meta"><span>Cilj <b>${active.item.targetReps?`${active.target} × ${esc(active.item.targetReps)}`:`${active.target} ${active.target===1?'serija':active.target===2?'seriji':active.target<5?'serije':'serij'}`}</b></span></div>`;
+      const scroll=`<div class="cg-fscroll">${title}${focusMeta}${logger(active)}</div>`;
+      const steps=focusSteps(index);
+      const start=!stRun?button('session-start',icon('play')+' Začni trening','cg-action cg-focus-start'):'';
+      return header+strip+restHost+scroll+steps+start;
     }
     const picker=state.focus?'':quickNavigation();
     const overview=weekOverview(cw),cdOverview=overview.days.find(d=>d.dayIndex===cd)||{status:'pending',done:0,total:0,completed:false,date:''};
@@ -300,7 +337,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       else if(act==='set-undo'){if(!await ask('Razveljavim oznako opravljeno za to serijo? Kilogrami in ponovitve ostanejo v načrtu.','Razveljavi'))return;const rows=getSets()[e.key]||[];if(!rows[index]?.done)return;tgSet(e.key,index,cd,e.ei,getCyc().num);window.WTFocusPatchV10.syncFromStorage(e.key);showDay(cd);}
       else if(act==='rest-settings'){editRestSheet();return;}
       else if(act==='rest-start')startT(e.key,e.rest);
-      else if(act==='rest-stop'){const t=currentTimerV6();if(t)stopT(t.key);}
+      else if(act==='rest-stop'){const t=currentTimerV6();if(t){restNotifiedId=t.id;stopT(t.key);}}
       else if(act==='rest-toggle'){const t=currentTimerV6();if(t)pauseResumeTimerV6(t.key);}
       else if(act==='rest-minus'||act==='rest-plus')adjustTimerV6(act==='rest-plus'?30:-30);
       else if(act==='exercise-info'){sheet(e.name,`<p class="cg-small">${esc(e.item.d||'Opis še ni dodan.')}</p><p class="cg-footnote">${esc(e.item.tip||'')}</p><label class="cg-checkline"><input name="plate" type="checkbox" ${window.WTReleasePatchV13.plateEnabled(e.key)?'checked':''}> Kalkulator plošč za to vajo</label><label>Bolečina (0–10)<input name="pain" type="number" min="0" max="10" value="${getPain(e.key)}"></label>`,data=>{window.WTReleasePatchV13.setPlateEnabled(e.key,data.has('plate'));setExPain(e.key,Number(data.get('pain')),cd,e.ei,getCyc().num);});return;}
@@ -366,7 +403,9 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   }
   function tick(){
     if(!root?.isConnected)return;$$('[data-session-clock]').forEach(el=>el.textContent=clock(stRun?(Date.now()-stStart)/1000:0));
-    const host=$('.cg-rest-host');if(host){const t=currentTimerV6(),signature=t?`${t.id}|${t.paused}`:'';if(host.dataset.timer!==signature){host.dataset.timer=signature;host.innerHTML=restBar();}const left=t?(t.paused?t.remainingSec:Math.max(0,Math.ceil((t.endTs-Date.now())/1000))):0;if(!left)host.innerHTML='';else host.querySelector('[data-rest-clock]')?.replaceChildren(clock(left));}
+    const host=$('.cg-rest-host');if(host){const t=currentTimerV6(),signature=t?`${t.id}|${t.paused}`:'';if(host.dataset.timer!==signature){host.dataset.timer=signature;host.innerHTML=restBar();}const left=t?(t.paused?t.remainingSec:Math.max(0,Math.ceil((t.endTs-Date.now())/1000))):0;
+      const step=restNotifyStep(t,left,restActiveId,restNotifiedId);restActiveId=step.activeId;restNotifiedId=step.notifiedId;if(step.fire)notify('Počitek končan.');
+      if(!left)host.innerHTML='';else host.querySelector('[data-rest-clock]')?.replaceChildren(clock(left));}
     const saved=$('[data-save-state]');if(saved)saved.textContent=storageHasPendingWrites()?'Čaka shranjevanje':'Shranjeno';
   }
   function showRecovery(){

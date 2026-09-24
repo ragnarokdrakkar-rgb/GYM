@@ -128,3 +128,61 @@
 @media(max-width:350px){#cg-app .cg-setrow-value,#cg-app .cg-setrow2 input{font-size:19px;}}
 #cg-app .cg-setrow2 button.cg-setrow-editable{color:var(--cg-text);background:transparent;border:0;border-radius:8px;text-decoration:underline dotted color-mix(in srgb,var(--cg-muted) 60%,transparent);text-underline-offset:5px;text-decoration-thickness:1px;}
 #cg-app .cg-setrow2 input::placeholder{color:var(--cg-dim);opacity:.7;}
+
+/* Step 3: calm, focused Focus mode. */
+#cg-app .cg-fhead{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+#cg-app .cg-ficon{width:44px;height:44px;min-width:44px;min-height:44px;flex:none;border-radius:10px;background:var(--cg-raised);border:1px solid var(--cg-line);display:flex;align-items:center;justify-content:center;color:var(--cg-text);}
+#cg-app .cg-fhead-mid{flex:1;min-width:0;text-align:center;}
+#cg-app .cg-fhead-mid strong{display:block;font-family:var(--cg-display);font-weight:700;font-size:19px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#cg-app .cg-fhead-mid small{display:block;font-size:11px;color:var(--cg-muted);margin-top:2px;}
+#cg-app .cg-fhead-clock{flex:none;text-align:right;}
+#cg-app .cg-fhead-clock strong{font-family:var(--cg-display);font-weight:700;font-size:22px;color:var(--cg-muted);font-variant-numeric:tabular-nums;}
+
+#cg-app .cg-fprog{display:flex;gap:3px;margin-bottom:12px;}
+#cg-app .cg-fprog i{flex:1;height:4px;min-width:3px;border-radius:2px;background:var(--cg-line2);display:block;}
+#cg-app .cg-fprog i.done{background:var(--cg-ok);}
+#cg-app .cg-fprog i.partial{background:var(--cg-partial);}
+#cg-app .cg-fprog i.current{outline:2px solid var(--cg-accent);outline-offset:1px;}
+
+#cg-app .cg-rest{display:flex;flex-direction:column;gap:8px;background:linear-gradient(135deg,color-mix(in srgb,var(--cg-accent) 22%,var(--cg-panel)),color-mix(in srgb,var(--cg-accent2) 14%,var(--cg-panel)));border:1px solid var(--cg-accent);border-radius:14px;padding:12px 14px;margin-bottom:14px;}
+#cg-app .cg-rest-label{font-size:11px;color:var(--cg-muted);text-transform:uppercase;letter-spacing:.5px;overflow-wrap:anywhere;}
+#cg-app .cg-rest-clock{font-family:var(--cg-display);font-weight:700;font-size:34px;font-variant-numeric:tabular-nums;color:var(--cg-text);}
+#cg-app .cg-rest-actions{display:flex;gap:8px;}
+#cg-app .cg-rest-actions button{flex:1;min-width:48px;min-height:48px;border-radius:10px;background:var(--cg-raised);border:1px solid var(--cg-line);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--cg-text);}
+
+/* The rest card (and header/progress strip) stay on screen while only the
+   exercise content scrolls. This intentionally avoids position:sticky: with
+   this app's global `html,body{overflow-x:hidden}` (css/app.css) both elements
+   become independent scroll containers and sticky never engages inside the
+   shadow-DOM shell (verified — not something fixable from this stylesheet).
+   A plain non-scrolling flex shell with one bounded, scrollable child sidesteps
+   the bug entirely and is more predictable across browsers besides. */
+#cg-app[data-focus="true"] .cg-header{display:none;}
+#cg-app[data-focus="true"] .cg-shell{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}
+#cg-app[data-focus="true"] .cg-message{flex:none;}
+#cg-app[data-focus="true"] .cg-main{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding-bottom:10px;}
+#cg-app[data-focus="true"] .cg-main>*{flex:none;}
+#cg-app[data-focus="true"] .cg-main .cg-fscroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+
+#cg-app .cg-fname{font-family:var(--cg-display);font-weight:700;font-size:31px;line-height:1.1;text-wrap:balance;margin:2px 0 10px;}
+
+#cg-app .cg-focus-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;font-size:13px;color:var(--cg-muted);}
+#cg-app .cg-focus-meta b{color:var(--cg-text);font-weight:700;}
+
+#cg-app .cg-focus-steps{display:grid;grid-template-columns:52px 1fr 52px;align-items:center;gap:8px;margin:16px 0 10px;}
+#cg-app .cg-focus-steps>button{width:52px;height:52px;min-width:52px;min-height:52px;flex:none;border-radius:12px;background:var(--cg-raised);border:1px solid var(--cg-line);display:flex;align-items:center;justify-content:center;color:var(--cg-text);}
+#cg-app .cg-focus-steps>button:disabled{opacity:.35;}
+#cg-app .cg-focus-steps .cg-dots{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
+#cg-app .cg-dots button{width:30px;height:30px;min-width:30px;min-height:30px;flex:none;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;font-family:var(--cg-display);font-weight:700;font-size:12px;background:transparent;border:1.5px solid var(--cg-pending);color:var(--cg-pending);}
+#cg-app .cg-dots button.done{background:var(--cg-ok);border-color:var(--cg-ok);color:var(--cg-on-accent);}
+#cg-app .cg-dots button.partial{background:linear-gradient(90deg,var(--cg-partial) 50%,transparent 50%);border-color:var(--cg-partial);color:var(--cg-text);}
+#cg-app .cg-dots button.current{box-shadow:0 0 0 3px var(--cg-accent);}
+
+#cg-app .cg-focus-start{width:100%;min-height:52px;border-radius:12px;font-size:15px;}
+/* Review fixes: horizontal rest card; beat legacy `.cg-rest span{font-size:12px;flex:1}` from the reference CSS. */
+#cg-app .cg-rest{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"label label" "clock actions";align-items:center;column-gap:10px;row-gap:2px;}
+#cg-app .cg-rest .cg-rest-label{grid-area:label;flex:none;font-size:11px;}
+#cg-app .cg-rest .cg-rest-clock{grid-area:clock;flex:none;font-size:40px;line-height:1;}
+#cg-app .cg-rest .cg-rest-actions{grid-area:actions;gap:6px;}
+#cg-app .cg-rest .cg-rest-actions button{flex:none;width:48px;}
+#cg-app .cg-dots button{width:28px;height:28px;min-width:28px;min-height:28px;}
