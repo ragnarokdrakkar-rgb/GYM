@@ -71,7 +71,11 @@ test('Quick navigation locks during running, saved-pending and recovery sessions
 });
 test('Quick buttons replace the collapsed selectors in Training and Program, while Focus stays compact',()=>{
   assert.doesNotMatch(shell,/data-workout-day|<select data-week|cg-workout-picker/);
-  assert.match(shell,/const picker=state.focus\?'':quickNavigation\(\)/);assert.match(shell,/quickNavigation\(true\)/);assert.match(shell,/data-quick-day="\$\{d.dayIndex\}"/);assert.match(shell,/cikel \$\{getCyc\(\)\.num\}/);assert.match(shell,/Teden \$\{cw\+1\}/);
+  // Step 4: Program no longer shows the full Training quick-navigation block — it
+  // has its own compact week selector (data-quick-week) instead, reusing the same
+  // click handler. quickNavigation() itself keeps its programPage parameter for
+  // other callers/tests even though program() no longer calls it.
+  assert.match(shell,/const picker=state.focus\?'':quickNavigation\(\)/);assert.match(shell,/function quickNavigation\(programPage=false\)/);assert.doesNotMatch(shell.slice(shell.indexOf('function program(){'),shell.indexOf('function selectDate(')),/quickNavigation\(/);assert.match(shell,/data-quick-week="\$\{w\}"/);assert.match(shell,/data-quick-day="\$\{d.dayIndex\}"/);assert.match(shell,/cikel \$\{getCyc\(\)\.num\}/);assert.match(shell,/Teden \$\{cw\+1\}/);
   assert.match(shell,/aria-pressed="\$\{d.dayIndex===selected\}"/);assert.match(read('css/compact-shell.css'),/\.cg-quick-days \.partial small/);
 });
 test('Startup restores sixth and seventh active workout days instead of silently falling back to day one',()=>{
