@@ -24,6 +24,8 @@ function safeSetRaw(k,v){
     localStorage.setItem(k,String(v));
     if(localStorage.getItem(k)!==String(v))throw new Error('StorageVerificationError');
     pendingStorageWrites.delete(k);
+    // A newer successful write supersedes a failed batch that touched the same key.
+    if(pendingBatchWrites&&pendingBatchWrites.entries.some(([key])=>key===k))pendingBatchWrites=null;
     refreshStorageStatus();
     return true;
   }catch(e){
@@ -47,6 +49,8 @@ function safeRemoveRaw(k){
   try{
     localStorage.removeItem(k);
     pendingStorageWrites.delete(k);
+    // A newer successful write supersedes a failed batch that touched the same key.
+    if(pendingBatchWrites&&pendingBatchWrites.entries.some(([key])=>key===k))pendingBatchWrites=null;
     refreshStorageStatus();
     return true;
   }catch(e){
@@ -65,7 +69,11 @@ function retryPendingStorageWrites(){
   }
   if(pendingBatchWrites){
     const batch=pendingBatchWrites;pendingBatchWrites=null;
-    try{commitStorageBatch(new Map(batch));}catch(error){pendingBatchWrites=batch;}
+    // Replay only if none of its keys changed since the failed attempt; a newer
+    // write must never be overwritten by an older, failed edit.
+    if(batch.before.every(([key,value])=>localStorage.getItem(key)===value)){
+      try{commitStorageBatch(new Map(batch.entries));}catch(error){pendingBatchWrites=batch;}
+    }
   }
   refreshStorageStatus();
   return !storageHasPendingWrites();
@@ -115,7 +123,7 @@ function commitStorageBatch(changes){
     // the "not saved" indicator back to "saved" within a second, even though this
     // edit was silently dropped. retryPendingStorageWrites() replays the same
     // batch atomically through commitStorageBatch again.
-    pendingBatchWrites=entries;
+    pendingBatchWrites={entries,before};
     refreshStorageStatus('error');
     throw new Error(storageRecoveryError?'Obnova ni dokončana. Ne zapri aplikacije; uporabi Ponovi shranjevanje.':'Zapis ni uspel. Prejšnji podatki so ostali ohranjeni.');
   }

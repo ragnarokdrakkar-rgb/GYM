@@ -122,6 +122,25 @@ test('a failed commitStorageBatch keeps storageHasPendingWrites() true (so the h
   assert.equal(h.data.get('wt_sess6'),'new sessions');
 });
 
+test('a failed batch never overwrites a newer successful write when retried',()=>{
+  // Newer single-key write (e.g. logging a set) supersedes the failed batch.
+  const h=harness({wt_s6:'old sets',wt_sc6:'old counts'});
+  h.rejectWith((k,v)=>k==='wt_sc6'&&v==='plan counts');
+  assert.throws(()=>h.run("commitStorageBatch(new Map([['wt_s6','plan sets'],['wt_sc6','plan counts']]))"));
+  h.rejectWith(null);
+  assert.equal(h.run("safeSetRaw('wt_s6','logged set')"),true);
+  assert.equal(h.run('storageHasPendingWrites()'),false);
+  h.run('retryPendingStorageWrites()');
+  assert.equal(h.data.get('wt_s6'),'logged set');assert.equal(h.data.get('wt_sc6'),'old counts');
+  // A key changed outside the app's write helpers also makes the failed batch stale.
+  const g=harness({wt_bw6:'80'});
+  g.rejectWith((k,v)=>k==='wt_bw6'&&v==='80.5');
+  assert.throws(()=>g.run("commitStorageBatch(new Map([['wt_bw6','80.5']]))"));
+  g.rejectWith(null);g.data.set('wt_bw6','81');
+  g.run('retryPendingStorageWrites()');
+  assert.equal(g.data.get('wt_bw6'),'81');assert.equal(g.run('storageHasPendingWrites()'),false);
+});
+
 test('interrupted transaction journal is recovered on startup',()=>{
   const h=harness({wt_s6:'partial',wt_new:'partial',wt_storage_journal_v18:JSON.stringify([['wt_s6','original'],['wt_new',null]])});
   assert.equal(h.data.get('wt_s6'),'original');assert.equal(h.data.has('wt_new'),false);
