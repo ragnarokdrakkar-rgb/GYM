@@ -63,6 +63,7 @@ function progressCtx(overrides={}){
     avg7d:()=>null,compactWeeklyWeightV27:()=>null,weightVerdictV30:()=>({tone:'neutral',text:'x'}),
     getSets:()=>({}),getSessions:()=>[],sessionExercisesForStatsV19:()=>[],compactDayColorV26:()=>'#fff',
     localStorage:{getItem:()=>null},sessionStatsV19:()=>({setCount:0}),
+    getMeas:()=>({}),MEAS_FIELDS:['Prsa','Pas','Boki','L roka','D roka','L stegno','D stegno'],LS:{meas:'wt_m6'},dateKey:()=>'2026-09-24',
     ...overrides};
   return harness(base);
 }

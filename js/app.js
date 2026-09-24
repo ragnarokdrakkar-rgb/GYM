@@ -6621,9 +6621,12 @@ function rerenderExCard(key,di,ei,cn){
 function checkPR(key,di,ei,sets){
   const prs=getPRs(),prk=`pr${di}${ei}`;
   const cpr=typeof prs[prk]==='object'?prs[prk].kg:(prs[prk]||0);
+  // PR-ji smejo priti samo iz opravljenih delovnih serij te vaje — ne iz
+  // planiranih (done:false) vrstic in ne iz ogrevalnih (warmup) serij.
+  const doneWorkSets=sets.filter(s=>s?.done===true&&s.type!=='warmup'&&s.warm!==true);
   // Najdi top set (max kg, ali pri tied max e1RM)
   let bestSet=null,bestE1=0;
-  sets.forEach(s=>{
+  doneWorkSets.forEach(s=>{
     if(!s.kg||!s.reps)return;
     const e1=parseFloat(s.kg)*(1+parseInt(s.reps)/30);
     if(e1>bestE1){bestE1=e1;bestSet=s;}
@@ -6631,10 +6634,10 @@ function checkPR(key,di,ei,sets){
   const maxKg=bestSet?parseFloat(bestSet.kg):0;
   const card=document.getElementById('ec-'+key);if(!card)return;
   const exName=(PROG.days[di].ex[ei]||{}).n||'Vaja';
-  // Rep PR — preveri vsak opravljeni set posebej
+  // Rep PR — preveri vsak opravljeni delovni set posebej
   let repPRhit=false;
-  sets.forEach(s=>{
-    if(s.done&&s.kg&&s.reps){
+  doneWorkSets.forEach(s=>{
+    if(s.kg&&s.reps){
       if(checkRepPR(exName,parseFloat(s.kg),parseInt(s.reps)))repPRhit=true;
     }
   });

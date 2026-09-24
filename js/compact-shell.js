@@ -295,7 +295,24 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     const verdictBox=`<div class="cg-verdict cg-verdict-${verdict.tone}"><span class="cg-verdict-phase">${esc(phase.label)}${phase.start?' · od '+shortDate(phase.start):''}</span><p>${esc(verdict.text)}</p></div>`;
     const rangeButtons=`<div class="cg-range-seg">${[[30,'30 d'],[90,'90 d'],[0,'Vse']].map(([v,t])=>`<button type="button" data-weight-range="${v}" class="${state.weightDays===v?'selected':''}">${t}</button>`).join('')}</div>`;
     const chart=last?`<div class="cg-strength-chart"><canvas id="cg-shell-weight" role="img" aria-label="Meritve in sedemdnevni trend telesne teže"></canvas></div><div class="cg-chart-legend"><span><i class="cg-legend-dot"></i>Meritev</span><span><i class="cg-legend-line"></i>7-dnevno povprečje</span></div>`:'<p class="cg-small cg-empty">Vnesi prvo meritev za prikaz grafa.</p>';
-    return tiles+verdictBox+`<div class="cg-section-label"><span>Telesna teža · kg</span>${rangeButtons}</div>${chart}${button('weight-add','+ Vnesi današnjo težo','cg-add cg-add-accent')}<details><summary>Meritve · pregled in urejanje</summary>${entries.slice().reverse().map(([date,v])=>`<div class="cg-setrow"><span class="cg-setvalue">${dateLabel(date)}<small>${fmt(v)} kg</small></span>${button('weight-edit','Uredi','cg-link',`data-date-key="${date}"`)}</div>`).join('')}</details>`;
+    const measEntries=Object.entries(getMeas()).sort((a,b)=>a[0].localeCompare(b[0]));
+    const measBlock=`<div class="cg-section-label"><span>Telesne mere · cm</span></div>${button('meas-add','+ Vnesi telesne mere','cg-add')}`+(measEntries.length===0?'<p class="cg-small cg-empty">Še ni vnesenih telesnih mer.</p>':`<details><summary>Telesne mere · pregled in urejanje</summary>${measEntries.slice().reverse().map(([date,v])=>`<div class="cg-setrow"><span class="cg-setvalue">${dateLabel(date)}<small>${MEAS_FIELDS.filter(f=>v[f]).map(f=>`${f}: ${fmt(v[f])}cm`).join(' · ')||'—'}</small></span>${button('meas-edit','Uredi','cg-link',`data-date-key="${date}"`)}</div>`).join('')}</details>`);
+    return tiles+verdictBox+`<div class="cg-section-label"><span>Telesna teža · kg</span>${rangeButtons}</div>${chart}${button('weight-add','+ Vnesi današnjo težo','cg-add cg-add-accent')}<details><summary>Meritve · pregled in urejanje</summary>${entries.slice().reverse().map(([date,v])=>`<div class="cg-setrow"><span class="cg-setvalue">${dateLabel(date)}<small>${fmt(v)} kg</small></span>${button('weight-edit','Uredi','cg-link',`data-date-key="${date}"`)}</div>`).join('')}</details>`+measBlock;
+  }
+  function editMeas(date=dateKey(new Date())){
+    const old=getMeas(),expected=JSON.stringify(old),existing=old[date]||{};
+    const fields=MEAS_FIELDS.map(f=>`<label>${esc(f)} (cm)<input type="number" inputmode="decimal" name="${esc(f)}" min="20" max="200" step="0.5" value="${existing[f]??''}"></label>`).join('');
+    sheet('Telesne mere',`<label>Datum<input type="date" name="date" value="${date}" required></label>`+fields,async data=>{
+      const next=getMeas();if(JSON.stringify(next)!==expected)throw Error('Meritve so se spremenile.');
+      const d=data.get('date'),entry={};
+      MEAS_FIELDS.forEach(f=>{const v=data.get(f);if(v!=='' && v!=null)entry[f]=Number(v);});
+      if(Object.keys(entry).length===0)throw Error('Vnesi vsaj eno mero.');
+      if(d!==date && next[d]!==undefined)throw Error('Na izbrani datum že obstajajo mere. Uredi jih v seznamu.');
+      if(d!==date)delete next[date];
+      next[d]=entry;
+      commitStorageBatch([[LS.meas,JSON.stringify(next)]]);
+      notify('Telesne mere shranjene.');
+    });
   }
   function progress(){return `<div class="cg-title-row"><div><h1 class="cg-progress-title">Napredek</h1><p class="cg-sub">Tvoj pregled treninga.</p></div></div><div class="cg-seg">${['Teža','Moč','Zgodovina'].map(p=>`<button data-progress="${p}" class="${state.progress===p?'selected':''}">${p}</button>`).join('')}</div>`+({'Teža':weightView,'Moč':strengthView,'Zgodovina':historyView}[state.progress]||weightView)();}
   function subHeader(title,sub){
@@ -503,6 +520,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       else if(act==='strength-prev'||act==='strength-next'){const series=compactStrengthSeriesV26(sessions(),state.strength);state.point=compactStrengthNavV30(series,state.point,act==='strength-next'?'next':'prev');}
       else if(act==='strength-history'){const point=compactStrengthSeriesV26(sessions(),state.strength).find(p=>p.si===state.point);if(point){selectDate(point.date);state.session=point.si;const si=sessions()[point.si];state.exercise=String(si.exercises.findIndex(e=>compactNameV26(e.name)===state.strength));state.progress='Zgodovina';state.flagged=false;}}
       else if(act==='weight-add'||act==='weight-edit'){editWeight(b.dataset.dateKey);return;}
+      else if(act==='meas-add'||act==='meas-edit'){editMeas(b.dataset.dateKey);return;}
       else if(act==='program'){state.page='Program';state.settings='';}
       else if(['equipment','history','backup','phase','advanced'].includes(act)){state.page='Nastavitve';state.settings=act;state.flagged=false;}
       else if(act==='update')await window.WTAndroidUpdates.check();
