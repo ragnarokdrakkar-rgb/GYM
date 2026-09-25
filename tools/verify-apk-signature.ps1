@@ -37,6 +37,20 @@ foreach ($Root in $SdkRoots) {
 if (-not $BuildTools) { Fail 'apksigner.bat ni najden v Android SDK build-tools.' }
 
 $Apksigner = Join-Path $BuildTools 'apksigner.bat'
+
+# apksigner needs Java. build-release.bat sets JAVA_HOME only for itself, so when this
+# script runs from publish-release.ps1 fall back to the JDK bundled with Android Studio.
+$JavaOk = ($env:JAVA_HOME -and (Test-Path -LiteralPath (Join-Path $env:JAVA_HOME 'bin\java.exe'))) -or
+    [bool](Get-Command java -ErrorAction SilentlyContinue)
+if (-not $JavaOk) {
+    $JavaHome = @(
+        (Join-Path $env:ProgramFiles 'Android\Android Studio\jbr'),
+        (Join-Path $env:LOCALAPPDATA 'Programs\Android Studio\jbr')
+    ) | Where-Object { $_ -and (Test-Path -LiteralPath (Join-Path $_ 'bin\java.exe')) } | Select-Object -First 1
+    if (-not $JavaHome) { Fail 'Java ni najdena (JAVA_HOME ali Android Studio jbr).' }
+    $env:JAVA_HOME = $JavaHome
+    $env:PATH = (Join-Path $JavaHome 'bin') + ';' + $env:PATH
+}
 $Aapt2 = Join-Path $BuildTools 'aapt2.exe'
 
 $SignerOutput = @(& $Apksigner verify --verbose --print-certs $ApkPath 2>&1 | ForEach-Object { "$_" })

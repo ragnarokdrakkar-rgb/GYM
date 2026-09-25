@@ -7,6 +7,8 @@ test('APK verification requires the existing release certificate, package and a 
   const v=read('tools/verify-apk-signature.ps1');
   assert.ok(v.includes(`'${CERT}'`));assert.ok(v.includes("'com.kemal.workouttracker'"));
   assert.match(v,/apksigner\.bat/);assert.match(v,/verify --verbose --print-certs/);assert.match(v,/Select-Object -Unique/);
+  // publish-release.ps1 runs the check without build-release.bat's JAVA_HOME.
+  assert.match(v,/Android Studio\\jbr/);assert.match(v,/\$env:JAVA_HOME = \$JavaHome/);
   // The digest pattern must accept both apksigner output formats and reject other lines.
   const pattern=new RegExp(v.match(/'(\^[^']*Signer[^']+)'/)[1]);
   const d='b0:80:7a:b8:a9:43:93:f2:26:94:e9:27:f8:1e:6c:ce:d8:da:df:1a:c7:1e:ad:47:58:e2:39:ba:cc:7a:b0:86';
