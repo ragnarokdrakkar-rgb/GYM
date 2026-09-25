@@ -24,6 +24,11 @@ aplikacije pa bi se izgubili lokalni podatki.
 
 1. Naredi zunanjo JSON varnostno kopijo v aplikaciji (Nastavitve → Varnostna kopija).
 2. `git checkout main` in `git pull --ff-only`, nato zaženi `publish-release.bat`.
+   Pred tem mora biti v kodi verzija že nastavljena na novo (`package.json`,
+   `package-lock.json`, `APP_VERSION` v `js/core/bootstrap.js`, `sw.js`,
+   `README-GITHUB.md`, `tests/release-regression.test.js`) in dodan
+   `RELEASE_NOTES_<verzija>.md`. Skripta sama poveča samo versionCode in
+   versionName v `build.gradle`, opis releasa pa vzame iz te datoteke.
 3. Skripta zgradi APK s `build-release.bat` (poveča versionCode) in takoj zažene
    `tools/verify-apk-signature.ps1`:
    - `apksigner verify --print-certs`: shema v2/v3, natanko en podpisnik,

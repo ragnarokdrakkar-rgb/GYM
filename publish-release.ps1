@@ -406,7 +406,7 @@ $OriginUrl = (
 )
 
 if ($OriginUrl -notmatch 'ragnarokdrakkar-rgb[/:]GYM(?:\.git)?$') {
-    Stop-WithMessage "Napačen Git remote origin: $OriginUrl"
+    Stop-WithMessage "Napacen Git remote origin: $OriginUrl"
 }
 
 Write-Host ''
@@ -661,7 +661,15 @@ if ($PublishConfirm -cne 'OBJAVI') {
     Stop-WithMessage 'Objava je bila preklicana. Build je ostal v release mapi.'
 }
 
-$ChangeNote = Read-Host 'Kaj je novega? (Enter za splosni opis)'
+# Release notes come from RELEASE_NOTES_<version>.md when it exists (read as UTF-8,
+# since Windows PowerShell 5.1 would otherwise mis-decode Slovenian characters).
+$ReleaseNotesSource = Join-Path $ProjectRoot ("RELEASE_NOTES_{0}.md" -f $Version)
+if (Test-Path -LiteralPath $ReleaseNotesSource) {
+    $ChangeNote = [System.IO.File]::ReadAllText($ReleaseNotesSource, [System.Text.Encoding]::UTF8).Trim()
+    Write-Host "Opis sprememb: $ReleaseNotesSource"
+} else {
+    $ChangeNote = Read-Host 'Kaj je novega? (Enter za splosni opis)'
+}
 
 if ([string]::IsNullOrWhiteSpace($ChangeNote)) {
     $ChangeNote = 'Stabilna Android posodobitev aplikacije Workout Tracker.'
@@ -690,7 +698,7 @@ $ChangeNote
 - Aplikacije pred posodobitvijo ne odstrani, da lokalni podatki ostanejo.
 
 ### Android
-``com.kemal.workouttracker`` · versionCode ``$BuiltVersionCode`` · podpisni certifikat SHA-256 ``b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086``
+``com.kemal.workouttracker`` | versionCode ``$BuiltVersionCode`` | podpisni certifikat SHA-256 ``b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086``
 
 APK SHA-256: ``$VerifiedApkHash``
 

@@ -36,3 +36,15 @@ test('No CI workflow signs or publishes APKs with a generated or debug key',()=>
   for(const f of fs.readdirSync(dir)){const y=fs.readFileSync(path.join(dir,f),'utf8');assert.doesNotMatch(y,/assembleRelease|keytool -genkey|release create/i,f);}
   assert.doesNotMatch(read('.gitignore'),/^!.*\.jks/m);assert.match(read('.gitignore'),/^\*\.jks$/m);
 });
+
+test('release PowerShell scripts are ASCII-only and take notes from RELEASE_NOTES_<version>.md',()=>{
+  // Windows PowerShell 5.1 reads BOM-less scripts as ANSI, so any non-ASCII literal
+  // (e.g. the middle dot in release notes) is published as mojibake.
+  for(const f of ['publish-release.ps1','tools/verify-apk-signature.ps1']){
+    const bad=[...read(f)].findIndex(c=>c.charCodeAt(0)>127);
+    assert.equal(bad,-1,`${f} contains a non-ASCII character`);
+  }
+  const pub=read('publish-release.ps1');
+  assert.match(pub,/RELEASE_NOTES_\{0\}\.md/);
+  assert.match(pub,/ReadAllText\(\$ReleaseNotesSource, \[System\.Text\.Encoding\]::UTF8\)/);
+});

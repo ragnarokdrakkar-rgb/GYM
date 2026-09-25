@@ -1,14 +1,23 @@
-# Workout Tracker 1.3.2 — Hitra izbira treninga
+# Workout Tracker 1.4.0 — Nov videz, zanesljivo shranjevanje
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
-2. Prenesi [APK izdaje 1.3.2](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.3.2/Workout-Tracker-v1.3.2.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+2. Prenesi [APK izdaje 1.4.0](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.4.0/Workout-Tracker-v1.4.0.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.3.2 je 69. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.4.0 je 70. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Novo v 1.4.0
+
+- Nov temen videz z oranžno-rdečimi poudarki na vseh zaslonih; večja, berljiva pisava.
+- Tabela serij: kg in ponovitve za vsako serijo, serijo dodaš ali odstraniš z enim dotikom.
+- Trening se začne sam ob potrditvi prve serije.
+- »Shranjeno« samo, ko so podatki res zapisani; ob napaki opozorilo in ponovni poskus.
+- Rekordi samo iz opravljenih delovnih serij; nova orodja Privzeti počitek in Preveri rekorde.
+- Podrobnosti: [release notes](RELEASE_NOTES_1.4.0.md).
 
 ## Novo v 1.3.2
 
