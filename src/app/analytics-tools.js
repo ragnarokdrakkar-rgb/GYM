@@ -1576,6 +1576,7 @@ async function buildBackupJSON(includePhotos){
     reps_step:localStorage.getItem('wt_reps_step'),
     colors:getStoredColors(),
     custom_rest:getCustomRest(),
+    default_rest:localStorage.getItem('wt_default_rest'),
     compact:isCompact(),
     gym_mode:getGymMode()
   });

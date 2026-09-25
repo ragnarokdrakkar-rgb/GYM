@@ -3,7 +3,10 @@ const REST_T={main:180,acc:90,iso:60,lat:45};
 // Poljuben počitek per vaja (shranjen po imenu vaje)
 function getCustomRest(){try{return JSON.parse(localStorage.getItem('wt_custom_rest')||'{}');}catch{return {};}}
 function setCustomRestFor(key,secs){const r=getCustomRest();if(secs)r[key]=secs;else delete r[key];safeSetRaw('wt_custom_rest',JSON.stringify(r));}
-function restForEx(id,name,def){const r=getCustomRest();return r[id]||r[name]||def;}
+// Uporabnikov privzeti počitek (velja za vsako vajo brez lastnega počitka). 30–600s; neveljavno/manjkajoče = ni nastavljen.
+function getDefaultRest(){const v=parseInt(localStorage.getItem('wt_default_rest'),10);return (Number.isFinite(v)&&v>=30&&v<=600)?v:null;}
+// Prednost: lastni počitek vaje > uporabnikov privzeti počitek > privzeta vrednost glede na vrsto vaje (def).
+function restForEx(id,name,def){const r=getCustomRest();const custom=r[id]||r[name];if(custom)return custom;const d=getDefaultRest();return d!=null?d:def;}
 function fmtRest(s){if(s%60===0)return (s/60)+' min';if(s>60)return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');return s+'s';}
 let _restEditCtx=null;
 // === Lastni potrditveni / vnosni modali (nadomestijo confirm/prompt) ===

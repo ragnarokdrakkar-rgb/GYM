@@ -1170,7 +1170,7 @@ function mergeSessions(current,incoming){
   const map=new Map();[...(current||[]),...(incoming||[])].forEach(x=>{if(!x||typeof x!=='object')return;const k=x.id||[x.date,x.dayName,x.startISO||x.startTime,x.durationMin].join('|');map.set(k,x);});
   return [...map.values()].sort((a,b)=>String(b.startISO||b.date||'').localeCompare(String(a.startISO||a.date||'')));
 }
-const MANAGED_LOCAL_KEYS=[...Object.values(LS),'wt_sugs6','wt_bwgoal','wt_alarm6','wt_collars_kg','wt_exswap','wt_extra_ex','wt_hidden_ex','wt_daylist_cut','wt_daylist_bulk','wt_daylist_shared_v16','wt_daylist_migration_v16','wt_program_meta_shared_v16','wt_ex_ordernames','wt_rep_prs','wt_phases','wt_profile','wt_531tm','wt_531offset','wt_goals','wt_daylog','wt_custom_ex','wt_kg_step','wt_reps_step','wt_colors','wt_custom_rest','wt_compact','wt_gym_mode','wt_active_ex','wt_active_timer'];
+const MANAGED_LOCAL_KEYS=[...Object.values(LS),'wt_sugs6','wt_bwgoal','wt_alarm6','wt_collars_kg','wt_exswap','wt_extra_ex','wt_hidden_ex','wt_daylist_cut','wt_daylist_bulk','wt_daylist_shared_v16','wt_daylist_migration_v16','wt_program_meta_shared_v16','wt_ex_ordernames','wt_rep_prs','wt_phases','wt_profile','wt_531tm','wt_531offset','wt_goals','wt_daylog','wt_custom_ex','wt_kg_step','wt_reps_step','wt_colors','wt_custom_rest','wt_default_rest','wt_compact','wt_gym_mode','wt_active_ex','wt_active_timer'];
 function clearManagedData(){MANAGED_LOCAL_KEYS.forEach(k=>localStorage.removeItem(k));}
 async function restoreBackupObjectP1(rawBackup,opts={}){
   if(stRun||window.v6RecoveryPending||localStorage.getItem('wt_active_sess'))throw new Error('Najprej zaključi ali obnovi aktivni trening.');
@@ -8673,6 +8673,7 @@ async function buildBackupJSON(includePhotos){
     reps_step:localStorage.getItem('wt_reps_step'),
     colors:getStoredColors(),
     custom_rest:getCustomRest(),
+    default_rest:localStorage.getItem('wt_default_rest'),
     compact:isCompact(),
     gym_mode:getGymMode()
   });

@@ -26,6 +26,7 @@ function settingsCtx(overrides={}){
     getCollars:()=>2.5,
     getV6Settings:()=>({plateCalculator:true}),
     getAlarmSettings:()=>({sound:true,vibrate:true,notif:true,volume:80,melody:'default'}),
+    getDefaultRest:()=>null,
     get531CycleOffset:()=>0,
     historyRowsV24:()=>[],
     programUses531V16:()=>false,
@@ -76,6 +77,16 @@ test('Program caption counts only active, non-deleted days and their active (non
   const html=ctx.settings();
   // 2 active non-deleted days (Push, Pull); 2+1=3 active (non-disabled) exercises
   assert.match(html,/2 aktivnih dni · 3 aktivnih vaj/);
+});
+
+test('Trening card shows the default rest row, with the current value or a fallback caption',()=>{
+  const set=settingsCtx({getDefaultRest:()=>90}).settings();
+  assert.match(set,/data-act="default-rest"/);
+  assert.match(set,/Privzeti počitek/);
+  assert.match(set,/Velja, dokler vaja nima svojega/);
+  assert.match(set,/90/); // stubbed clock(n)=>String(n)
+  const unset=settingsCtx({getDefaultRest:()=>null}).settings();
+  assert.match(unset,/Po vrsti vaje/);
 });
 
 test('Phase subpage shows both data-profile buttons with the guideline captions and marks the active profile selected',()=>{

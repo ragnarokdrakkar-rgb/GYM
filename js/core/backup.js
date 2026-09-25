@@ -31,6 +31,7 @@ function validateBackupV18(backup){
   for(const key of ['pr','notes','bw','meas','gym','pain','cynotes','restplan','setcounts','swaps','extra_ex','hidden_ex','ex_ordernames','rep_prs','daylog','colors','custom_rest','tm531','v6settings','platePrefsV13']){
     if(backup[key]!==undefined&&backup[key]!==null&&!obj(backup[key]))return bad('Polje '+key+' mora biti objekt.');
   }
+  if(backup.default_rest!==undefined&&backup.default_rest!==null&&backup.default_rest!==''&&!numeric(backup.default_rest,30,600))return bad('Neveljaven privzeti počitek.');
   // renderCycle writes an array; older backups use {} when no suggestions exist.
   // Preserve both representations unchanged during validation and restoration.
   if(backup.sugs!==undefined&&backup.sugs!==null){
@@ -92,7 +93,7 @@ function buildRestorePlanV18(backup,mode='replace'){
   if(backup.cycle){const current=getCyc();put(LS.cycle,merge?{...current,num:Math.max(current.num||1,backup.cycle.num||1),startDates:{...backup.cycle.startDates,...current.startDates}}:backup.cycle);}
   // Merge imports history; the current training program, phase and preferences stay authoritative.
   if(!merge){
-    for(const [field,key] of Object.entries({bwgoal:'wt_bwgoal',alarm:'wt_alarm6',collars:'wt_collars_kg',phases:'wt_phases',tm531:'wt_531tm',offset531:'wt_531offset',goals:'wt_goals',custom_ex:CUST_KEY,kg_step:'wt_kg_step',reps_step:'wt_reps_step',sugs:'wt_sugs6',colors:'wt_colors',v6settings:V6_KEYS.settings,lastExternal:V6_KEYS.lastExternal}))put(key,backup[field]);
+    for(const [field,key] of Object.entries({bwgoal:'wt_bwgoal',alarm:'wt_alarm6',collars:'wt_collars_kg',phases:'wt_phases',tm531:'wt_531tm',offset531:'wt_531offset',goals:'wt_goals',custom_ex:CUST_KEY,kg_step:'wt_kg_step',reps_step:'wt_reps_step',sugs:'wt_sugs6',colors:'wt_colors',v6settings:V6_KEYS.settings,lastExternal:V6_KEYS.lastExternal,default_rest:'wt_default_rest'}))put(key,backup[field]);
     put('wt_profile',backup.phase?.active||backup.profile||'cut');
     for(const phase of ['cut','bulk','shared'])if(backup.daylists?.[phase])put(phase==='shared'?'wt_daylist_shared_v16':'wt_daylist_'+phase,backup.daylists[phase]);
     put(V6_KEYS.metaShared,backup.programMeta?.shared||backup.programMeta?.cut||backup.programMeta?.bulk);

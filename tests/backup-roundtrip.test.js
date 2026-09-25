@@ -65,6 +65,7 @@ function seedData() {
     wt_reps_step: '1',
     wt_colors: JSON.stringify({ accent: '#ff0000' }),
     wt_custom_rest: JSON.stringify({ ex_bench: 200 }),
+    wt_default_rest: '90',
     wt_compact: '1',
     wt_gym_mode: '0',
     wt_bwgoal: '82',
@@ -168,6 +169,7 @@ test('buildBackupJSON -> restoreBackupObjectP1(replace) round trip loses nothing
   for (const [key, expected] of Object.entries(checks)) {
     assert.deepEqual(JSON.parse(h.data.get(key)), JSON.parse(expected), key + ' was lost or altered by the round trip');
   }
+  assert.equal(h.data.get('wt_default_rest'), seed.wt_default_rest, 'wt_default_rest was lost or altered by the round trip');
 });
 
 test('merge keeps current data on conflicts and does not touch program/phase/settings', async () => {
