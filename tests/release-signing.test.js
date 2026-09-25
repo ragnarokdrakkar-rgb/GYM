@@ -8,10 +8,14 @@ test('APK verification requires the existing release certificate, package and a 
   assert.ok(v.includes(`'${CERT}'`));assert.ok(v.includes("'com.kemal.workouttracker'"));
   assert.match(v,/apksigner\.bat/);assert.match(v,/verify --verbose --print-certs/);assert.match(v,/Select-Object -Unique/);
   // The digest pattern must accept both apksigner output formats and reject other lines.
-  const pattern=new RegExp(v.match(/'(\^Signer[^']+)'/)[1]);
+  const pattern=new RegExp(v.match(/'(\^[^']*Signer[^']+)'/)[1]);
   const d='b0:80:7a:b8:a9:43:93:f2:26:94:e9:27:f8:1e:6c:ce:d8:da:df:1a:c7:1e:ad:47:58:e2:39:ba:cc:7a:b0:86';
   assert.equal(pattern.exec('Signer #1 certificate SHA-256 digest: '+d)[1],d);
   assert.equal(pattern.exec('Signer (minSdkVersion=24, maxSdkVersion=2147483647) certificate SHA-256 digest: b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086')[1],'b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086');
+  // Real build-tools output on the release machine (public certificate data only).
+  assert.equal(pattern.exec('V2 Signer: certificate SHA-256 digest: b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086')[1],'b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086');
+  assert.equal(pattern.exec('V2 Signer: public key SHA-256 digest: 4b446abd2b541882584298e3910e8d611e730a2eec53c1bbadf46e4d5c02b870'),null);
+  assert.equal(pattern.exec('V2 Signer: certificate SHA-1 digest: 7deafbd89a3440aa33047fe1e7aac7c78852c018'),null);
   assert.equal(pattern.exec('Signer #1 certificate SHA-1 digest: abcd'),null);
   assert.equal(pattern.exec('Signer #1 public key SHA-256 digest: '+d),null);
   assert.match(v,/\$Digests\.Count -ne 1/);assert.match(v,/CN=Android Debug/);assert.match(v,/VersionCode -le \$MinVersionCodeExclusive/);

@@ -49,11 +49,12 @@ if ($Joined -notmatch 'Verified using v2 scheme \(APK Signature Scheme v2\): tru
 }
 if ($Joined -match 'CN=Android Debug') { Fail 'APK je podpisan z debug kljucem.' }
 
-# apksigner prints either "Signer #1 certificate SHA-256 digest: ..." or, for v3.1 /
-# SDK-targeted signers, "Signer (minSdkVersion=.., maxSdkVersion=..) certificate SHA-256 digest: ...".
+# apksigner prints "Signer #1 certificate SHA-256 digest: ...", "V2 Signer: certificate SHA-256
+# digest: ..." (build-tools 35+) or, for SDK-targeted v3.1 signers,
+# "Signer (minSdkVersion=.., maxSdkVersion=..) certificate SHA-256 digest: ...".
 # The same certificate can appear once per scheme, so distinct digests are counted.
 $Digests = @($SignerOutput | ForEach-Object {
-    $DigestMatch = [regex]::Match($_.Trim(), '^Signer\b.*certificate SHA-256 digest:\s*([0-9a-fA-F:]+)$')
+    $DigestMatch = [regex]::Match($_.Trim(), '^(?:V[0-9.]+ )?Signer\b.*certificate SHA-256 digest:\s*([0-9a-fA-F:]+)$')
     if ($DigestMatch.Success) { $DigestMatch.Groups[1].Value.Replace(':', '').ToLowerInvariant() }
 } | Select-Object -Unique)
 if ($Digests.Count -ne 1) {
