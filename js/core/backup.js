@@ -87,6 +87,9 @@ function buildRestorePlanV18(backup,mode='replace'){
   };
   const managed=[...MANAGED_LOCAL_KEYS,...Object.values(V6_KEYS),'wt_plate_calc_exercises_v13','wt_active_sess','wt_last_week','wt_last_day','wt_session_draft_v6','wt_undo_v15','wt_previous_day_draft_v18'];
   if(!merge)managed.forEach(key=>plan.set(key,null));
+  // Undo snapshots describe pre-restore data; replaying one after any restore would
+  // overwrite imported sets/sessions/PRs/weights, so they are cleared in both modes.
+  for(const key of ['wt_history_undo_v24','wt_plan_undo_v26','wt_bw_undo_v27'])plan.set(key,null);
   const maps={sets:LS.sets,pr:LS.pr,notes:LS.notes,bw:LS.bw,meas:LS.meas,gym:LS.gym,pain:LS.pain,cynotes:LS.cynotes,restplan:LS.restplan,setcounts:LS.setcounts,swaps:'wt_exswap',extra_ex:'wt_extra_ex',hidden_ex:'wt_hidden_ex',ex_ordernames:'wt_ex_ordernames',rep_prs:'wt_rep_prs',daylog:'wt_daylog',custom_rest:'wt_custom_rest',platePrefsV13:'wt_plate_calc_exercises_v13'};
   Object.entries(maps).forEach(([field,key])=>put(key,backup[field],true));
   put(LS.sessions,merge?mergeSessions(backup.sessions||[],getSessions()):backup.sessions||[]);

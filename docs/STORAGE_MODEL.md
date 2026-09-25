@@ -92,13 +92,10 @@ Getters/setters for all of these live in `js/core/state-storage.js` (`getSets`/`
 
 ### `wt_m6` — body measurements (`LS.meas`)
 - **Purpose**: historical measurements (chest/waist/hips/arms/thighs, see `MEAS_FIELDS` in
-  bootstrap.js). The dedicated "Measurements" page/route has been removed from the UI
-  (per `tests/body-measurements.test.js`: "measurements page and navigation are gone; old route
-  opens bodyweight without deleting stored data") but **the storage key and its data are kept**
-  — this is a UI removal, not a data-model removal. Treat `wt_m6` as **legacy-but-preserved**:
-  still exported/imported by backup, still readable via `getMeas()`, but there is no discovered
-  menu entry that writes new values through the normal UI anymore (uncertain — no writer other
-  than `saveMeas()` calls found in the reviewed sources besides backup restore).
+  bootstrap.js). The old standalone "Measurements" route is gone (it opens body weight), but
+  measurements are edited in Napredek → Teža → **Telesne mere** (`editMeas()` in
+  `js/compact-shell.js`, acts `meas-add`/`meas-edit`, written with `commitStorageBatch`;
+  covered by `tests/body-measurements.test.js`).
 - **Backup**: exported as `meas`, restored via `maps.meas`.
 
 ### `wt_g6` — plate/bar gym config (`LS.gym`)
@@ -255,6 +252,7 @@ const V6_KEYS={
 | `wt_sugs6` | cycle-end progression suggestions | `renderCycle`-family code | Yes, field `sugs` (array **or** object — both forms accepted); replace-only |
 | `wt_colors` | custom theme accent colors | `getStoredColors`/setter (ui-shell.js) | Yes, field `colors`; replace-only |
 | `wt_custom_rest` | per-exercise custom rest override | `getCustomRest`/`setCustomRestFor` (bootstrap.js) | Yes, field `custom_rest`; replace-only |
+| `wt_default_rest` | user default rest in seconds (30–600), used when an exercise has no custom rest; precedence in `restForEx`: custom > default > exercise type | `getDefaultRest` (bootstrap.js); written by Nastavitve → Privzeti počitek (`defaultRestSheet`, `safeSetRaw`/`safeRemoveRaw`) | Yes, field `default_rest`; replace-only (device preference, like `kg_step`) |
 | `wt_custom_ex` (via `CUST_KEY`) | user-added custom exercise definitions | direct set | Yes, field `custom_ex`; replace-only |
 | `wt_daylog` | free-form day log/journal | direct set | Yes, field `daylog`; replace-only |
 | `wt_rep_prs` | rep-based PR tracking | direct set, remapped in `reconcilePositions`-adjacent code | Yes, field `rep_prs`; replace-only |
@@ -427,12 +425,11 @@ All of this lives in `js/core/state-storage.js`.
 ## 8. Undo-buffer keys (single-slot, transient, not exported)
 
 These hold exactly one "before" snapshot each, to support a single Undo action in their
-respective editors. None of them appear in the backup export or the restore plan's field maps —
-**however, `wt_undo_v15` is explicitly cleared (`null`) by a replace-mode restore** (it's in the
-`managed` array in `buildRestorePlanV18`), while **`wt_history_undo_v24`, `wt_plan_undo_v26` and
-`wt_bw_undo_v27` are not** — a stale undo buffer from before a restore can still be present
-afterwards, and "Undo" in those editors would then try to undo *into* pre-restore state. This
-is flagged as a **potential inconsistency finding**, not fixed here.
+respective editors. None of them appear in the backup export. `wt_undo_v15` is cleared by a
+replace-mode restore (it's in the `managed` array in `buildRestorePlanV18`), and
+**`wt_history_undo_v24`, `wt_plan_undo_v26` and `wt_bw_undo_v27` are cleared by every restore,
+replace and merge** — replaying a pre-restore snapshot would overwrite imported data
+(`tests/restore-clears-undo.test.js`).
 
 | Key | Set by | Undone by |
 |---|---|---|
@@ -523,8 +520,7 @@ A `SetRow` inside `wt_s6` represents one planned-or-recorded set:
    (dejanski zagnani bundle) razide od `src/app`/`js/core` virov.
 6. **Ne dodajaj podatkov, ki bi jih bilo treba počistiti ob "Zamenjaj" (replace) restore, ne da bi
    jih dodal tudi v `MANAGED_LOCAL_KEYS`/`managed`** — sicer bo "replace" pustil osirotele stare
-   podatke poleg na novo obnovljenih (glej najdbo o `wt_history_undo_v24`/`wt_plan_undo_v26`/
-   `wt_bw_undo_v27` v §8).
+   podatke poleg na novo obnovljenih. Undo-bufferje (§8) počisti vsaka obnova.
 
 ## 13. Znane nedoslednosti / uncertain (findings — ne popravljeno v tem opravilu)
 
@@ -535,13 +531,9 @@ A `SetRow` inside `wt_s6` represents one planned-or-recorded set:
   da ga ni (§4) — ostanek odstranjene "AI chat" funkcije.
 - `wt_compact` in `wt_active_timer` se pišeta mimo `safeSetRaw`/journaling (§7) — napaka pri
   shranjevanju teh dveh ključev ne bi sprožila banner-ja "ni shranjeno" niti retry logike.
-- Undo-buferji `wt_history_undo_v24`, `wt_plan_undo_v26`, `wt_bw_undo_v27` niso počiščeni ob
-  "Zamenjaj" restore (§8), za razliko od `wt_undo_v15`, ki je.
 - `wt_session_draft_v6` je referenciran kot upravljan/počiščen ključ, a v pregledanih virih ni bilo
   najdeno mesto, ki bi vanj kdaj zapisalo neničelno vrednost — verjetno ostanek starejšega
   mehanizma (§2).
-- `wt_m6` (meritve telesa) ostaja v modelu podatkov in v backupu, čeprav je namenska stran v UI
-  odstranjena (§1) — podatki niso izgubljeni, samo brez namenskega urejevalnika v trenutni UI.
 - `wt_notes` (`wt_n6`) — v pregledanih virih ni bilo najdeno mesto zunaj `state-storage.js`/
   backup poti, ki bi klicalo `saveNotes()`; negotovo, ali je funkcija za urejanje opomb še
   dosegljiva iz UI.
