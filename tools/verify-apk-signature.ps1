@@ -49,11 +49,19 @@ if ($Joined -notmatch 'Verified using v2 scheme \(APK Signature Scheme v2\): tru
 }
 if ($Joined -match 'CN=Android Debug') { Fail 'APK je podpisan z debug kljucem.' }
 
+# apksigner prints either "Signer #1 certificate SHA-256 digest: ..." or, for v3.1 /
+# SDK-targeted signers, "Signer (minSdkVersion=.., maxSdkVersion=..) certificate SHA-256 digest: ...".
+# The same certificate can appear once per scheme, so distinct digests are counted.
 $Digests = @($SignerOutput | ForEach-Object {
-    $Match = [regex]::Match($_, '^Signer #(\d+) certificate SHA-256 digest:\s*([0-9a-fA-F:]+)\s*$')
-    if ($Match.Success) { $Match.Groups[2].Value.Replace(':', '').ToLowerInvariant() }
-})
-if ($Digests.Count -ne 1) { Fail "Pricakovan je natanko en podpisnik, najdenih: $($Digests.Count)." }
+    $DigestMatch = [regex]::Match($_.Trim(), '^Signer\b.*certificate SHA-256 digest:\s*([0-9a-fA-F:]+)$')
+    if ($DigestMatch.Success) { $DigestMatch.Groups[1].Value.Replace(':', '').ToLowerInvariant() }
+} | Select-Object -Unique)
+if ($Digests.Count -ne 1) {
+    # Public certificate lines only (DN and digests), for diagnosis.
+    Write-Host 'apksigner (javni podatki certifikata):'
+    $SignerOutput | Where-Object { $_ -match 'Signer|certificate|Verified using|WARNING|ERROR' } | ForEach-Object { Write-Host ('  ' + $_.Trim()) }
+    Fail "Pricakovan je natanko en podpisni certifikat, najdenih: $($Digests.Count)."
+}
 
 $Expected = $ExpectedCertSha256.Replace(':', '').ToLowerInvariant()
 if ($Digests[0] -ne $Expected) {

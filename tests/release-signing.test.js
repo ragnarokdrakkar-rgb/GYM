@@ -6,7 +6,14 @@ const CERT='b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086';
 test('APK verification requires the existing release certificate, package and a higher versionCode',()=>{
   const v=read('tools/verify-apk-signature.ps1');
   assert.ok(v.includes(`'${CERT}'`));assert.ok(v.includes("'com.kemal.workouttracker'"));
-  assert.match(v,/apksigner\.bat/);assert.match(v,/verify --verbose --print-certs/);assert.match(v,/Signer #\(\\d\+\) certificate SHA-256 digest/);
+  assert.match(v,/apksigner\.bat/);assert.match(v,/verify --verbose --print-certs/);assert.match(v,/Select-Object -Unique/);
+  // The digest pattern must accept both apksigner output formats and reject other lines.
+  const pattern=new RegExp(v.match(/'(\^Signer[^']+)'/)[1]);
+  const d='b0:80:7a:b8:a9:43:93:f2:26:94:e9:27:f8:1e:6c:ce:d8:da:df:1a:c7:1e:ad:47:58:e2:39:ba:cc:7a:b0:86';
+  assert.equal(pattern.exec('Signer #1 certificate SHA-256 digest: '+d)[1],d);
+  assert.equal(pattern.exec('Signer (minSdkVersion=24, maxSdkVersion=2147483647) certificate SHA-256 digest: b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086')[1],'b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086');
+  assert.equal(pattern.exec('Signer #1 certificate SHA-1 digest: abcd'),null);
+  assert.equal(pattern.exec('Signer #1 public key SHA-256 digest: '+d),null);
   assert.match(v,/\$Digests\.Count -ne 1/);assert.match(v,/CN=Android Debug/);assert.match(v,/VersionCode -le \$MinVersionCodeExclusive/);
   assert.doesNotMatch(v,/storePassword|keyPassword|keystore\.properties|\.jks/i,'the verifier must never touch signing secrets');
   assert.doesNotMatch(v,/[^\x00-\x7F]/,'Windows PowerShell 5.1 reads BOM-less scripts as ANSI');
