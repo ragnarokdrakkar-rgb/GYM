@@ -65,8 +65,12 @@ test('selection = accent border + 10% accent tint + soft glow on every picker, c
   const cal=body('#cg-app .cg-calendar-grid button.selected');
   assert.ok(cal.includes(SELECT_BG)&&cal.includes(SELECT_SHADOW));
   assert.ok(body('#cg-app .cg-seg button.selected').includes(SELECT_BG));
-  // the shell's `.cg-quick-days .done` tint must not leave a green patch behind the chip of a selected day
-  assert.ok(body('#cg-app .cg-quick-days .cg-chip').includes('background:transparent'));
+  // the shell's done tint paints the day BUTTON only (never the status icon inside it), and on a selected day the selection tint above
+  // (same specificity, this file loads later) replaces it, so a selected day shows no green patch
+  const shellCss=read('css/compact-shell.css');
+  assert.match(shellCss,/#cg-app \.cg-quick-days button\.done\{background:color-mix\(in srgb,var\(--cg-ok\) 9%,var\(--cg-panel\)\);\}/);
+  assert.doesNotMatch(shellCss,/\.cg-quick-days \.done/);
+  assert.match(body('#cg-app .cg-dot.done'),/background:var\(--cg-ok\)/);
   assert.ok(body('#cg-app .cg-seg button.selected::after').includes('background:var(--cg-accent)'));
 });
 

@@ -66,8 +66,9 @@ test('Day card active-exercise and weekly-set counts exclude a disabled exercise
   const ctx=programCtx({getProgramMetaV6:()=>({days:[day('Push')]}),dayListFor:()=>list,getHiddenEx:()=>hidden});
   const html=ctx.program();
   // Only Bench (3 sets) counts: Row is disabled, Curl is hidden this week.
-  assert.match(html,/<strong>1\/3<\/strong><span>aktivnih vaj<\/span>/);
-  assert.match(html,/<strong>3<\/strong><span>serij<\/span>/);
+  // Step 9: the three values sit in ONE inline stats line instead of three big columns.
+  assert.match(html,/<b>1\/3<\/b> aktivnih vaj · <b>3<\/b> serije · aktiven dan: <b>Da<\/b>/);
+  assert.doesNotMatch(html,/cg-hero-stats/);
   // All three rows still render so the exercise can be reordered/re-enabled/un-hidden later.
   assert.equal(html.split('<div class="cg-prow').length-1,3);
   // The exercise removed from this week only says so and offers a way back; the others do not.
@@ -76,8 +77,7 @@ test('Day card active-exercise and weekly-set counts exclude a disabled exercise
   assert.match(html,/data-act="program-unhide" data-index="2"/);
   // Without any hidden exercise, both Bench and Curl (not disabled) count.
   const visible=programCtx({getProgramMetaV6:()=>({days:[day('Push')]}),dayListFor:()=>list}).program();
-  assert.match(visible,/<strong>2\/3<\/strong><span>aktivnih vaj<\/span>/);
-  assert.match(visible,/<strong>7<\/strong><span>serij<\/span>/);
+  assert.match(visible,/<b>2\/3<\/b> aktivnih vaj · <b>7<\/b> serij · aktiven dan: <b>Da<\/b>/);
 });
 
 test('program-toggle flips programDisabled on a fresh read, saves via saveDayLists, and throws when the exercise is gone',()=>{

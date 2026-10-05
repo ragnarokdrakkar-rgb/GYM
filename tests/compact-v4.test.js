@@ -36,10 +36,13 @@ test('Chip words cover every status, distinguish partial fractions, and are hone
   assert.equal(ctx.chipWord('pending',0,0,true),'–');
 });
 
-test('Four-column (seven day) grids use short chip words but keep the full status in aria-label',()=>{
+test('Four-column (seven day) grids show only the status icon and the name on a day button, and keep the full status in aria-label',()=>{
   const html=navCtx(7).quickNavigation();
   assert.match(html,/data-quick-day="0"/);
-  assert.match(html,/<span>○<\/span>/);
+  assert.match(html,/--day-columns:4"/);
+  // Step 9: one line per day = icon + name; no glyph or status word is rendered any more.
+  assert.match(html,/<i class="cg-dot pending" aria-hidden="true"><\/i><strong>Dan 0<\/strong>/);
+  assert.doesNotMatch(html,/<span>○<\/span>/);
   assert.doesNotMatch(html,/<span>Ni opravljeno<\/span>/);
   assert.match(html,/aria-label="Dan 0: Še ni opravljeno"/);
 });

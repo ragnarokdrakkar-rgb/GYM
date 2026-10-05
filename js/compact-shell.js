@@ -245,17 +245,22 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     if(short)return {done:'✓',partial:`${done}/${total}`,active:'●',pending:'○'}[status];
     return {done:'Opravljeno',partial:`Delno ${done}/${total}`,active:'V teku',pending:'Ni opravljeno'}[status];
   }
-  function chip(status,done,total,short){return `<span class="cg-chip ${status}"><i class="cg-dot ${status}"></i><span>${chipWord(status,done,total,short)}</span></span>`;}
+  // A day without active exercises is neither done nor pending: it gets the muted dash, not the red ring.
+  function chip(status,done,total,short){const kind=total?status:'none';return `<span class="cg-chip ${kind}"><i class="cg-dot ${kind}"></i><span>${chipWord(status,done,total,short)}</span></span>`;}
   function quickNavigation(programPage=false){
     const weeks=PROG.weeks.map((plan,week)=>({...weekOverview(week),name:weekLabel(week)}));
     const current=weeks[cw],selected=programPage?state.day:cd,locked=navigationLocked(),next=compactNextDayV28(current.days);
-    const statusText=d=>d.active?'V teku':d.completed?(d.recordCount?'Trening opravljen':'Serije opravljene'):d.status==='partial'?'Delno opravljeno':d.total?'Še ni opravljeno':'Brez aktivnih vaj';
+    const statusText=d=>d.active?'V teku':d.completed?(d.recordCount?'Trening opravljen':'Serije opravljene'):d.status==='partial'?`Delno opravljeno · ${d.done}/${d.total} serij`:d.total?'Še ni opravljeno':'Brez aktivnih vaj';
+    // Status icon of a day (shape + color, decorative): the words live in the button's aria-label.
+    const dayMark=d=>`<i class="cg-dot ${d.total?d.status:'none'}" aria-hidden="true"></i>`;
     const n=current.days.length,columns=n<=3?Math.max(1,n):n===4?2:n<=6?3:4;
     const meta=getProgramMetaV6(),inactiveCount=meta.days.filter(d=>d.active===false&&!d.deleted).length;
     const selectedDay=current.days.find(d=>d.dayIndex===selected),selectedCompleted=!!selectedDay?.completed;
     const inactiveNote=inactiveCount?`<p class="cg-quick-note">${inactiveCount} ${inactiveCount===1?'neaktiven dan ni prikazan':'neaktivnih dni ni prikazanih'} in ne šteje v ${current.done}/${current.total}.</p>`:'';
     const statusNote=locked?'<p class="cg-quick-note">Izbira tedna in treninga je med aktivnim treningom zaklenjena.</p>':(selectedCompleted&&next)?button('quick-next','Naslednji: '+esc(next.name)+' '+icon('right'),'cg-next-workout',`data-index="${next.dayIndex}"`):current.status==='done'?'<p class="cg-quick-note">Vsi aktivni treningi tega tedna so opravljeni.</p>':current.days.some(d=>d.total>0)?'':'<p class="cg-quick-note">Dodaj aktivne vaje v Programu.</p>';
-    return `<section class="cg-quick-nav" aria-label="Hitra izbira treninga"><div class="cg-weekbar" aria-hidden="true">${current.days.map(d=>`<i class="${d.status}"></i>`).join('')}</div><div class="cg-quick-weeks" aria-label="Tedni cikla">${weeks.map(w=>`<button type="button" data-quick-week="${w.week}" class="cg-week ${w.status}${w.week===cw?' selected':''}" aria-pressed="${w.week===cw}" aria-label="Teden ${w.week+1} · ${esc(w.name)} · ${w.done}/${w.total} opravljenih treningov" ${locked?'disabled':''}><strong>T${w.week+1}${w.status==='done'?' ✓':''}</strong><small>${esc(w.name)}</small><span class="cg-pips">${w.days.map(d=>`<i class="${d.status}"></i>`).join('')}</span></button>`).join('')}</div><div class="cg-quick-days" style="--day-columns:${columns}" aria-label="Treningi tega tedna">${current.days.map(d=>`<button type="button" data-quick-day="${d.dayIndex}" data-quick-program="${programPage?'1':'0'}" class="cg-day ${d.status}${d.dayIndex===selected?' selected':''}" aria-pressed="${d.dayIndex===selected}" aria-label="${esc(d.name+': '+statusText(d))}${d.date?' · '+esc(dateLabel(d.date)):''}" ${locked&&!programPage?'disabled':''}><strong>${esc(d.name)}</strong>${chip(d.status,d.done,d.total,columns===4)}</button>`).join('')}</div>${inactiveNote}${statusNote}</section>`;
+    const weekButtons=weeks.map(w=>`<button type="button" data-quick-week="${w.week}" class="cg-week ${w.status}${w.week===cw?' selected':''}" aria-pressed="${w.week===cw}" aria-label="Teden ${w.week+1} · ${esc(w.name)} · ${w.done}/${w.total} opravljenih treningov" ${locked?'disabled':''}><strong>T${w.week+1}${w.status==='done'?' ✓':''}</strong><span class="cg-pips">${w.days.map(d=>`<i class="${d.status}"></i>`).join('')}</span></button>`).join('');
+    const dayButtons=current.days.map(d=>`<button type="button" data-quick-day="${d.dayIndex}" data-quick-program="${programPage?'1':'0'}" class="cg-day ${d.status}${d.dayIndex===selected?' selected':''}" aria-pressed="${d.dayIndex===selected}" aria-label="${esc(d.name+': '+statusText(d))}${d.date?' · '+esc(dateLabel(d.date)):''}" ${locked&&!programPage?'disabled':''}>${dayMark(d)}<strong>${esc(d.name)}</strong></button>`).join('');
+    return `<section class="cg-quick-nav" aria-label="Hitra izbira treninga"><div class="cg-quick-weeks" aria-label="Tedni cikla">${weekButtons}</div><div class="cg-quick-days${columns===4?' dense':''}" style="--day-columns:${columns}" aria-label="Treningi tega tedna">${dayButtons}</div>${inactiveNote}${statusNote}</section>`;
   }
   function selectQuickWorkout(week,day,programPage=false){
     if(navigationLocked())throw Error('Najprej zaključi ali obnovi aktivni trening.');
@@ -281,7 +286,15 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     const primaryBtn=stRun?button('session-finish',primaryLabel,'cg-hero-finish'):button('session-start',icon('play')+' '+primaryLabel,'cg-hero-start');
     const focusBtn=button('focus',icon('focus')+' Fokus','cg-hero-focus');
     const live=stRun?`<div class="cg-hero-live"><strong data-session-clock>${clock((Date.now()-stStart)/1000)}</strong><span>Trening v teku</span></div>`:'';
-    return `<section class="cg-hero"><h2 class="cg-hero-name">${esc(day?.name||'Trening')}</h2>${day?.sub?`<p class="cg-hero-sub">${esc(day.sub)}</p>`:''}${chip(status,cdOverview.done,cdOverview.total,false)}<div class="cg-hero-stats"><div><strong>${exCount}</strong><span>vaj</span></div><div><strong>${total}/${target}</strong><span>serij</span></div><div><strong>${zLabel}</strong><span>zadnjič</span></div></div>${live}<div class="cg-hero-actions">${primaryBtn}${focusBtn}</div></section>`;
+    const vaj=exCount===1?'vaja':exCount===2?'vaji':exCount>=3&&exCount<=4?'vaje':'vaj';
+    return `<section class="cg-hero"><div class="cg-hero-head"><h2 class="cg-hero-name">${esc(day?.name||'Trening')}</h2>${chip(status,cdOverview.done,cdOverview.total,false)}</div>${day?.sub?`<p class="cg-hero-sub">${esc(day.sub)}</p>`:''}<p class="cg-hero-line"><b>${exCount}</b> ${vaj} · <b>${total}/${target}</b> serij · zadnjič <b>${zLabel}</b></p>${live}<div class="cg-hero-actions">${primaryBtn}${focusBtn}</div></section>`;
+  }
+  // Focus: ONE muted line under the exercise name, `Cilj <b>…</b> · Zadnjič 47,5 kg × 8`. The last entry is worded like the
+  // logger's own `.cg-last` line (which css hides in Focus); with no previous entry only the target is shown.
+  function focusMeta(e){
+    const target=e.item.targetReps?`${e.target} × ${esc(e.item.targetReps)}`:`${e.target} ${e.target===1?'serija':e.target===2?'seriji':e.target<5?'serije':'serij'}`;
+    const last=e.last?` · <span class="cg-focus-last">Zadnjič ${fmt(e.last.kg)} kg × ${esc(e.last.reps)}${e.last.rpe?' · RPE '+esc(e.last.rpe):''}</span>`:'';
+    return `<div class="cg-focus-meta">Cilj <b>${target}</b>${last}</div>`;
   }
   function workout(){
     workoutCache=currentRows();if(!workoutCache.some(e=>e.key===state.active))state.active=workoutCache.find(e=>e.key===localStorage.getItem('wt_active_ex'))?.key||workoutCache[0]?.key||'';
@@ -300,8 +313,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       const restHost=`<div class="cg-rest-host">${restBar()}</div>`;
       if(!active)return header+strip+restHost+'<div class="cg-fscroll"><p class="cg-small cg-empty">Ta dan nima aktivnih vaj.</p></div>';
       const title=`<div class="cg-ftitle"><h1 class="cg-fname">${esc(active.name)}</h1>${button('exercise-menu','⋯','cg-ficon cg-fmenu','aria-label="Možnosti vaje" aria-haspopup="dialog"')}</div>`;
-      const focusMeta=`<div class="cg-focus-meta"><span>Cilj <b>${active.item.targetReps?`${active.target} × ${esc(active.item.targetReps)}`:`${active.target} ${active.target===1?'serija':active.target===2?'seriji':active.target<5?'serije':'serij'}`}</b></span></div>`;
-      const scroll=`<div class="cg-fscroll">${title}${focusMeta}${logger(active)}</div>`;
+      const scroll=`<div class="cg-fscroll">${title}${focusMeta(active)}${logger(active)}</div>`;
       const steps=focusSteps(index);
       const start=!stRun?button('session-start',icon('play')+' Začni trening','cg-action cg-focus-start'):'';
       return header+strip+restHost+scroll+steps+start;
@@ -327,7 +339,8 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       const active=d.active!==false,cnt=active?dayListFor(i,getCyc().num,cw).filter(e=>!e.programDisabled).length:0;
       return `<button type="button" class="cg-pchip${active?'':' inactive'}${i===state.day?' selected':''}" data-act="program-day" data-index="${i}" aria-pressed="${i===state.day}"><strong>${esc(d.name||'Dan '+(i+1))}</strong><span>${active?cnt+' vaj':'neaktiven'}</span></button>`;
     }).join('')}${button('day-add','+ Dan','cg-pchip cg-pchip-add',days.length>=7?'disabled':'')}</div>`;
-    const dayCard=`<section class="cg-hero cg-pcard"><h2 class="cg-hero-name">${esc(selectedDay.name||'Dan')}</h2>${selectedDay.sub?`<p class="cg-hero-sub">${esc(selectedDay.sub)}</p>`:''}<div class="cg-hero-stats"><div><strong>${activeEx.length}/${list.length}</strong><span>aktivnih vaj</span></div><div><strong>${totalSets}</strong><span>serij</span></div><div><strong>${selectedDay.active!==false?'Da':'Ne'}</strong><span>aktiven dan</span></div></div><div class="cg-hero-actions">${button('day-edit','Uredi dan','cg-quiet cg-nowrap')}</div></section>`;
+    const serij=totalSets===1?'serija':totalSets===2?'seriji':totalSets>=3&&totalSets<=4?'serije':'serij';
+    const dayCard=`<section class="cg-hero cg-pcard"><div class="cg-hero-head"><h2 class="cg-hero-name">${esc(selectedDay.name||'Dan')}</h2></div>${selectedDay.sub?`<p class="cg-hero-sub">${esc(selectedDay.sub)}</p>`:''}<p class="cg-hero-line"><b>${activeEx.length}/${list.length}</b> aktivnih vaj · <b>${totalSets}</b> ${serij} · aktiven dan: <b>${selectedDay.active!==false?'Da':'Ne'}</b></p><div class="cg-hero-actions">${button('day-edit','Uredi dan','cg-quiet cg-nowrap')}</div></section>`;
     const label=`<div class="cg-section-label"><span>Vaje · vrstni red</span><span>stikalo = aktivna</span></div>`;
     const rows=list.map((e,i)=>{
       const off=!!e.programDisabled,removed=!off&&!!hiddenThisWeek[sdk(cyc,cw,state.day,i)],n=setsOf(e,i),sub=`${n} ${n===1?'serija':n===2?'seriji':n<5?'serije':'serij'}${e.targetReps?' × '+esc(e.targetReps):''} · počitek ${clock(restForEx(e.id,e.n,e.r||90))}${off?' · neaktivna':''}${removed?` · odstranjena v tednu ${cw+1}`:''}`;
