@@ -48,3 +48,18 @@ test('release PowerShell scripts are ASCII-only and take notes from RELEASE_NOTE
   assert.match(pub,/RELEASE_NOTES_\{0\}\.md/);
   assert.match(pub,/ReadAllText\(\$ReleaseNotesSource, \[System\.Text\.Encoding\]::UTF8\)/);
 });
+
+test('the Android release guard stops a build whose app/package version differs from the entered version',()=>{
+  const guard=read('release-guard.ps1');
+  assert.equal([...guard].findIndex(c=>c.charCodeAt(0)>127),-1,'release-guard.ps1 stays ASCII-only for PowerShell 5.1');
+  assert.match(guard,/\[regex\]::Match\(\[System\.IO\.File\]::ReadAllText\(\$BootstrapFile\), "const APP_VERSION='\(\[\^'\]\+\)'"\)/);
+  assert.match(guard,/\$AppVersionMatch\.Groups\[1\]\.Value -cne \$ExpectedVersion\) \{\s*Fail-Guard/);
+  assert.match(guard,/\$PackageVersionMatch\.Groups\[1\]\.Value -cne \$ExpectedVersion\) \{\s*Fail-Guard/);
+});
+
+test('every release version has its release notes file, which publish-release uses as the description',()=>{
+  const version=JSON.parse(read('package.json')).version;
+  const notes=read(`RELEASE_NOTES_${version}.md`);
+  assert.ok(notes.trim().length>200,'notes are not empty');
+  assert.doesNotMatch(notes,/^## Android/m,'publish-release adds the verified Android section itself');
+});

@@ -621,6 +621,19 @@ function Invoke-AndroidGuard {
         Fail-Guard "Android versionName je $($GradleVersion.Name), pricakovano pa $ExpectedVersion."
     }
 
+    # The version shown in the app (APP_VERSION) and package.json must match the release version,
+    # otherwise the installed app reports an old version number.
+    $BootstrapFile = Join-Path $ProjectRoot 'js\core\bootstrap.js'
+    Assert-File -Path $BootstrapFile -Label 'js/core/bootstrap.js'
+    $AppVersionMatch = [regex]::Match([System.IO.File]::ReadAllText($BootstrapFile), "const APP_VERSION='([^']+)'")
+    if (-not $AppVersionMatch.Success -or $AppVersionMatch.Groups[1].Value -cne $ExpectedVersion) {
+        Fail-Guard "APP_VERSION v js/core/bootstrap.js ni $ExpectedVersion. Najprej uskladi verzijo v kodi (RELEASE_SIGNING.md)."
+    }
+    $PackageVersionMatch = [regex]::Match([System.IO.File]::ReadAllText((Join-Path $ProjectRoot 'package.json')), '"version"\s*:\s*"([^"]+)"')
+    if (-not $PackageVersionMatch.Success -or $PackageVersionMatch.Groups[1].Value -cne $ExpectedVersion) {
+        Fail-Guard "Verzija v package.json ni $ExpectedVersion. Najprej uskladi verzijo v kodi (RELEASE_SIGNING.md)."
+    }
+
     $SoundFile = Join-Path $ProjectRoot 'android\app\src\main\res\raw\workout_rest.wav'
     Assert-File -Path $SoundFile -Label 'workout_rest.wav'
 

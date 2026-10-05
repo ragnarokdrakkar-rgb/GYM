@@ -1,14 +1,23 @@
-# Workout Tracker 1.4.0 — Nov videz, zanesljivo shranjevanje
+# Workout Tracker 1.5.0 — Temno-rdeča prenova in hitrejši vnos serij
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
-2. Prenesi [APK izdaje 1.4.0](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.4.0/Workout-Tracker-v1.4.0.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+2. Prenesi [APK izdaje 1.5.0](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.5.0/Workout-Tracker-v1.5.0.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.4.0 je 70. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.5.0 je 71. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Novo v 1.5.0
+
+- Teža se ne prepiše več na vse serije: ko potrdiš serijo, jo prevzame samo naslednja. Vnaprej vpisana teža ostane in je označena.
+- Gumbi −2,5 / +2,5 kg in −1 / +1 ponovitev pri trenutni seriji.
+- Fokus: večje ime vaje, ena vrstica s ciljem in zadnjim rezultatom, meni vaje z odstranitvijo iz treninga ali programa.
+- Nova temno-rdeča tema; zgoščen zaslon Trening, vaje so vidne že na prvem zaslonu.
+- Napredek: vnos današnje teže na vrhu, sprememba moči od prejšnjega treninga, Zgodovina se odpre na zadnjem treningu.
+- Podrobnosti: [release notes](RELEASE_NOTES_1.5.0.md).
 
 ## Novo v 1.4.0
 

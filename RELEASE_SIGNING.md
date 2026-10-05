@@ -29,6 +29,8 @@ aplikacije pa bi se izgubili lokalni podatki.
    `README-GITHUB.md`, `tests/release-regression.test.js`) in dodan
    `RELEASE_NOTES_<verzija>.md`. Skripta sama poveča samo versionCode in
    versionName v `build.gradle`, opis releasa pa vzame iz te datoteke.
+   Če se `APP_VERSION` ali verzija v `package.json` ne ujema z vpisano
+   verzijo, release guard build ustavi, preden se APK zgradi.
 3. Skripta zgradi APK s `build-release.bat` (poveča versionCode) in takoj zažene
    `tools/verify-apk-signature.ps1`:
    - `apksigner verify --print-certs`: shema v2/v3, natanko en podpisnik,
