@@ -69,7 +69,10 @@ test('Week buttons: line 1 "T1" (+ " ✓" when done), line 2 the status pips; no
   // selection and lock semantics are unchanged
   weeks.forEach((b,i)=>{assert.match(b,new RegExp(`data-quick-week="${i}"`));assert.match(b,new RegExp(`aria-pressed="${i===1}"`));assert.doesNotMatch(b,/ disabled/);});
   assert.match(weeks[1],/class="cg-week partial selected"/);assert.doesNotMatch(weeks[0],/selected/);
-  for(const b of buttonsOf(navCtx({locked:true}).quickNavigation(),'data-quick-week'))assert.match(b,/ disabled/);
+  // During a running/recovering workout Trening renders no week buttons at all, only the reason.
+  const lockedNav=navCtx({locked:true}).quickNavigation();
+  assert.equal(buttonsOf(lockedNav,'data-quick-week').length,0);
+  assert.match(lockedNav,/cg-quick-locked/);assert.match(lockedNav,/Teden in trening sta med treningom zaklenjena\./);
 });
 
 test('Day buttons are ONE line (status icon + name): no visible status word, the words stay in aria-label, one icon class per status',()=>{
@@ -102,9 +105,9 @@ test('Day buttons keep data-quick-day / data-quick-program / aria-pressed / disa
     assert.match(b,new RegExp(`aria-pressed="${i===2}"`));assert.doesNotMatch(b,/ disabled/);
   });
   assert.match(trening[2],/class="cg-day active selected"/);assert.doesNotMatch(trening[0],/selected/);
-  // locked (running / recovery session): Trening day buttons are disabled; the Program variant stays usable
+  // locked (running / recovery session): Trening shows no day buttons; the Program variant stays usable
   const locked=navCtx({locked:true,cd:0,stateDay:1}),lockedDays=buttonsOf(locked.quickNavigation(),'data-quick-day');
-  lockedDays.forEach(b=>assert.match(b,/ disabled/));
+  assert.equal(lockedDays.length,0);
   const program=buttonsOf(locked.quickNavigation(true),'data-quick-day');
   program.forEach((b,i)=>{assert.match(b,/data-quick-program="1"/);assert.doesNotMatch(b,/ disabled/);assert.match(b,new RegExp(`aria-pressed="${i===1}"`));});
   for(const [n,cols] of [[1,1],[3,3],[4,2],[5,3],[6,3],[7,4]])
@@ -258,7 +261,7 @@ const fex=(over={})=>({target:4,item:{targetReps:'8-10'},last:{kg:47.5,reps:8},.
 test('Focus meta is ONE line: "Cilj <b>target</b> · Zadnjič kg × reps" with a previous entry, only the target without one',()=>{
   const ctx=metaCtx();
   const withLast=ctx.focusMeta(fex());
-  assert.equal(withLast,'<div class="cg-focus-meta">Cilj <b>4 × 8-10</b> · <span class="cg-focus-last">Zadnjič 47,5 kg × 8</span></div>');
+  assert.equal(withLast,'<div class="cg-focus-meta">Cilj <b>4 × 8-10</b> <span class="cg-focus-last">· Zadnjič 47,5 kg × 8</span></div>');
   assert.equal(withLast.match(/class="cg-focus-meta"/g).length,1);
   assert.equal(visibleText(withLast),'Cilj 4 × 8-10 · Zadnjič 47,5 kg × 8');
   const without=ctx.focusMeta(fex({last:null}));

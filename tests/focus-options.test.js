@@ -107,3 +107,9 @@ test('Focus shows the exercise name with an options button; the logger link open
   assert.match(css,/#cg-app \.cg-ftitle \.cg-fname\{[^}]*font-size:clamp\(34px,9\.8vw,42px\)/,'bigger than the old 31px');
   assert.match(css,/#cg-app\[data-focus="true"\] \.cg-message\{bottom:calc\(96px \+ env\(safe-area-inset-bottom,0px\)\);\}/,'toasts sit above the step bar');
 });
+
+test('an empty set field is not painted as an error before the user has touched it',()=>{
+  const css=fs.readFileSync(path.join(__dirname,'..','css/compact-v4.css'),'utf8');
+  assert.match(css,/#cg-app \.cg-setrow2 input:user-invalid\{border-color:var\(--cg-pending\);\}/);
+  assert.doesNotMatch(css,/\.cg-setrow2 input:invalid/);
+});

@@ -248,6 +248,8 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   // A day without active exercises is neither done nor pending: it gets the muted dash, not the red ring.
   function chip(status,done,total,short){const kind=total?status:'none';return `<span class="cg-chip ${kind}"><i class="cg-dot ${kind}"></i><span>${chipWord(status,done,total,short)}</span></span>`;}
   function quickNavigation(programPage=false){
+    // During a running (or recovering) workout the pickers cannot be used, so Trening shows one line instead of disabled buttons.
+    if(!programPage&&navigationLocked())return '<section class="cg-quick-nav cg-quick-locked" aria-label="Hitra izbira treninga"><p class="cg-quick-note">Teden in trening sta med treningom zaklenjena.</p></section>';
     const weeks=PROG.weeks.map((plan,week)=>({...weekOverview(week),name:weekLabel(week)}));
     const current=weeks[cw],selected=programPage?state.day:cd,locked=navigationLocked(),next=compactNextDayV28(current.days);
     const statusText=d=>d.active?'V teku':d.completed?(d.recordCount?'Trening opravljen':'Serije opravljene'):d.status==='partial'?`Delno opravljeno · ${d.done}/${d.total} serij`:d.total?'Še ni opravljeno':'Brez aktivnih vaj';
@@ -293,7 +295,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   // logger's own `.cg-last` line (which css hides in Focus); with no previous entry only the target is shown.
   function focusMeta(e){
     const target=e.item.targetReps?`${e.target} × ${esc(e.item.targetReps)}`:`${e.target} ${e.target===1?'serija':e.target===2?'seriji':e.target<5?'serije':'serij'}`;
-    const last=e.last?` · <span class="cg-focus-last">Zadnjič ${fmt(e.last.kg)} kg × ${esc(e.last.reps)}${e.last.rpe?' · RPE '+esc(e.last.rpe):''}</span>`:'';
+    const last=e.last?` <span class="cg-focus-last">· Zadnjič ${fmt(e.last.kg)} kg × ${esc(e.last.reps)}${e.last.rpe?' · RPE '+esc(e.last.rpe):''}</span>`:'';
     return `<div class="cg-focus-meta">Cilj <b>${target}</b>${last}</div>`;
   }
   function workout(){
