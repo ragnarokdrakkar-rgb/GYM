@@ -446,7 +446,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   }
   function chartTokensV30(){
     const cs=root?getComputedStyle(root):null,get=(name,fb)=>{const v=cs?cs.getPropertyValue(name).trim():'';return v||fb;};
-    return {accent:get('--cg-accent','#ff7a1a'),muted:get('--cg-muted','#b4a79b'),line:get('--cg-line','#2f2620'),dim:get('--cg-dim','#8a7d72')};
+    return {accent:get('--cg-accent','#ff3b3b'),muted:get('--cg-muted','#bba9a9'),line:get('--cg-line','#271818'),dim:get('--cg-dim','#8c7676')};
   }
   function chartOptions(){
     const t=chartTokensV30();
