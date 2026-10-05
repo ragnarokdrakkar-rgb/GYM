@@ -14,7 +14,7 @@ function validateBackupV18(backup){
   let count=0;
   function validateRows(rows){
     if(!Array.isArray(rows)||(count+=rows.length)>250000)return false;
-    return rows.every(s=>obj(s)&&numeric(s.kg,0,1500)&&numeric(s.reps,0,1000,true)&&numeric(s.rpe,0,10)&&(s.done===undefined||typeof s.done==='boolean'));
+    return rows.every(s=>obj(s)&&numeric(s.kg,0,2000)&&numeric(s.reps,0,1000,true)&&numeric(s.rpe,0,10)&&(s.done===undefined||typeof s.done==='boolean'));
   }
   for(const [key,rows] of Object.entries(backup.sets)){
     if(!/^c\d+w\d+d\d+e\d+$/.test(key)||!validateRows(rows))return bad('Neveljaven ključ ali vrednosti seta: '+key);

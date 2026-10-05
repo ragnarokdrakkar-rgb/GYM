@@ -153,6 +153,13 @@ test('invalid restore plans leave all active data unchanged',()=>{
   assert.deepEqual([...h.data],before);
 });
 
+test('backups accept every kg value the app lets you enter (up to 2000 kg) and still reject more',()=>{
+  const h=harness({});
+  // Set inputs and plan edits allow 0–2000 kg; a backup containing such a set must stay restorable.
+  assert.equal(h.run("validateBackupV18({version:7,sets:{c1w0d0e0:[{kg:1800,reps:1,done:true}]}}).ok"),true);
+  assert.equal(h.run("validateBackupV18({version:7,sets:{c1w0d0e0:[{kg:2001,reps:1,done:true}]}}).ok"),false);
+});
+
 test('merge preserves current conflicting sets and does not replace selected program or phase',()=>{
   const h=harness({wt_s6:JSON.stringify({c1w0d0e0:[{kg:80,reps:8}]}),wt_profile:'cut',wt_daylist_shared_v16:JSON.stringify({0:[{id:'mine',n0:'My exercise'}]})});
   h.run("commitStorageBatch(buildRestorePlanV18({version:7,sets:{c1w0d0e0:[{kg:10,reps:2}],c1w0d1e0:[{kg:30,reps:9}]},profile:'bulk',daylists:{shared:{0:[{n0:'Other'}]}}},'merge'))");
