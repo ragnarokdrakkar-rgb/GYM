@@ -132,3 +132,22 @@ test('Calendar marks today with a "today" class distinct from "selected"',()=>{
   assert.match(html,new RegExp(`data-date="${todayKey}" class="[^"]*today`));
   assert.doesNotMatch(html,new RegExp(`data-date="${todayKey}" class="[^"]*selected`));
 });
+
+test('Teža: the daily weight action sits right under the tiles and edits today when it exists',()=>{
+  const ctx=progressCtx({getBW:()=>({'2026-09-20':80.2})});inner(ctx,'weightView');
+  const html=ctx.weightView();
+  assert.ok(html.indexOf('cg-weight-today')>html.indexOf('cg-tiles')&&html.indexOf('cg-weight-today')<html.indexOf('cg-verdict'),'between tiles and verdict');
+  assert.match(html,/data-act="weight-add"[^>]*>\+ Vnesi današnjo težo</);
+  assert.equal((html.match(/Vnesi današnjo težo/g)||[]).length,1,'no second button below the chart');
+  const today=progressCtx({getBW:()=>({'2026-09-24':80.6})});inner(today,'weightView');
+  assert.match(today.weightView(),/data-act="weight-edit" data-date-key="2026-09-24">Danes 80.6 kg · uredi</);
+});
+
+test('Moč: each row shows the change since the previous session (up, down, same, none)',()=>{
+  const ctx=progressCtx({});inner(ctx,'strengthTrend');
+  assert.equal(ctx.strengthTrend({kg:65},{kg:62.5}),'<em class="cg-trend up">+2.5 kg</em> · ');
+  assert.equal(ctx.strengthTrend({kg:60},{kg:62.5}),'<em class="cg-trend down">−2.5 kg</em> · ');
+  assert.equal(ctx.strengthTrend({kg:60},{kg:60}),'<em class="cg-trend flat">enako</em> · ');
+  assert.equal(ctx.strengthTrend({kg:60},undefined),'');
+  assert.equal(ctx.strengthTrend(undefined,undefined),'');
+});

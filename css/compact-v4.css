@@ -448,3 +448,11 @@
 /* Focus shows the last entry in its meta line under the name, so the logger's own copy is hidden there (the Trening list keeps it). */
 #cg-app[data-focus="true"] .cg-last{display:none;}
 #cg-app .cg-focus-last{white-space:nowrap;}
+
+/* Step 10: Napredek. The daily weight entry sits under the tiles; Moč rows show
+   the change of the top working-set weight since the previous session. */
+#cg-app .cg-weight-today{margin:0 0 12px;min-height:48px;font-weight:650;}
+#cg-app .cg-trend{font-style:normal;font-weight:700;}
+#cg-app .cg-trend.up{color:var(--cg-ok);}
+#cg-app .cg-trend.down{color:var(--cg-pending);}
+#cg-app .cg-trend.flat{color:var(--cg-muted);font-weight:600;}

@@ -324,11 +324,12 @@ test('Focus step dots: partial = blue border + light blue tint + normal text (di
 });
 
 // ---- guard rails for the stylesheet change itself ------------------------------------------------------------------------
-test('Step 9 block sits at the END of compact-v4.css, uses only var(--cg-*) tokens (no new literal colors) and carries the new rules',()=>{
+test('Step 9 block is appended once to compact-v4.css, uses only var(--cg-*) tokens (no new literal colors) and carries the new rules',()=>{
   const marker='/* Step 9: compact Trening top, inline hero stats, Focus meta line */';
   assert.equal(v4.split(marker).length-1,1);
-  assert.equal(v4.lastIndexOf('/* Step '),v4.indexOf(marker),'no later Step block');
-  const block=v4.slice(v4.indexOf(marker)).replace(/\/\*[\s\S]*?\*\//g,'');
+  // The block runs until the next "/* Step" block (later steps append their own blocks after it).
+  const start=v4.indexOf(marker),next=v4.indexOf('/* Step ',start+marker.length);
+  const block=v4.slice(start,next<0?undefined:next).replace(/\/\*[\s\S]*?\*\//g,'');
   assert.doesNotMatch(block,/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
   assert.match(block,/var\(--cg-/);
   for(const selector of ['#cg-app .cg-hero-head','#cg-app .cg-hero-line','#cg-app[data-focus="true"] .cg-last','#cg-app .cg-dot.none'])assert.match(block,new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')),selector);
