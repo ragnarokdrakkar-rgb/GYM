@@ -12,11 +12,11 @@ function baseCtx(overrides={}){
     button:(act,label,cls,attrs)=>`<button type="button" class="${cls||'cg-link'}" data-act="${act}" ${attrs||''}>${label}</button>`,
     draft:new Map(),busy:false,
     prescriptionOpen:new Set(),window:{},clock:n=>String(n),
-    get531Prescription:()=>null,
+    get531Prescription:()=>null,getKgStep:()=>2.5,getRepsStep:()=>1,
     ...overrides
   });
 }
-function loadTable(ctx){for(const fn of ['valuesFor','lastSetValues','setRow','setTable'])inner(ctx,fn);}
+function loadTable(ctx){for(const fn of ['valuesFor','steppers','setRow','setTable'])inner(ctx,fn);}
 function loadLogger(ctx){loadTable(ctx);inner(ctx,'logger');}
 
 function exercise(overrides={}){
@@ -88,25 +88,38 @@ test('"+ Serija" is disabled once the target reaches 30 sets',()=>{
   assert.doesNotMatch(ctx.setTable(under),/data-act="set-add-one" disabled/);
 });
 
-test('lastSetValues picks kg/reps from the last row that has a value, done or planned, else falls back to the pending draft',()=>{
+test('The current set has quick ± buttons: kg by the kg step (2,5) and reps by the reps step',()=>{
   const ctx=baseCtx();loadTable(ctx);
-  const pick=e=>{const v=ctx.lastSetValues(e);return v?{kg:v.kg,reps:v.reps}:v;};
-  const withPlanned=exercise({rows:[{kg:60,reps:8,done:true},{kg:'',reps:'',done:false},{kg:70,reps:5,done:false},{kg:'',reps:'',done:false}]});
-  assert.deepEqual(pick(withPlanned),{kg:70,reps:5});
-  const onlyDone=exercise({rows:[{kg:60,reps:8,done:true},{kg:'',reps:'',done:false}]});
-  assert.deepEqual(pick(onlyDone),{kg:60,reps:8});
-  const noneAtAll=exercise({rows:[{kg:'',reps:'',done:false},{kg:'',reps:'',done:false}],pending:{setIndex:0,complete:false,kg:'',reps:''}});
-  assert.equal(pick(noneAtAll),null);
-  const fallsBackToDraft=exercise({rows:[{kg:'',reps:'',done:false}],target:1,pending:{setIndex:0,complete:false,kg:55,reps:10}});
-  assert.deepEqual(pick(fallsBackToDraft),{kg:55,reps:10});
+  const row=ctx.setRow(exercise(),1,1);
+  assert.match(row,/data-act="kg-step" data-dir="-1"[^>]*>−2\.5</);
+  assert.match(row,/data-act="kg-step" data-dir="1"[^>]*>\+2\.5</);
+  assert.match(row,/data-act="reps-step" data-dir="-1"[^>]*>−1</);
+  assert.match(row,/data-act="reps-step" data-dir="1"[^>]*>\+1</);
+  // Buttons only on the current set, and they never submit the set.
+  assert.doesNotMatch(ctx.setRow(exercise(),2,1),/kg-step/);
+  assert.doesNotMatch(ctx.setRow(exercise(),0,1),/kg-step/);
+  assert.doesNotMatch(row,/<button type="submit"[^>]*data-act="kg-step"/);
 });
 
-test('set-add-one payload (via lastSetValues) matches what savePlanAction would receive',()=>{
+test('A set planned by hand is marked (dot + label), a carried or empty one is not',()=>{
   const ctx=baseCtx();loadTable(ctx);
-  const e=exercise({rows:[{kg:60,reps:8,done:true},{kg:'',reps:'',done:false},{kg:'',reps:'',done:false},{kg:'',reps:'',done:false}]});
-  const vals=ctx.lastSetValues(e);
-  const action={type:'add',count:1,kg:vals.kg,reps:vals.reps};
-  assert.deepEqual(action,{type:'add',count:1,kg:60,reps:8});
+  const e=exercise({rows:[{kg:60,reps:8,done:true},{kg:62.5,reps:8,done:false,carried:true},{kg:70,reps:5,done:false,manual:true},{kg:'',reps:'',done:false}]});
+  const html=ctx.setTable(e);
+  assert.match(ctx.setRow(e,2,1),/cg-setrow2 planned manual/);
+  assert.match(ctx.setRow(e,2,1),/cg-manual-dot/);
+  assert.match(ctx.setRow(e,2,1),/aria-label="Serija 3 kg, ročno načrtovano"/);
+  assert.doesNotMatch(ctx.setRow(e,3,1),/manual/);
+  assert.doesNotMatch(ctx.setRow(e,1,1),/cg-manual-dot/);
+  assert.match(html,/cg-manual-note/);
+  assert.doesNotMatch(ctx.setTable(exercise()),/cg-manual-note/);
+  // The current set keeps the mark when it was planned by hand.
+  const current=exercise({rows:[{kg:60,reps:8,done:true},{kg:85,reps:5,done:false,manual:true}],target:2,pending:{setIndex:1,complete:false,kg:'85',reps:'5'}});
+  assert.match(ctx.setRow(current,1,1),/cg-setrow2 current manual/);
+});
+
+test('"+ Serija" adds an empty set that follows the carry rule instead of copying values in advance',()=>{
+  assert.match(shell,/act==='set-add-one'\)\{savePlanAction\(e,\{type:'add',count:1,kg:'',reps:''\}\)/);
+  assert.doesNotMatch(shell,/function lastSetValues\(/);
 });
 
 test('All-done message is shown above the table, which stays visible so sets can be edited or undone',()=>{

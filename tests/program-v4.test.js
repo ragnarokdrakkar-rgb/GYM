@@ -70,6 +70,10 @@ test('Day card active-exercise and weekly-set counts exclude a disabled exercise
   assert.match(html,/<strong>3<\/strong><span>serij<\/span>/);
   // All three rows still render so the exercise can be reordered/re-enabled/un-hidden later.
   assert.equal(html.split('<div class="cg-prow').length-1,3);
+  // The exercise removed from this week only says so and offers a way back; the others do not.
+  assert.match(html,/odstranjena v tednu 1/);
+  assert.equal((html.match(/data-act="program-unhide"/g)||[]).length,1);
+  assert.match(html,/data-act="program-unhide" data-index="2"/);
   // Without any hidden exercise, both Bench and Curl (not disabled) count.
   const visible=programCtx({getProgramMetaV6:()=>({days:[day('Push')]}),dayListFor:()=>list}).program();
   assert.match(visible,/<strong>2\/3<\/strong><span>aktivnih vaj<\/span>/);

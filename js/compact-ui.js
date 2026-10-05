@@ -34,12 +34,17 @@ function compactPlanChangeV26(rows,target,action){
   if(action.type==='edit'){
     for(const item of action.values){if(!Number.isInteger(item.index)||item.index<0||item.index>=count)throw Error('Serija ni več na voljo.');
       if(next[item.index]?.done)continue;
-      next[item.index]={...next[item.index],kg:numeric(item.kg,'kg'),reps:numeric(item.reps,'reps'),done:false};
+      // A value typed in advance is a manual plan: carrying the previous set's
+      // values forward never overwrites it. Clearing both fields drops the plan.
+      const kg=numeric(item.kg,'kg'),reps=numeric(item.reps,'reps'),row={...next[item.index],kg,reps,done:false};
+      delete row.carried;
+      if(kg===''&&reps==='')delete row.manual;else row.manual=true;
+      next[item.index]=row;
     }
   }else if(action.type==='add'){
     const n=Number(action.count);if(!Number.isInteger(n)||n<1||count+n>30)throw Error('Izberi 1–30 serij skupaj.');
     const kg=numeric(action.kg,'kg'),reps=numeric(action.reps,'reps');
-    const slots=Array.from({length:n},()=>({kg,reps,done:false}));next.splice(count,0,...slots);count+=n;
+    const slots=Array.from({length:n},()=>kg!==''||reps!==''?{kg,reps,done:false,manual:true}:{kg,reps,done:false});next.splice(count,0,...slots);count+=n;
   }else if(action.type==='remove'){
     if(count<=1||!Number.isInteger(action.index)||action.index<0||action.index>=count||next[action.index]?.done)throw Error('Opravljene ali zadnje serije ni mogoče odstraniti iz načrta.');
     next.splice(action.index,1);count--;

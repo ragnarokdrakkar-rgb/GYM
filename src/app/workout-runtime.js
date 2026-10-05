@@ -888,31 +888,14 @@ async function sv(key,si,field,val,di,ei,cn,isBarbell){
   if(!saveSets(all))return false;
   rebuildRows(key,di,ei,wk,n,all[key]);checkPR(key,di,ei,all[key]);
   if(field==='kg'){
+    // Teža se NE prepiše na vse naslednje serije. Naslednja serija dobi vrednosti
+    // šele, ko je ta potrjena (tgSet), in nikoli ne prepiše ročno načrtovane.
     const kg=parseFloat(val)||0;
-    if(kg>0){
-      const cur=getSets();
-      for(let i=si+1;i<n;i++){
-        if(!cur[key][i])cur[key][i]={kg:'',reps:'',done:false};
-        if(!cur[key][i].kg&&!cur[key][i].done){
-          cur[key][i].kg=val;
-          const inp=document.querySelector(`#row-${key}-${i} .wi`);
-          if(inp)inp.value=val;
-        }
-      }
-      saveSets(cur);
-    }
     if(PROG.days[di].ex[ei].m&&cw===0){const box=document.querySelector(`#ec-${key} .wubox`);if(box){const fkg=parseFloat(all[key][0]?.kg)||0;if(fkg>0){const type=PROG.days[di].ex[ei].n.toLowerCase().includes('squat')||PROG.days[di].ex[ei].n.toLowerCase().includes('deadlift')||PROG.days[di].ex[ei].n.toLowerCase().includes('leg press')?'lower':'upper';const wu=buildWU(fkg,type);box.innerHTML=`<strong>Ogrevanje:</strong> ${wu.map(w=>`${w.pct===0?'Palica':w.pct+'%'}→${w.kg}kg×${w.reps}`).join(' · ')}`;}}}
     if(isBarbell){
       updatePlMini(key,si,kg);
       // Posodobi velik plate box ne glede na set — kaže zadnjo vneseno težo
       if(kg>0)updatePlateBox(key,kg);
-      // Posodobi tudi vrstice, ki so dobile auto-fill enako težo
-      if(kg>0){
-        for(let i=si+1;i<n;i++){
-          const inp=document.querySelector(`#row-${key}-${i} .wi`);
-          if(inp&&parseFloat(inp.value)===kg)updatePlMini(key,i,kg);
-        }
-      }
     }
   }
 }
@@ -1026,6 +1009,8 @@ function tgSet(key,si,di,ei,cn){
   const wk=PROG.weeks[cw],n=nsf(di,ei,wk,key),all=getSets();
   if(!all[key])all[key]=Array.from({length:n},()=>({kg:'',reps:'',done:false}));
   all[key][si].done=!all[key][si].done;
+  // A confirmed set is the user's own data from now on, never an auto-carried value.
+  if(all[key][si].done)delete all[key][si].carried;
   if(all[key][si].done&&navigator.vibrate)navigator.vibrate(25);
   // Shrani ime vaje (za ločeno zgodovino ob zamenjavi)
   const _exO=PROG.days[di].ex[ei];
@@ -1046,14 +1031,14 @@ function tgSet(key,si,di,ei,cn){
       startT(key,restForEx(_e&&_e.id,_nm,_e?_e.r:90));
     }
     const nextSi=si+1;
-    if(nextSi<n){
-      if(!all[key][nextSi])all[key][nextSi]={kg:'',reps:'',done:false};
-      const curKg=all[key][si].kg,curReps=all[key][si].reps;
-      // Pri drop setu NE auto-filla naslednjega — manj teže pričakovano
-      if(!all[key][si].drop){
-        if(curKg&&!all[key][nextSi].kg){all[key][nextSi].kg=curKg;const iw=document.querySelector(`#row-${key}-${nextSi} .wi`);if(iw)iw.value=curKg;updatePlMini(key,nextSi,parseFloat(curKg)||0);}
-        if(curReps&&!all[key][nextSi].reps){all[key][nextSi].reps=curReps;const ir=document.querySelector(`#row-${key}-${nextSi} .ri`);if(ir)ir.value=curReps;}
-      }
+    // Samo naslednja serija dobi kg/pon potrjene serije; ročno načrtovane ostanejo.
+    // Pri drop setu se ne prenaša nič — pričakovana je manjša teža.
+    const carried=nextSi<n?carryToNextSetV34(all[key][si],all[key][nextSi]):null;
+    if(carried){
+      all[key][nextSi]=carried;
+      const iw=document.querySelector(`#row-${key}-${nextSi} .wi`);if(iw)iw.value=carried.kg??'';
+      const ir=document.querySelector(`#row-${key}-${nextSi} .ri`);if(ir)ir.value=carried.reps??'';
+      updatePlMini(key,nextSi,parseFloat(carried.kg)||0);
       saveSets(all);
     }
   }

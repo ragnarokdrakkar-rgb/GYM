@@ -13,6 +13,21 @@ function exerciseTargetSetsV19(item,wk,key){
 function nsf(di,ei,wk,exKey){
   return exerciseTargetSetsV19(PROG.days[di]?.ex?.[ei],wk,exKey);
 }
+// After set `cur` is confirmed, the next set inherits its kg/reps — only then,
+// never earlier. A set the user planned by hand (manual) or already finished
+// keeps its values; values that were themselves carried may be replaced, and
+// empty fields are filled. Drop sets do not carry. Returns the new next row or
+// null when nothing changes.
+function carryToNextSetV34(cur,next){
+  if(!cur||cur.done!==true||cur.drop)return null;
+  const base=next||{kg:'',reps:'',done:false},empty=v=>v===''||v===undefined||v===null;
+  if(base.done===true||base.manual===true)return null;
+  const fields=['kg','reps'].filter(f=>!empty(cur[f])&&(base.carried===true||empty(base[f]))&&String(base[f]??'')!==String(cur[f]));
+  if(!fields.length)return null;
+  const out={...base,carried:true};
+  fields.forEach(f=>{out[f]=cur[f];});
+  return out;
+}
 // Keep original exercise indexes: filtering must never reassign saved set keys.
 function activeWorkoutEntriesV19(cycle,week,dayIndex){
   const day=typeof getProgramMetaV6==='function'?getProgramMetaV6().days?.[dayIndex]:PROG.days[dayIndex];
