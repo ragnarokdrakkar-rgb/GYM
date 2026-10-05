@@ -353,6 +353,9 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     return title+weeks+chips+dayCard+label+rows+button('program-add','+ Dodaj vajo','cg-add cg-add-accent')+`<details><summary>Neaktivni dnevi (${inactiveCount})</summary>${inactive||'<p class="cg-small">Ni neaktivnih dni.</p>'}</details><p class="cg-footnote">Fazo Cut / Bulk urejaš v Nastavitvah. Tvoj seznam vaj ostane isti.</p>`;
   }
   function selectDate(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;const d=new Date(date+'T12:00');if(!Number.isFinite(d.getTime()))return;state.date=date;state.month=d.getMonth();state.year=d.getFullYear();state.session=-1;state.exercise='';}
+  function workoutsText(n){const m=n%100;return `${n} ${m===1?'trening':m===2?'treninga':m===3||m===4?'treningi':'treningov'}`;}
+  // Opening Zgodovina on a day without a workout jumps to the most recent workout instead of an empty day.
+  function latestWorkoutDate(current){const dates=getSessions().map(s=>s.date).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d||''));return dates.includes(current)||!dates.length?'':dates.sort().at(-1);}
   function sessions(){const all=getSets();return getSessions().map((s,si)=>({...s,si,exercises:sessionExercisesForStatsV19(s,all)}));}
   function calendar(){
     const first=new Date(state.year,state.month,1),cells=[],byDate=new Map(),seen=new Map(),todayKey=dateKey(new Date());
@@ -378,7 +381,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
         return `<details class="cg-history-exercise" open><summary><strong>${esc(ex.name)}</strong><span>${rows.length} serij</span></summary><div class="cg-setrows">${rows.map(({s,ri})=>`<div class="cg-setrow"><span class="cg-setnum">${ri+1}</span><span class="cg-setvalue">${fmt(s.kg)} kg × ${esc(s.reps)}<small>RPE ${esc(s.rpe??'—')}${Number(s.kg)>250?' · preveri vrednost':''}</small></span>${raw?.exercises?.[ei]?.sets?.[ri]?`<button class="cg-link" data-edit-ref="${refAttr({kind:'session',si:state.session,ei,ri})}">Uredi</button>`:'<small>Star vir</small>'}</div>`).join('')}</div>${raw?.exercises?.[ei]?button('history-add','+ Dodaj zabeleženo serijo','cg-link',`data-index="${ei}"`):''}</details>`;
       }).join('');
     }
-    return calendar()+`<div class="cg-section-label"><span>${dateLabel(state.date)}</span><span>${records.length} treningov</span></div><label class="cg-field-label cg-date-label">Skoči na datum<input type="date" data-history-date value="${state.date}"></label>${chips}${detail}<details class="cg-filter-details"><summary>Filter</summary><label class="cg-checkline"><input type="checkbox" data-flagged ${state.flagged?'checked':''}> Samo vrednosti za pregled</label></details>${button('history-undo','Razveljavi zadnjo spremembo','cg-link',localStorage.getItem('wt_history_undo_v24')?'':'disabled')}${button('history-sources','Vsi viri in sumljivi PR-ji')}<p class="cg-footnote">Popravek velja samo za izbrani zgodovinski trening, ne za današnji program.</p>`;
+    return calendar()+`<div class="cg-section-label"><span>${dateLabel(state.date)}</span><span>${workoutsText(records.length)}</span></div><label class="cg-field-label cg-date-label">Skoči na datum<input type="date" data-history-date value="${state.date}"></label>${chips}${detail}<details class="cg-filter-details"><summary>Filter</summary><label class="cg-checkline"><input type="checkbox" data-flagged ${state.flagged?'checked':''}> Samo vrednosti za pregled</label></details>${button('history-undo','Razveljavi zadnjo spremembo','cg-link',localStorage.getItem('wt_history_undo_v24')?'':'disabled')}${button('history-sources','Vsi viri in sumljivi PR-ji')}<p class="cg-footnote">Popravek velja samo za izbrani zgodovinski trening, ne za današnji program.</p>`;
   }
   function activeRoster(){const meta=getProgramMetaV6(),rosters={};meta.days.forEach((_,di)=>{rosters[di]=dayListFor(di,getCyc().num,cw);});return compactActiveExercisesV26(meta,rosters);}
   // Change of the top working-set weight since the previous session of the same exercise.
@@ -626,7 +629,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       if(b.dataset.ex){state.active=b.dataset.ex;state.openRow=state.openRow===b.dataset.ex?'':b.dataset.ex;setGymFocus(state.active,false);render();return;}
       if(b.dataset.quickWeek!==undefined){const programPage=state.page==='Program',candidate=programPage?state.day:cd,day=activeDayIndicesV6().includes(candidate)?candidate:activeDayIndicesV6()[0];selectQuickWorkout(Number(b.dataset.quickWeek),day,programPage);render();return;}
       if(b.dataset.quickDay!==undefined){const day=Number(b.dataset.quickDay);if(b.dataset.quickProgram==='1'){if(!activeDayIndicesV6().includes(day))throw Error('Ta trening ni aktiven.');state.day=day;}else selectQuickWorkout(cw,day);render();return;}
-      if(b.dataset.progress){state.progress=b.dataset.progress;render();return;}
+      if(b.dataset.progress){state.progress=b.dataset.progress;if(state.progress==='Zgodovina'){const latest=latestWorkoutDate(state.date);if(latest)selectDate(latest);}render();return;}
       if(b.dataset.date){selectDate(b.dataset.date);render();return;}
       if(b.dataset.weightRange!==undefined){state.weightDays=Number(b.dataset.weightRange);render();return;}
       if(b.dataset.historyPick!==undefined){state.session=Number(b.dataset.historyPick);state.exercise='';render();return;}

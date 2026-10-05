@@ -96,7 +96,7 @@ function historyCtx(sessions,overrides={}){
     localStorage:{getItem:()=>null},
     ...overrides};
   const ctx=harness(base);
-  inner(ctx,'selectDate');inner(ctx,'sessions');inner(ctx,'calendar');inner(ctx,'historyView');
+  inner(ctx,'selectDate');inner(ctx,'sessions');inner(ctx,'calendar');inner(ctx,'workoutsText');inner(ctx,'historyView');
   return ctx;
 }
 
@@ -150,4 +150,18 @@ test('Moč: each row shows the change since the previous session (up, down, same
   assert.equal(ctx.strengthTrend({kg:60},{kg:60}),'<em class="cg-trend flat">enako</em> · ');
   assert.equal(ctx.strengthTrend({kg:60},undefined),'');
   assert.equal(ctx.strengthTrend(undefined,undefined),'');
+});
+
+test('Zgodovina opens on the most recent workout when the selected day has none',()=>{
+  const at=list=>{const ctx=progressCtx({getSessions:()=>list});inner(ctx,'latestWorkoutDate');return ctx.latestWorkoutDate;};
+  assert.equal(at([{date:'2026-09-20'},{date:'2026-09-28'},{date:'2026-09-02'}])('2026-10-05'),'2026-09-28');
+  assert.equal(at([{date:'2026-10-05'},{date:'2026-09-28'}])('2026-10-05'),'','a day that has a workout stays selected');
+  assert.equal(at([])('2026-10-05'),'','no workouts at all: stay on the selected day');
+  assert.equal(at([{date:''},{}])('2026-10-05'),'','sessions without a date are ignored');
+  assert.match(shell,/if\(state\.progress==='Zgodovina'\)\{const latest=latestWorkoutDate\(state\.date\);if\(latest\)selectDate\(latest\);\}/);
+});
+
+test('the number of workouts on a day uses Slovenian dual/plural forms',()=>{
+  const ctx=progressCtx({});inner(ctx,'workoutsText');
+  assert.deepEqual([0,1,2,3,4,5,11,101,102,103].map(n=>ctx.workoutsText(n)),['0 treningov','1 trening','2 treninga','3 treningi','4 treningi','5 treningov','11 treningov','101 trening','102 treninga','103 treningi']);
 });
