@@ -8,7 +8,7 @@ const shell=read('js/compact-shell.js'),v4=read('css/compact-v4.css'),host=read(
 test('Header brand is WORKOUT with the inline flame mark, not GYM / COMPACT',()=>{
   assert.match(shell,/<span>WORKOUT<\/span>/);
   assert.match(shell,/class="cg-flame"/);
-  assert.match(shell,/fill="#ff7a1a"/);assert.match(shell,/fill="#ffd08a"/);
+  assert.match(shell,/fill="#ff3b2f"/);assert.match(shell,/fill="#ffc46b"/);
   assert.doesNotMatch(shell,/GYM<span class="cg-brand-detail">/);
   assert.doesNotMatch(shell,/COMPACT/);
 });

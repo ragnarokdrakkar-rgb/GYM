@@ -4,7 +4,7 @@
 @font-face{font-family:"WT Display";font-style:normal;font-weight:600;font-display:swap;src:url('../assets/fonts/barlow-condensed-latin-ext-600-normal.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
 @font-face{font-family:"WT Display";font-style:normal;font-weight:700;font-display:swap;src:url('../assets/fonts/barlow-condensed-latin-700-normal.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
 @font-face{font-family:"WT Display";font-style:normal;font-weight:700;font-display:swap;src:url('../assets/fonts/barlow-condensed-latin-ext-700-normal.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
-.compact-shell-v27 body{margin:0!important;padding:0!important;background:#0a0807!important;min-height:100dvh;}
+.compact-shell-v27 body{margin:0!important;padding:0!important;background:#050404!important;min-height:100dvh;}
 .compact-shell-v27 body::before,.compact-shell-v27 body::after{display:none!important;}
 .compact-shell-v27 .topbar,.compact-shell-v27 body>.nav,.compact-shell-v27 body>.page,
 .compact-shell-v27 #bk-banner,.compact-shell-v27 #pr-banner,.compact-shell-v27 #toast-el,
@@ -17,7 +17,10 @@
    flip one of these on; this keeps them invisible regardless of that ".on" class. */
 .compact-shell-v27 .note-pop{display:none!important;}
 #wt-compact-host{display:block;position:relative;isolation:isolate;min-height:100dvh;}
-.compact-shell-v27 #wt-update-banner{background:#1c2024!important;color:#f5f6f7!important;border:1px solid #353b41!important;box-shadow:none!important;}
+.compact-shell-v27 #wt-update-banner{background:#0e0909!important;color:#f8f3f3!important;border:1px solid #271818!important;box-shadow:none!important;}
+.compact-shell-v27 #wt-update-banner .wt-update-title{color:#f8f3f3!important;}
+.compact-shell-v27 #wt-update-banner .wt-update-text{color:#bba9a9!important;}
 .compact-shell-v27 #wt-update-banner button{font-size:12px!important;min-height:44px;}
-.compact-shell-v27 #wt-update-download{background:#ff883e!important;color:#121416!important;border-color:#ff883e!important;}
+.compact-shell-v27 #wt-update-download{background:linear-gradient(135deg,#e3232b,#8f0a12)!important;color:#ffffff!important;border-color:#e3232b!important;}
+.compact-shell-v27 #wt-update-close{background:#170e0e!important;color:#bba9a9!important;border-color:#3a2222!important;}
 .compact-shell-v27 #storage-error-banner:not([hidden]){display:block!important;position:fixed;z-index:999999;bottom:0;left:0;right:0;}
