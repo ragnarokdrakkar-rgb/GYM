@@ -9,8 +9,6 @@
 /* Selection = accent ring + faint accent tint + soft glow. Status colors (ok/partial/pending) never use it.
    Same selectors as compact-shell.css (its underline rule is more specific than .cg-week.selected). */
 #cg-app .cg-quick-weeks button.selected,#cg-app .cg-quick-days button.selected,#cg-app .cg-quick-weeks button[aria-pressed="true"],#cg-app .cg-quick-days button[aria-pressed="true"]{border-color:var(--cg-accent);background:color-mix(in srgb,var(--cg-accent) 10%,var(--cg-raised));box-shadow:inset 0 0 0 1px var(--cg-accent),0 6px 20px -12px var(--cg-accent);}
-/* compact-shell.css tints every `.done` inside the day picker, including the inner status chip; keep the chip clear so a selected (red-tinted) day shows no green patch. */
-#cg-app .cg-quick-days .cg-chip{background:transparent;}
 /* Bottom nav: active tab = red text + red top bar (rules below) + faint red pill; inactive tabs stay muted. */
 #cg-app .cg-nav button[aria-current="page"]{background:color-mix(in srgb,var(--cg-accent) 12%,transparent);}
 /* Inputs: black field, line2 border; the focus-visible ring (2px accent outline, rule below) marks focus. */
@@ -34,7 +32,7 @@
 #cg-app .cg-nav button[aria-current="page"]::before{content:'';position:absolute;top:0;left:18%;right:18%;height:3px;border-radius:0 0 2px 2px;background:var(--cg-accent);}
 
 /* Cycle header */
-#cg-app .cg-cycle{margin:0 0 14px;}
+#cg-app .cg-cycle{margin:0 0 8px;}
 #cg-app .cg-cycle-top{display:flex;align-items:center;gap:10px;}
 #cg-app .cg-cycle-info{flex:1;min-width:0;}
 #cg-app .cg-cycle-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--cg-muted);}
@@ -48,29 +46,20 @@
 #cg-app .cg-cycle-menu .cg-settingsrow{padding:14px 0;}
 #cg-app .cg-cycle-menu p.cg-quick-note{margin:0 0 10px;}
 
-/* Week progress bar */
-#cg-app .cg-weekbar{display:flex;gap:4px;margin:0 0 10px;}
-#cg-app .cg-weekbar i{flex:1;height:6px;border-radius:3px;background:var(--cg-line2);display:block;}
-#cg-app .cg-weekbar i.done{background:var(--cg-ok);}
-#cg-app .cg-weekbar i.partial,#cg-app .cg-weekbar i.active{background:var(--cg-partial);}
-#cg-app .cg-weekbar i.pending{background:var(--cg-line2);}
-
 /* Week + day pickers: status colors independent from selection */
 #cg-app .cg-week,#cg-app .cg-day{position:relative;background:var(--cg-panel);border-color:var(--cg-line);}
 #cg-app .cg-week.selected,#cg-app .cg-day.selected{border-color:var(--cg-accent);background:color-mix(in srgb,var(--cg-accent) 10%,var(--cg-raised));box-shadow:inset 0 0 0 1px var(--cg-accent),0 6px 20px -12px var(--cg-accent);}
-#cg-app .cg-day.selected::after{content:'';position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--cg-accent);}
 #cg-app .cg-week strong{font-family:var(--cg-display);font-weight:700;font-size:15px;}
 #cg-app .cg-week.done strong{color:var(--cg-ok);}
-#cg-app .cg-pips{display:flex;gap:2px;margin-top:2px;}
+#cg-app .cg-pips{display:flex;gap:2px;}
 #cg-app .cg-pips i{width:7px;height:7px;border-radius:50%;background:var(--cg-line2);display:block;}
 #cg-app .cg-pips i.done{background:var(--cg-ok);}
 #cg-app .cg-pips i.partial,#cg-app .cg-pips i.active{background:var(--cg-partial);}
 #cg-app .cg-pips i.pending{background:transparent;box-shadow:inset 0 0 0 1px var(--cg-pending);}
-#cg-app .cg-day strong{font-family:var(--cg-display);font-weight:600;font-size:18px;line-height:1.05;letter-spacing:.01em;overflow-wrap:anywhere;}
+#cg-app .cg-day strong{font-family:var(--cg-display);font-weight:600;font-size:18px;line-height:1.05;letter-spacing:.01em;overflow-wrap:anywhere;min-width:0;}
 
 /* Status chip: icon/shape + word, never color alone */
 #cg-app .cg-chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--cg-muted);margin-top:3px;}
-#cg-app .cg-day .cg-chip{justify-content:center;}
 #cg-app .cg-dot{width:14px;height:14px;border-radius:50%;flex:none;position:relative;box-sizing:border-box;display:inline-block;}
 #cg-app .cg-dot.done{background:var(--cg-ok);}
 #cg-app .cg-dot.done::after{content:'';position:absolute;left:3px;top:4px;width:7px;height:4px;border-left:2px solid var(--cg-bg);border-bottom:2px solid var(--cg-bg);transform:rotate(-45deg);}
@@ -84,20 +73,15 @@
 @media(prefers-reduced-motion:reduce){#cg-app .cg-dot.active{animation:none;}}
 
 /* Hero card */
-#cg-app .cg-hero{background:radial-gradient(120% 90% at 0% 0%,color-mix(in srgb,var(--cg-accent-fill) 16%,transparent),transparent 60%),var(--cg-panel);border:1px solid var(--cg-line);border-radius:16px;padding:16px;margin:14px 0;}
-#cg-app .cg-hero-name{font-family:var(--cg-display);font-weight:700;font-size:26px;line-height:1.1;}
-#cg-app .cg-hero-sub{color:var(--cg-muted);font-size:12px;margin-top:3px;}
-#cg-app .cg-hero .cg-chip{margin-top:8px;font-size:11px;}
+#cg-app .cg-hero{background:radial-gradient(120% 90% at 0% 0%,color-mix(in srgb,var(--cg-accent-fill) 16%,transparent),transparent 60%),var(--cg-panel);border:1px solid var(--cg-line);border-radius:16px;padding:10px 12px;margin:10px 0;}
+#cg-app .cg-hero-name{font-family:var(--cg-display);font-weight:700;font-size:26px;line-height:1.1;min-width:0;overflow-wrap:anywhere;}
+#cg-app .cg-hero-sub{color:var(--cg-muted);font-size:12px;line-height:1.35;margin-top:1px;}
+#cg-app .cg-hero .cg-chip{margin-top:0;font-size:11px;}
 #cg-app .cg-hero .cg-dot{width:16px;height:16px;}
-#cg-app .cg-hero-stats{display:flex;gap:0;margin-top:14px;padding-top:12px;border-top:1px solid var(--cg-line);}
-#cg-app .cg-hero-stats div{flex:1;text-align:left;}
-#cg-app .cg-hero-stats div+div{border-left:1px solid var(--cg-line);padding-left:12px;}
-#cg-app .cg-hero-stats strong{display:block;font-family:var(--cg-display);font-weight:700;font-size:19px;font-variant-numeric:tabular-nums;}
-#cg-app .cg-hero-stats span{font-size:10px;color:var(--cg-muted);text-transform:uppercase;letter-spacing:.5px;}
-#cg-app .cg-hero-live{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--cg-muted);}
+#cg-app .cg-hero-live{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--cg-muted);}
 #cg-app .cg-hero-live strong{font-family:var(--cg-display);font-size:16px;color:var(--cg-text);font-variant-numeric:tabular-nums;}
-#cg-app .cg-hero-actions{display:flex;gap:8px;margin-top:14px;}
-#cg-app .cg-hero-start,#cg-app .cg-hero-finish,#cg-app .cg-hero-focus{min-height:54px;border-radius:12px;font-weight:650;display:flex;align-items:center;justify-content:center;gap:7px;}
+#cg-app .cg-hero-actions{display:flex;gap:8px;margin-top:8px;}
+#cg-app .cg-hero-start,#cg-app .cg-hero-finish,#cg-app .cg-hero-focus{min-height:48px;border-radius:12px;font-weight:650;display:flex;align-items:center;justify-content:center;gap:7px;}
 #cg-app .cg-hero-start{flex:2;background:linear-gradient(135deg,var(--cg-accent-fill),var(--cg-accent2));color:var(--cg-on-accent);}
 #cg-app .cg-hero-finish{flex:2;background:var(--cg-panel);color:var(--cg-text);border:1px solid var(--cg-line2);}
 #cg-app .cg-hero-focus{flex:1;background:var(--cg-raised);color:var(--cg-text);border:1px solid var(--cg-line);}
@@ -189,7 +173,7 @@
 
 #cg-app .cg-fname{font-family:var(--cg-display);font-weight:700;font-size:31px;line-height:1.1;text-wrap:balance;margin:2px 0 10px;}
 
-#cg-app .cg-focus-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;font-size:13px;color:var(--cg-muted);}
+#cg-app .cg-focus-meta{display:block;margin-bottom:8px;font-size:13px;line-height:1.4;color:var(--cg-muted);}
 #cg-app .cg-focus-meta b{color:var(--cg-text);font-weight:700;}
 
 #cg-app .cg-focus-steps{display:grid;grid-template-columns:52px 1fr 52px;align-items:center;gap:8px;margin:16px 0 10px;}
@@ -198,7 +182,7 @@
 #cg-app .cg-focus-steps .cg-dots{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
 #cg-app .cg-dots button{width:30px;height:30px;min-width:30px;min-height:30px;flex:none;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;font-family:var(--cg-display);font-weight:700;font-size:12px;background:transparent;border:1.5px solid var(--cg-pending);color:var(--cg-pending);}
 #cg-app .cg-dots button.done{background:var(--cg-ok);border-color:var(--cg-ok);color:var(--cg-bg);}
-#cg-app .cg-dots button.partial{background:linear-gradient(90deg,var(--cg-partial) 50%,transparent 50%);border-color:var(--cg-partial);color:var(--cg-text);}
+#cg-app .cg-dots button.partial{background:color-mix(in srgb,var(--cg-partial) 22%,transparent);border-color:var(--cg-partial);color:var(--cg-text);}
 #cg-app .cg-dots button.current{box-shadow:0 0 0 2px var(--cg-bg),0 0 0 4px var(--cg-accent);}
 
 #cg-app .cg-focus-start{width:100%;min-height:52px;border-radius:12px;font-size:15px;}
@@ -444,3 +428,23 @@
 #cg-app .cg-removed b{color:var(--cg-text);font-weight:600;}
 #cg-app .cg-unhide-row{display:flex;justify-content:flex-end;margin:-4px 0 6px;}
 #cg-app[data-focus="true"] .cg-message{bottom:calc(96px + env(safe-area-inset-bottom,0px));}
+
+/* Step 9: compact Trening top, inline hero stats, Focus meta line */
+/* A day without active exercises gets a muted dash, not a status ring (it is neither done nor pending). */
+#cg-app .cg-dot.none{background:transparent;border-radius:0;}
+#cg-app .cg-dot.none::after{content:'';position:absolute;left:2px;right:2px;top:50%;height:2px;margin-top:-1px;border-radius:1px;background:var(--cg-dim);}
+/* Hero + Program day card: name (and the status chip, right-aligned) on one row, then ONE inline stats line. */
+#cg-app .cg-hero-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;}
+#cg-app .cg-hero-head .cg-chip{flex:none;margin-left:auto;}
+#cg-app .cg-hero-line{margin-top:6px;font-size:13.5px;line-height:1.4;color:var(--cg-muted);font-variant-numeric:tabular-nums;}
+#cg-app .cg-hero-line b{color:var(--cg-text);font-weight:700;}
+/* The section label right below the hero / day card sits closer (the first row brings its own 14px padding). */
+#cg-app .cg-hero~.cg-section-label{margin:10px 0 4px;}
+/* Seven days = four narrow columns: smaller icon, gap and name so short names still stay on one line. */
+#cg-app .cg-quick-days.dense button{gap:4px;padding:5px 4px;}
+#cg-app .cg-quick-days.dense strong{font-size:16px;}
+#cg-app .cg-quick-days.dense .cg-dot{width:12px;height:12px;}
+#cg-app .cg-quick-days.dense .cg-dot.done::after{left:2px;top:3px;}
+/* Focus shows the last entry in its meta line under the name, so the logger's own copy is hidden there (the Trening list keeps it). */
+#cg-app[data-focus="true"] .cg-last{display:none;}
+#cg-app .cg-focus-last{white-space:nowrap;}

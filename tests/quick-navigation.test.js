@@ -85,7 +85,12 @@ test('Quick buttons replace the collapsed selectors in Training and Program, whi
   // click handler. quickNavigation() itself keeps its programPage parameter for
   // other callers/tests even though program() no longer calls it.
   assert.match(shell,/const picker=state.focus\?'':quickNavigation\(\)/);assert.match(shell,/function quickNavigation\(programPage=false\)/);assert.doesNotMatch(shell.slice(shell.indexOf('function program(){'),shell.indexOf('function selectDate(')),/quickNavigation\(/);assert.match(shell,/data-quick-week="\$\{w\}"/);assert.match(shell,/data-quick-day="\$\{d.dayIndex\}"/);assert.match(shell,/cikel \$\{getCyc\(\)\.num\}/);assert.match(shell,/Teden \$\{cw\+1\}/);
-  assert.match(shell,/aria-pressed="\$\{d.dayIndex===selected\}"/);assert.match(read('css/compact-shell.css'),/\.cg-quick-days \.partial small/);
+  assert.match(shell,/aria-pressed="\$\{d.dayIndex===selected\}"/);
+  // Step 9: a day button is ONE row (status icon + name, no <small>); its status colors live on the icon element.
+  const shellCss=read('css/compact-shell.css'),v4Css=read('css/compact-v4.css');
+  assert.match(shellCss,/\.cg-quick-days button\{flex-direction:row;[^}]*min-height:46px;/);
+  assert.doesNotMatch(shellCss,/\.cg-quick-days small/);
+  assert.match(v4Css,/#cg-app \.cg-dot\.partial\{[^}]*var\(--cg-partial\)/);
 });
 test('Startup restores sixth and seventh active workout days instead of silently falling back to day one',()=>{
   const source=read('src/app/main.js'),start=source.indexOf('const _lastDay='),end=source.indexOf('try{const _av',start),block=source.slice(start,end),days=Array.from({length:7},()=>({active:true}));days[1].active=false;days[3].deleted=true;
