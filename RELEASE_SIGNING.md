@@ -49,10 +49,42 @@ aplikacije pa bi se izgubili lokalni podatki.
 Skripte nikoli ne izpišejo gesel, aliasa ali poti do keystoreja. Izpišejo samo
 javni SHA-256 certifikata in APK-ja.
 
-## Možnost: podpis v GitHub Actions
+## Podpis in objava v GitHub Actions (workflow »Android release«)
 
-Če želiš graditi v oblaku, lahko **lastnik repozitorija sam** doda šifrirane
-secrets (keystore v base64 in gesla) v GitHub → Settings → Secrets and variables
-→ Actions. Keystoreja in gesel nikoli ne pošiljaj v klepet in jih ne commitaj.
-Takšen workflow mora pred objavo zagnati enako preverjanje certifikata in se
-ustaviti, če se certifikat ne ujema.
+Workflow `.github/workflows/release-android.yml` naredi isto kot `publish-release.bat`,
+samo v oblaku: testi, priprava `www`, release guard, Capacitor sync, Gradle build,
+preverjanje podpisa (`tools/verify-apk-signature.ps1`) in objava. Zažene se samo
+ročno in samo z veje `main`. Objavi samo APK, ki:
+
+- ima natanko enega podpisnika s certifikatom SHA-256
+  `b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086`,
+- ima paket `com.kemal.workouttracker`,
+- ima versionCode višji od zadnje objavljene izdaje.
+
+Po objavi APK prenese nazaj in preveri, da se SHA-256 ujema. Ključ se na koncu
+vedno izbriše s strežnika (strežnik je tudi sicer enkraten).
+
+### Enkratna nastavitev (naredi jo lastnik sam, nikoli prek klepeta)
+
+Ključ in gesli gredo samo v šifrirane GitHub Secrets. Na svojem računalniku v
+PowerShellu:
+
+1. Ključ kot base64 v odložišče:
+   `[Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\WorkoutTrackerKeys\workout-tracker-release.jks')) | Set-Clipboard`
+2. Na GitHubu: repozitorij → Settings → Secrets and variables → Actions →
+   New repository secret. Ime `WT_RELEASE_KEYSTORE_B64`, vrednost prilepi, Add secret.
+3. Vsebina nastavitev v odložišče:
+   `Get-Content 'C:\WorkoutTrackerKeys\keystore.properties' -Raw | Set-Clipboard`
+4. Nov secret z imenom `WT_RELEASE_KEYSTORE_PROPERTIES`, vrednost prilepi, Add secret.
+5. Počisti odložišče: `Set-Clipboard -Value ' '`.
+
+Tveganje: ključ je potem tudi v GitHubu. Kdor bi prevzel GitHub račun z
+dostopom do repozitorija, bi lahko podpisal posodobitev. Zato naj ima račun
+vklopljeno dvostopenjsko prijavo. Secret lahko kadarkoli izbrišeš v istem meniju.
+
+### Objava
+
+GitHub → Actions → **Android release** → Run workflow → `version` (npr. `1.5.0`).
+Z `dry_run` se preveri vse do prevajanja, brez ključa in brez objave. Verzija v
+kodi (`package.json`, `APP_VERSION`, `build.gradle` versionName in versionCode)
+in `RELEASE_NOTES_<verzija>.md` morata biti pripravljena na `main` že pred zagonom.

@@ -33,7 +33,16 @@ test('Build and publish scripts stop before release when the signature check fai
 });
 test('No CI workflow signs or publishes APKs with a generated or debug key',()=>{
   const dir=path.join(__dirname,'..','.github','workflows');
-  for(const f of fs.readdirSync(dir)){const y=fs.readFileSync(path.join(dir,f),'utf8');assert.doesNotMatch(y,/assembleRelease|keytool -genkey|release create/i,f);}
+  for(const f of fs.readdirSync(dir)){
+    const y=fs.readFileSync(path.join(dir,f),'utf8');
+    assert.doesNotMatch(y,/keytool[^\n]*-genkey|genkeypair|assembleDebug|signingConfigs\.debug/i,f);
+    // A workflow that builds or publishes a release must verify the EXISTING certificate first.
+    if(/assembleRelease|release create/i.test(y)){
+      assert.match(y,/b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086/,f);
+      assert.match(y,/verify-apk-signature\.ps1[^\n]*-ExpectedCertSha256/,f);
+      assert.ok(y.indexOf('verify-apk-signature.ps1')<y.search(/release create/i),f+': verify before publishing');
+    }
+  }
   assert.doesNotMatch(read('.gitignore'),/^!.*\.jks/m);assert.match(read('.gitignore'),/^\*\.jks$/m);
 });
 

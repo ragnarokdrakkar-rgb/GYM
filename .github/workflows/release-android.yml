@@ -1,0 +1,236 @@
+# Builds the Android APK, signs it with the EXISTING release key and publishes it
+# as a GitHub Release. Started by hand only (Actions -> Android release -> Run workflow).
+#
+# The key is never in the repository: the owner adds two encrypted repository
+# secrets once (see RELEASE_SIGNING.md):
+#   WT_RELEASE_KEYSTORE_B64        the .jks file as base64
+#   WT_RELEASE_KEYSTORE_PROPERTIES the content of keystore.properties
+# Nothing is published unless the APK is signed by exactly one signer whose
+# certificate SHA-256 is the existing one, the package is com.kemal.workouttracker
+# and versionCode is higher than the last published release.
+# dry_run=true checks everything up to compiling the release variant, without
+# any key and without publishing.
+name: Android release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. 1.5.0 (must match package.json, APP_VERSION and build.gradle)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Check the build without signing or publishing'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+env:
+  VERSION: ${{ inputs.version }}
+  DRY_RUN: ${{ inputs.dry_run }}
+  EXPECTED_CERT_SHA256: b0807ab8a94393f22694e927f81e6cced8dadf1ac71ead4758e239bacc7ab086
+
+jobs:
+  tests:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  build-sign-publish:
+    needs: tests
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Keep repository line endings
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Signing secrets are configured
+        if: env.DRY_RUN != 'true'
+        shell: pwsh
+        env:
+          KEYSTORE_B64: ${{ secrets.WT_RELEASE_KEYSTORE_B64 }}
+          KEYSTORE_PROPERTIES: ${{ secrets.WT_RELEASE_KEYSTORE_PROPERTIES }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:KEYSTORE_B64) -or [string]::IsNullOrWhiteSpace($env:KEYSTORE_PROPERTIES)) {
+            throw 'Missing repository secrets WT_RELEASE_KEYSTORE_B64 / WT_RELEASE_KEYSTORE_PROPERTIES. Nothing was built or published.'
+          }
+
+      - name: Version, release notes and versionCode
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $v = $env:VERSION.Trim()
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Invalid version '$v'." }
+          $pkg = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($pkg -ne $v) { throw "package.json has $pkg, requested $v." }
+          $app = [regex]::Match((Get-Content js/core/bootstrap.js -Raw), "const APP_VERSION='([^']+)'").Groups[1].Value
+          if ($app -ne $v) { throw "APP_VERSION is $app, requested $v." }
+          $gradle = Get-Content android/app/build.gradle -Raw
+          $name = [regex]::Match($gradle, 'versionName\s+"([^"]+)"').Groups[1].Value
+          $code = [int][regex]::Match($gradle, 'versionCode\s+(\d+)').Groups[1].Value
+          if ($name -ne $v) { throw "build.gradle versionName is $name, requested $v." }
+          if (-not (Test-Path "RELEASE_NOTES_$v.md")) { throw "RELEASE_NOTES_$v.md is missing." }
+          gh release view "v$v" --json tagName 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) { throw "Release v$v already exists." }
+          $latest = (gh release view --json tagName --jq .tagName).Trim()
+          if ($LASTEXITCODE -ne 0 -or -not $latest) { throw 'Could not read the latest published release.' }
+          $publishedGradle = (git show "${latest}:android/app/build.gradle") -join "`n"
+          $published = [int][regex]::Match($publishedGradle, 'versionCode\s+(\d+)').Groups[1].Value
+          if ($published -le 0) { throw "Could not read versionCode of $latest." }
+          if ($code -le $published) { throw "versionCode $code is not higher than published $published ($latest)." }
+          "VERSION_CODE=$code" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+          "PUBLISHED_CODE=$published" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+          Write-Host "Release v$v, versionCode $code (published: $published, $latest)"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+
+      - name: Prepare Android web assets (same steps as build-release.bat)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node tools/build-app-bundle.cjs --check
+          if ($LASTEXITCODE -ne 0) { throw 'js/app.js is not the bundle of src/app.' }
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File release-guard.ps1 -Phase Source
+          if ($LASTEXITCODE -ne 0) { throw 'Source release guard failed.' }
+          if (Test-Path www) { Remove-Item -Recurse -Force www }
+          New-Item -ItemType Directory www | Out-Null
+          Copy-Item index.html www/
+          foreach ($file in 'manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png') { if (Test-Path $file) { Copy-Item $file www/ } }
+          foreach ($dir in 'css', 'js', 'assets', 'vendor') { if (Test-Path $dir) { Copy-Item $dir www/ -Recurse } }
+          $index = (Resolve-Path www/index.html).Path
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File prepare-android.ps1 -IndexFile $index
+          if ($LASTEXITCODE -ne 0) { throw 'prepare-android.ps1 failed.' }
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File release-guard.ps1 -Phase Android -IndexFile $index -ExpectedVersion $env:VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'Android release guard failed.' }
+          if (Test-Path www/sw.js) { Remove-Item www/sw.js }
+
+      - name: Capacitor sync
+        run: npx cap sync android
+
+      - name: Write the existing signing key (never printed)
+        if: env.DRY_RUN != 'true'
+        shell: pwsh
+        env:
+          KEYSTORE_B64: ${{ secrets.WT_RELEASE_KEYSTORE_B64 }}
+          KEYSTORE_PROPERTIES: ${{ secrets.WT_RELEASE_KEYSTORE_PROPERTIES }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = 'C:\WorkoutTrackerKeys'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          $b64 = (($env:KEYSTORE_B64 -split "`r?`n") | Where-Object { $_ -notmatch '^-----' }) -join ''
+          [System.IO.File]::WriteAllBytes("$dir\workout-tracker-release.jks", [Convert]::FromBase64String(($b64 -replace '\s', '')))
+          $lines = @($env:KEYSTORE_PROPERTIES -split "`r?`n" | Where-Object { $_ -notmatch '^\s*storeFile\s*=' })
+          $lines += 'storeFile=C:/WorkoutTrackerKeys/workout-tracker-release.jks'
+          [System.IO.File]::WriteAllLines("$dir\keystore.properties", [string[]]$lines)
+
+      - name: Dry run - compile the release variant without any key
+        if: env.DRY_RUN == 'true'
+        shell: pwsh
+        working-directory: android
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force 'C:\WorkoutTrackerKeys' | Out-Null
+          # Placeholder values only so that build.gradle can be configured; no key file exists and nothing is signed.
+          [System.IO.File]::WriteAllLines('C:\WorkoutTrackerKeys\keystore.properties', [string[]]@('storeFile=C:/WorkoutTrackerKeys/missing.jks', 'storePassword=dry-run', 'keyAlias=dry-run', 'keyPassword=dry-run'))
+          .\gradlew.bat :app:compileReleaseJavaWithJavac --no-daemon
+          if ($LASTEXITCODE -ne 0) { throw 'Gradle compile failed.' }
+
+      - name: Gradle release build
+        if: env.DRY_RUN != 'true'
+        working-directory: android
+        run: .\gradlew.bat assembleRelease --no-daemon
+
+      - name: Verify signature, package and versionCode
+        if: env.DRY_RUN != 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force release | Out-Null
+          $apk = "release/Workout-Tracker-v$($env:VERSION).apk"
+          Copy-Item android/app/build/outputs/apk/release/app-release.apk $apk
+          $apkPath = (Resolve-Path $apk).Path
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/verify-apk-signature.ps1 -ApkPath $apkPath -ExpectedCertSha256 $env:EXPECTED_CERT_SHA256 -MinVersionCodeExclusive $env:PUBLISHED_CODE -ExpectedVersionCode $env:VERSION_CODE
+          if ($LASTEXITCODE -ne 0) { Remove-Item $apk -Force; throw 'APK is not signed with the existing release key (or wrong package/versionCode). Nothing was published.' }
+          $hash = (Get-FileHash $apk -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Workout-Tracker-v$($env:VERSION).apk" | Out-File -Encoding ascii "release/Workout-Tracker-v$($env:VERSION)-SHA256.txt"
+          "APK_SHA256=$hash" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+
+      - name: Remove the signing key
+        if: always()
+        shell: pwsh
+        run: Remove-Item -Recurse -Force 'C:\WorkoutTrackerKeys' -ErrorAction SilentlyContinue
+
+      - name: Publish GitHub release
+        if: env.DRY_RUN != 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $v = $env:VERSION
+          $changes = Get-Content "RELEASE_NOTES_$v.md" -Raw -Encoding utf8
+          $body = @"
+          ## Workout Tracker v$v
+
+          $changes
+
+          ### Namestitev
+          - Prenesi ``Workout-Tracker-v$v.apk``.
+          - Odpri APK in izberi **Posodobi**.
+          - Aplikacije pred posodobitvijo ne odstrani, da lokalni podatki ostanejo.
+
+          ### Android
+          ``com.kemal.workouttracker`` | versionCode ``$($env:VERSION_CODE)`` | podpisni certifikat SHA-256 ``$($env:EXPECTED_CERT_SHA256)``
+
+          APK SHA-256: ``$($env:APK_SHA256)``
+
+          ### Datoteke
+          - podpisan Android APK
+          - SHA-256 kontrolna vsota
+          "@
+          [System.IO.File]::WriteAllText("$PWD/release-notes.md", $body, (New-Object System.Text.UTF8Encoding($false)))
+          gh release create "v$v" "release/Workout-Tracker-v$v.apk" "release/Workout-Tracker-v$v-SHA256.txt" --title "Workout Tracker v$v" --notes-file release-notes.md --target $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'gh release create failed.' }
+
+      - name: Verify the published APK
+        if: env.DRY_RUN != 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $v = $env:VERSION
+          gh release download "v$v" --pattern "Workout-Tracker-v$v.apk" --dir published
+          if ($LASTEXITCODE -ne 0) { throw 'Could not download the published APK.' }
+          $got = (Get-FileHash "published/Workout-Tracker-v$v.apk" -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($got -ne $env:APK_SHA256) { throw "Published APK SHA-256 $got differs from the verified $($env:APK_SHA256)." }
+          Write-Host "Published v$v, APK SHA-256 $got, certificate $($env:EXPECTED_CERT_SHA256)"
