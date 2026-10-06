@@ -719,8 +719,15 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       render();
     }catch(error){notify(error.message,true);}
   }
+  // Focus while typing: the on-screen keyboard leaves little room, so the step bar,
+  // progress strip and header step aside and the field is scrolled above the keyboard.
+  function typingField(el){return !!(el&&el.matches?.('input,select,textarea')&&el.closest('.cg-fscroll'));}
+  function revealField(el){if(typingField(el))el.scrollIntoView({block:'center'});}
   function bind(){
     root.addEventListener('click',click);
+    root.addEventListener('focusin',event=>{if(!typingField(event.target))return;root.classList.add('cg-typing');setTimeout(()=>revealField(event.target),250);});
+    root.addEventListener('focusout',()=>setTimeout(()=>{if(!typingField(root.getRootNode().activeElement))root.classList.remove('cg-typing');},0));
+    window.visualViewport?.addEventListener('resize',()=>revealField(root.getRootNode().activeElement));
     message.addEventListener('click',()=>{if(message.classList.contains('cg-message-error')){message.textContent='';message.classList.remove('cg-message-error');clearTimeout(message._timer);}});
     root.addEventListener('input',event=>{const el=event.target,e=activeExercise();if(el.dataset.field&&e){const values=valuesFor(e);draft.set(e.key,{...values,[el.dataset.field]:el.value});updatePlates();}});
     root.addEventListener('change',event=>{const el=event.target,e=activeExercise();try{

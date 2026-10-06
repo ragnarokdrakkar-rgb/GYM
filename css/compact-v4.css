@@ -456,3 +456,10 @@
 #cg-app .cg-trend.up{color:var(--cg-ok);}
 #cg-app .cg-trend.down{color:var(--cg-pending);}
 #cg-app .cg-trend.flat{color:var(--cg-muted);font-weight:600;}
+
+/* Step 11: typing in Focus. With the keyboard open the scroll area was squeezed to
+   almost nothing between the fixed top (header, strip, rest card) and the step bar,
+   so a field lower in the set table ended up hidden under the keyboard. */
+#cg-app.cg-typing[data-focus="true"] .cg-fhead,#cg-app.cg-typing[data-focus="true"] .cg-fprog,#cg-app.cg-typing[data-focus="true"] .cg-focus-steps,#cg-app.cg-typing[data-focus="true"] .cg-focus-start{display:none;}
+#cg-app.cg-typing[data-focus="true"] .cg-rest{padding:6px 10px;margin-bottom:6px;}
+#cg-app.cg-typing[data-focus="true"] .cg-rest-label{display:none;}

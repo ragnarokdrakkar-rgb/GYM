@@ -113,3 +113,12 @@ test('an empty set field is not painted as an error before the user has touched 
   assert.match(css,/#cg-app \.cg-setrow2 input:user-invalid\{border-color:var\(--cg-pending\);\}/);
   assert.doesNotMatch(css,/\.cg-setrow2 input:invalid/);
 });
+
+test('typing in Focus makes room for the keyboard and keeps the field visible',()=>{
+  assert.match(shell,/root\.addEventListener\('focusin',event=>\{if\(!typingField\(event\.target\)\)return;root\.classList\.add\('cg-typing'\);setTimeout\(\(\)=>revealField\(event\.target\),250\);\}\);/);
+  assert.match(shell,/window\.visualViewport\?\.addEventListener\('resize',\(\)=>revealField\(root\.getRootNode\(\)\.activeElement\)\);/);
+  assert.match(shell,/function typingField\(el\)\{return !!\(el&&el\.matches\?\.\('input,select,textarea'\)&&el\.closest\('\.cg-fscroll'\)\);\}/);
+  const css=fs.readFileSync(path.join(__dirname,'..','css/compact-v4.css'),'utf8');
+  assert.match(css,/#cg-app\.cg-typing\[data-focus="true"\] \.cg-focus-steps/);
+  assert.match(css,/#cg-app\.cg-typing\[data-focus="true"\] \.cg-fhead/);
+});
