@@ -27,7 +27,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
 
         // Pri vsaki novi APK-verziji povečaj versionCode.
-        versionCode 72
+        versionCode 73
         versionName "1.5.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
