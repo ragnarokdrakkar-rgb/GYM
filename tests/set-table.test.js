@@ -50,15 +50,12 @@ test('Only the current row carries data-field inputs and the submit button',()=>
   assert.equal((row2.match(/type="submit"/g)||[]).length,0);
 });
 
-test('Planned rows show their values as buttons that open the plan sheet (no inline fields)',()=>{
+test('Planned rows carry data-plan-index/data-plan-field attributes for the existing change handler',()=>{
   const ctx=baseCtx();loadTable(ctx);
   const e=exercise(),row=ctx.setRow(e,2,1);
-  assert.equal((row.match(/data-act="plan-edit" data-index="2"/g)||[]).length,2);
-  assert.doesNotMatch(row,/<input/);
-  // Nothing stored yet: the values taken over from the current set are shown greyed.
-  const hinted=ctx.setRow(exercise({pending:{setIndex:1,complete:false,kg:'60',reps:'8'}}),2,1);
-  assert.match(hinted,/cg-plan-value hint" data-act="plan-edit" data-index="2"[^>]*>60</);
-  assert.match(ctx.setRow(exercise(),2,1),/>—</,'no value at all shows a dash');
+  assert.match(row,/data-plan-index="2"/);
+  assert.match(row,/data-plan-field="kg"/);
+  assert.match(row,/data-plan-field="reps"/);
   assert.match(row,/cg-setrow-tick empty/);
   assert.match(row,/aria-hidden="true"/);
 });
@@ -110,9 +107,7 @@ test('A set planned by hand is marked (dot + label), a carried or empty one is n
   const html=ctx.setTable(e);
   assert.match(ctx.setRow(e,2,1),/cg-setrow2 planned manual/);
   assert.match(ctx.setRow(e,2,1),/cg-manual-dot/);
-  assert.match(ctx.setRow(e,2,1),/aria-label="Serija 3: 70 kg, ročno načrtovano · uredi"/);
-  const carried=exercise({rows:[{kg:60,reps:8,done:true},{kg:'',reps:'',done:false},{kg:62.5,reps:8,done:false,carried:true},{kg:'',reps:'',done:false}]});
-  assert.match(ctx.setRow(carried,2,1),/cg-plan-value" data-act="plan-edit" data-index="2"[^>]*>62\.5</,'a carried value is stored, so not greyed');
+  assert.match(ctx.setRow(e,2,1),/aria-label="Serija 3 kg, ročno načrtovano"/);
   assert.doesNotMatch(ctx.setRow(e,3,1),/manual/);
   assert.doesNotMatch(ctx.setRow(e,1,1),/cg-manual-dot/);
   assert.match(html,/cg-manual-note/);

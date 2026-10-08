@@ -23,8 +23,7 @@ test('± buttons step kg by the kg step and reps by the reps step, within valid 
 
 test('± buttons change only the current set field and never submit or save it',()=>{
   const code=branch('kg-step\'||act===\'reps-step');
-  assert.match(code,/b\.closest\('form'\)\?\.querySelector\(`\[data-field="\$\{field\}"\],\[data-step-field="\$\{field\}"\]`\)/,'current set form or the plan sheet');
-  assert.match(code,/input\.value!==''\?input\.value:input\.placeholder/,'an empty planned field steps from the shown suggestion');
+  assert.match(code,/b\.closest\('\[data-log-form\]'\)/);
   assert.match(code,/input\.dispatchEvent\(new Event\('input',\{bubbles:true\}\)\)/,'goes through the normal draft path');
   assert.match(code,/return;\}$/,'no re-render, no storage write');
   assert.doesNotMatch(code,/savePlanAction|safeSetRaw|commitStorageBatch|logValues/);
@@ -124,14 +123,8 @@ test('typing in Focus makes room for the keyboard and keeps the field visible',(
   assert.match(css,/#cg-app\.cg-typing\[data-focus="true"\] \.cg-fhead/);
 });
 
-test('a later set is planned in a sheet; saving keeps what was typed for the current set',()=>{
-  const sheetFn=shell.slice(shell.indexOf('  function planSheet('),shell.indexOf('  function exerciseMenu('));
-  assert.match(sheetFn,/if\(row\.done\|\|index>=e\.target\)return;/,'never for a confirmed set');
-  assert.match(sheetFn,/data-step-field="kg"/);assert.match(sheetFn,/data-step-field="reps"/);
-  assert.doesNotMatch(sheetFn,/data-field=/,'sheet fields never feed the current set draft');
-  assert.match(sheetFn,/savePlanAction\(e,\{type:'edit',values:\[\{index,kg:data\.get\('kg'\)\?\?'',reps:data\.get\('reps'\)\?\?''\}\]\},false\)/);
+test('planning a later set, adding or removing a set keeps what was typed for the current set',()=>{
   const save=shell.slice(shell.indexOf('  function savePlanAction('),shell.indexOf('\n  }\n',shell.indexOf('  function savePlanAction(')));
   assert.match(save,/const keep=draft\.get\(e\.key\);compactCommitPlanV27/);
   assert.match(save,/if\(keep&&pending&&!pending\.complete&&keep\.index===pending\.setIndex\)draft\.set\(e\.key,keep\);/);
-  assert.match(shell,/else if\(act==='plan-edit'\)\{planSheet\(index\);return;\}/);
 });

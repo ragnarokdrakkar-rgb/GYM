@@ -12,7 +12,7 @@ Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.5.2 je
 
 ## Novo v 1.5.2
 
-- Naslednjo serijo urediš v majhnem oknu (kg, ponovitve, ±2,5 / ±1); vnos trenutne serije ostane.
+- Vnos trenutne serije ostane, ko vnaprej vpišeš naslednjo serijo ali dodaš/odstraniš serijo.
 
 ## Novo v 1.5.1
 
