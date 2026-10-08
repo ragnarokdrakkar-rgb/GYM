@@ -463,3 +463,11 @@
 #cg-app.cg-typing[data-focus="true"] .cg-fhead,#cg-app.cg-typing[data-focus="true"] .cg-fprog,#cg-app.cg-typing[data-focus="true"] .cg-focus-steps,#cg-app.cg-typing[data-focus="true"] .cg-focus-start{display:none;}
 #cg-app.cg-typing[data-focus="true"] .cg-rest{padding:6px 10px;margin-bottom:6px;}
 #cg-app.cg-typing[data-focus="true"] .cg-rest-label{display:none;}
+
+/* Step 12: later sets are planned in a sheet. The table shows their values as
+   buttons that look like fields; grey = taken over from the previous set. */
+#cg-app .cg-setrow2 .cg-plan-value{width:100%;min-width:0;border:1px solid var(--cg-line2);background:var(--cg-bg);border-radius:8px;padding:0;color:var(--cg-text);}
+#cg-app .cg-setrow2 .cg-plan-value.hint{color:var(--cg-dim);}
+#cg-app .cg-setrow2.manual .cg-plan-value{border-color:color-mix(in srgb,var(--cg-accent) 55%,var(--cg-line));}
+#cg-app .cg-sheet-steppers{grid-column:auto;margin:10px 0 4px;}
+#cg-app .cg-sheet .cg-step{min-height:46px;}
