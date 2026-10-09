@@ -39,27 +39,21 @@ function settingsCtx(overrides={}){
   return ctx;
 }
 
-test('Main settings shows the Trening and Podatki cards, and a collapsed Napredno fold with history-sources and advanced',()=>{
+test('Main settings: four visible groups (Program, Trening, Podatki, Aplikacija), every row explained, nothing folded away',()=>{
   const ctx=settingsCtx({programUses531V16:()=>false});
   const html=ctx.settings();
-  assert.match(html,/cg-section-label"><span>Trening<\/span>/);
-  assert.match(html,/cg-section-label"><span>Podatki<\/span>/);
-  assert.match(html,/data-act="phase"/);
-  assert.match(html,/data-act="program"/);
-  assert.match(html,/data-act="equipment"/);
-  assert.match(html,/data-act="backup"/);
-  assert.match(html,/data-act="history"/);
-  const foldStart=html.indexOf('<details class="cg-fold">');
-  assert.ok(foldStart>=0,'expected a collapsed <details class="cg-fold">');
-  assert.doesNotMatch(html.slice(foldStart,foldStart+40),/ open/);
-  const fold=html.slice(foldStart);
-  assert.match(fold,/Napredno/);
-  assert.match(fold,/data-act="history-sources"/);
-  assert.match(fold,/data-act="advanced"/);
+  for(const g of ['Program','Trening','Podatki','Aplikacija'])assert.match(html,new RegExp(`cg-section-label"><span>${g}</span>`));
+  for(const act of ['program','phase','progression','default-rest','alarm','equipment','backup','history','pr-check','history-sources','app'])assert.match(html,new RegExp(`data-act="${act}"`),act);
+  assert.doesNotMatch(html,/<details class="cg-fold"/,'no hidden fold on the main settings screen');
+  assert.doesNotMatch(html,/data-act="advanced"/,'the catch-all "Dodatna orodja" page is gone');
   assert.doesNotMatch(html,/data-act="tm"/); // 531 not used
+  // every row has a caption
+  const rows=html.match(/<button[^>]*class="cg-srow"[^>]*>[\s\S]*?<\/button>/g)||[];
+  assert.ok(rows.length>=11);
+  for(const row of rows)assert.match(row,/<small>[^<]+<\/small>/,'row without caption: '+row.slice(0,80));
 });
 
-test('Main settings shows the 5/3/1 Training max row inside the fold only when the program uses 5\\/3\\/1',()=>{
+test('Main settings shows the 5/3/1 Training max row only when the program uses 5\\/3\\/1',()=>{
   const html531=settingsCtx({programUses531V16:()=>true}).settings();
   assert.match(html531,/data-act="tm"/);
   const noHtml=settingsCtx({programUses531V16:()=>false}).settings();
@@ -84,7 +78,7 @@ test('Trening card shows the default rest row, with the current value or a fallb
   const set=settingsCtx({getDefaultRest:()=>90}).settings();
   assert.match(set,/data-act="default-rest"/);
   assert.match(set,/Privzeti počitek/);
-  assert.match(set,/Velja, dokler vaja nima svojega/);
+  assert.match(set,/Velja za vaje brez lastnega počitka/);
   assert.match(set,/90/); // stubbed clock(n)=>String(n)
   const unset=settingsCtx({getDefaultRest:()=>null}).settings();
   assert.match(unset,/Po vrsti vaje/);
@@ -105,20 +99,25 @@ test('Phase subpage shows both data-profile buttons with the guideline captions 
 });
 
 test('Every settings subpage renders the shared settings-back header button',()=>{
-  for(const settingsRoute of ['phase','backup','equipment','history','sources','advanced']){
+  for(const settingsRoute of ['phase','backup','equipment','history','sources','advanced','alarm','progression','app']){
     const ctx=settingsCtx({state:{settings:settingsRoute,flagged:false,query:'',limit:50}});
     const html=ctx.settings();
     assert.match(html,/data-act="settings-back"/,`expected settings-back on ${settingsRoute}`);
   }
 });
 
-test('Advanced subpage keeps its form and every existing act',()=>{
-  const ctx=settingsCtx({state:{settings:'advanced',flagged:false,query:'',limit:50},programUses531V16:()=>true});
-  const html=ctx.settings();
-  assert.match(html,/<form data-advanced-form>/);
-  for(const act of ['cycle-new','tm-advance','tm-reset','update','draft-restore','diagnostics']){
-    assert.match(html,new RegExp(`data-act="${act}"`),`missing act ${act}`);
+test('Alarm and Progression subpages share one form (all field names present, the other group hidden); App page keeps cycle/update/diagnostics acts',()=>{
+  const fields=['sound','vibrate','notif','volume','melody','smartRest','restWarning','progression','rpeUp','rpeDown','painStop'];
+  for(const route of ['alarm','progression']){
+    const html=settingsCtx({state:{settings:route,flagged:false,query:'',limit:50}}).settings();
+    assert.match(html,/<form data-advanced-form>/);
+    for(const f of fields)assert.match(html,new RegExp(`name="${f}"`),`${route} missing ${f}`);
+    assert.match(html,/<div hidden>/);
   }
+  const app=settingsCtx({state:{settings:'app',flagged:false,query:'',limit:50},programUses531V16:()=>true}).settings();
+  for(const act of ['cycle-new','tm-advance','tm-reset','update','draft-restore','diagnostics'])assert.match(app,new RegExp(`data-act="${act}"`),`missing act ${act}`);
+  assert.doesNotMatch(app,/data-advanced-form/,'nothing to save on the app page');
+  assert.match(shell,/\['equipment','history','backup','phase','advanced','alarm','progression','app'\]\.includes\(act\)/);
 });
 
 test('Equipment subpage keeps data-equipment-form with all its field names',()=>{
@@ -128,4 +127,10 @@ test('Equipment subpage keeps data-equipment-form with all its field names',()=>
   for(const field of ['show','barKind','bar','collars','plate']){
     assert.match(html,new RegExp(`name="${field}"`),`missing field ${field}`);
   }
+});
+
+test('changing a field in the alarm/progression form does not re-render (which reset the form to stored values before saving)',()=>{
+  const handler=shell.slice(shell.indexOf("root.addEventListener('change'"),shell.indexOf("root.addEventListener('submit'"));
+  assert.match(handler,/el\.closest\('\[data-advanced-form\]'\)/);
+  assert.match(handler,/el\.closest\('\[data-equipment-form\]'\)/);
 });
