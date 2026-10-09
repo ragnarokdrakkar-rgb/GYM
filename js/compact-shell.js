@@ -173,6 +173,35 @@ function exercisesOfGroupV36(groupId,db,custom){
   (custom||[]).forEach(e=>{const g=e.group||(e.m?muscleGroupOfV36(e.m):'other');if(g===groupId&&!rows.some(x=>x.n===e.n))rows.push({n:e.n,custom:true});});
   return rows.sort((a,b)=>a.n.localeCompare(b.n,'sl'));
 }
+// Step 15: the clickable body ("možiček"). Two pictogram figures, front and
+// back, drawn in a 100×192 box each. Every muscle region is one <path> with
+// both sides in it, tagged data-muscle=<MUSCLE_GROUPS_V36 id>, so the picker
+// wires it exactly like a grid button. 'other' (whole body) stays on the grid.
+function muscleBodySvgV37(){
+  const W=100,poly=pts=>'M'+pts.map(p=>p.join(' ')).join('L')+'Z',mirror=pts=>pts.map(([x,y])=>[W-x,y]);
+  const both=pts=>poly(pts)+poly(mirror(pts));
+  const silhouette=[
+    '<circle cx="50" cy="14" r="12"/>','<rect x="44" y="25" width="12" height="9"/>',
+    `<path d="${poly([[22,33],[78,33],[74,96],[72,114],[28,114],[26,96]])}"/>`,
+    `<path d="${both([[22,33],[10,39],[5,86],[15,87],[21,52]])}"/>`,
+    `<path d="${both([[5,86],[15,87],[12,124],[2,124]])}"/>`,
+    '<circle cx="7" cy="131" r="6"/><circle cx="93" cy="131" r="6"/>',
+    `<path d="${both([[28,114],[49,114],[47,160],[26,160]])}"/>`,
+    `<path d="${both([[26,160],[47,160],[45,186],[29,186]])}"/>`,
+    '<rect x="24" y="186" width="22" height="6" rx="3"/><rect x="54" y="186" width="22" height="6" rx="3"/>'
+  ].map(s=>s.replace(/<(circle|rect|path) /g,'<$1 class="cg-body-s" ')).join('');
+  const shoulders=both([[11,38],[22,33],[30,35],[29,45],[20,52],[12,50]]),upperArm=both([[11,52],[21,54],[18,82],[8,80]]),
+    forearm=both([[7,88],[16,89],[13,120],[4,120]]),thigh=both([[30,117],[47,117],[45,156],[28,156]]),shin=both([[30,163],[45,163],[44,183],[31,183]]);
+  const regions={
+    front:[['shoulders',shoulders],['chest',both([[27,37],[49,37],[49,58],[40,62],[29,58]])],['biceps',upperArm],['forearms',forearm],
+      ['core',poly([[36,64],[64,64],[62,100],[38,100]])],['quads',thigh],['calves',shin]],
+    back:[['shoulders',shoulders],['back',poly([[27,36],[73,36],[72,60],[62,84],[38,84],[28,60]])],['triceps',upperArm],['forearms',forearm],
+      ['glutes',both([[30,97],[49,99],[49,114],[34,115],[29,108]])],['hams',thigh],['calves',shin]]
+  };
+  const region=([id,d])=>{const name=MUSCLE_GROUPS_V36.find(g=>g.id===id).name;return `<path class="cg-body-m" data-muscle="${id}" role="button" tabindex="0" aria-label="${name}" d="${d}"><title>${name}</title></path>`;};
+  const figure=(side,ox,label)=>`<g data-side="${side}" transform="translate(${ox} 0)">${silhouette}${regions[side].map(region).join('')}<text x="50" y="199">${label}</text></g>`;
+  return `<div class="cg-body-wrap" data-muscle-body><svg class="cg-body" viewBox="0 0 230 202" role="group" aria-label="Telo: tapni mišico">${figure('front',8,'Spredaj')}${figure('back',122,'Zadaj')}</svg></div>`;
+}
 if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact-shell')(function(){
   'use strict';
   const esc=safeHtml,fmt=n=>Number(n).toLocaleString('sl-SI',{maximumFractionDigits:2});
@@ -623,8 +652,8 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   function exercisePickerSheet({title,di,excludeIndex,onPick}){
     guardProgram();const custom=getCustomExercises(),all=getDayLists()[di]||[],cyc=getCyc().num;
     const onDay=name=>all.some((e,i)=>i!==excludeIndex&&compactNameV26(dispNameForItem(e,cyc,cw))===compactNameV26(name));
-    const groups=`<div class="cg-muscle-grid" data-muscle-grid>${MUSCLE_GROUPS_V36.map(g=>{const n=exercisesOfGroupV36(g.id,EXERCISE_DB,custom).length;return `<button type="button" class="cg-muscle" data-muscle="${g.id}"><strong>${esc(g.name)}</strong><small>${n} ${n===1?'vaja':n===2?'vaji':n<5?'vaje':'vaj'}</small></button>`;}).join('')}</div>`;
-    sheet(title,`<p class="cg-small" data-picker-hint>Izberi mišično skupino ali poišči vajo.</p><label>Iskanje<input name="search" data-exercise-search autocomplete="off" placeholder="Vpiši ime vaje" maxlength="100"></label><input type="hidden" name="name"><input type="hidden" name="group"><div data-picker-body>${groups}</div>`,async data=>{
+    const hint0='Tapni mišico na telesu, izberi skupino spodaj ali poišči vajo.';const groups=muscleBodySvgV37()+`<div class="cg-muscle-grid" data-muscle-grid>${MUSCLE_GROUPS_V36.map(g=>{const n=exercisesOfGroupV36(g.id,EXERCISE_DB,custom).length;return `<button type="button" class="cg-muscle" data-muscle="${g.id}"><strong>${esc(g.name)}</strong><small>${n} ${n===1?'vaja':n===2?'vaji':n<5?'vaje':'vaj'}</small></button>`;}).join('')}</div>`;
+    sheet(title,`<p class="cg-small" data-picker-hint>${hint0}</p><label>Iskanje<input name="search" data-exercise-search autocomplete="off" placeholder="Vpiši ime vaje" maxlength="100"></label><input type="hidden" name="name"><input type="hidden" name="group"><div data-picker-body>${groups}</div>`,async data=>{
       const name=plainImportedText(data.get('name')||data.get('search'),100).trim();if(!name)throw Error('Izberi ali vpiši vajo.');
       if(onDay(name))throw Error('Vaja je že na tem dnevu.');
       await onPick(name,data.get('group')||'');
@@ -636,8 +665,8 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       const trimmed=query.trim(),nova=trimmed&&!exact?`<button type="button" class="cg-exresult cg-exresult-new" data-pick-exercise="${esc(trimmed)}">Nova vaja: ${esc(trimmed)}</button>`:'';
       return `<div class="cg-exresults" data-exercise-results>${html}${nova}${!html&&!nova?'<p class="cg-small cg-empty">Ni zadetkov.</p>':''}</div>`;};
     const wire=()=>{body.querySelectorAll('[data-pick-exercise]').forEach(btn=>btn.addEventListener('click',()=>{if(programWriteBusy||btn.disabled)return;nameField.value=btn.dataset.pickExercise;form.requestSubmit();}));
-      body.querySelectorAll('[data-muscle]').forEach(btn=>btn.addEventListener('click',()=>{const g=MUSCLE_GROUPS_V36.find(x=>x.id===btn.dataset.muscle);groupField.value=g.id;hint.textContent=g.name+' · izberi vajo ali vpiši svojo.';body.innerHTML=button('picker-back','← Vse mišične skupine','cg-link')+list(exercisesOfGroupV36(g.id,EXERCISE_DB,custom),searchInput.value,g.id);wire();}));
-      body.querySelector('[data-act="picker-back"]')?.addEventListener('click',()=>{groupField.value='';hint.textContent='Izberi mišično skupino ali poišči vajo.';body.innerHTML=groups;wire();});};
+      body.querySelectorAll('[data-muscle]').forEach(btn=>{if(btn.tagName!=='BUTTON')btn.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();btn.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});btn.addEventListener('click',()=>{const g=MUSCLE_GROUPS_V36.find(x=>x.id===btn.dataset.muscle);if(!g)return;groupField.value=g.id;hint.textContent=g.name+' · izberi vajo ali vpiši svojo.';body.innerHTML=button('picker-back','← Vse mišične skupine','cg-link')+list(exercisesOfGroupV36(g.id,EXERCISE_DB,custom),searchInput.value,g.id);wire();});});
+      body.querySelector('[data-act="picker-back"]')?.addEventListener('click',()=>{groupField.value='';hint.textContent=hint0;body.innerHTML=groups;wire();});};
     searchInput.addEventListener('input',()=>{const g=groupField.value;if(g){const grp=MUSCLE_GROUPS_V36.find(x=>x.id===g);body.innerHTML=button('picker-back','← Vse mišične skupine','cg-link')+list(exercisesOfGroupV36(g,EXERCISE_DB,custom),searchInput.value,g);}
       else if(searchInput.value.trim()){const rows=[...EXERCISE_DB.map(e=>({n:e.n,custom:false})),...custom.filter(c=>!EXERCISE_DB.some(e=>e.n===c.n)).map(c=>({n:c.n,custom:true}))];body.innerHTML=list(rows,searchInput.value,'');}
       else body.innerHTML=groups;wire();});

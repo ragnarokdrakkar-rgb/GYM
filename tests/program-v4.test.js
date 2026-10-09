@@ -125,7 +125,8 @@ test('The picker opens with the muscle grid and counts, and rejects a pick that 
   ctx.exercisePickerSheet({title:'Dodaj vajo',di:0,excludeIndex:-1,onPick:async(n,g)=>{picked=[n,g];}});
   const s=ctx.sheets[0];
   assert.equal(s.title,'Dodaj vajo');assert.equal(s.ok,'Naprej');
-  assert.equal((s.body.match(/data-muscle="/g)||[]).length,12);
+  assert.equal((s.body.match(/<button type="button" class="cg-muscle" data-muscle="/g)||[]).length,12);
+  assert.ok(s.body.indexOf('data-muscle-body')>=0&&s.body.indexOf('data-muscle-body')<s.body.indexOf('data-muscle-grid'),'the body figure sits above the grid');
   assert.match(s.body,/data-muscle="chest"><strong>Prsa<\/strong><small>2 vaji<\/small>/,'DB + custom counted');
   assert.match(s.body,/data-muscle="shoulders"><strong>Ramena<\/strong><small>1 vaja<\/small>/);
   assert.match(s.body,/data-exercise-search/);
