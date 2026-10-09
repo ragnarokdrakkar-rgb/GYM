@@ -165,3 +165,14 @@ test('the number of workouts on a day uses Slovenian dual/plural forms',()=>{
   const ctx=progressCtx({});inner(ctx,'workoutsText');
   assert.deepEqual([0,1,2,3,4,5,11,101,102,103].map(n=>ctx.workoutsText(n)),['0 treningov','1 trening','2 treninga','3 treningi','4 treningi','5 treningov','11 treningov','101 trening','102 treninga','103 treningi']);
 });
+
+test('Zgodovina offers "Izbriši trening" that goes through commitHistory (undoable) and is blocked during a workout',()=>{
+  const ctx=historyCtx([{date:'2026-09-24',dayName:'Push A',startTime:'18:00',durationMin:50,exercises:[{name:'Bench',sets:[{kg:60,reps:8,done:true}]}]}]);
+  assert.match(ctx.historyView(),/data-act="history-delete"[^>]*>Izbriši trening</);
+  const fn=shell.slice(shell.indexOf('  function deleteHistorySession('),shell.indexOf('  function addHistorySet('));
+  assert.match(fn,/^\s*guardProgram\(\);/m,'not while a workout runs or waits for recovery');
+  assert.match(fn,/sheet\('Izbriši trening iz zgodovine'/);
+  assert.match(fn,/if\(JSON\.stringify\(before\.sessions\[si\]\)!==expected\)throw Error/,'re-checked right before writing');
+  assert.match(fn,/commitHistory\(before,historyDeleteSessionV35\(before,si,expected\)\)/,'written with the undo snapshot');
+  assert.match(fn,/,'Izbriši'\);/,'the primary button says what it does');
+});

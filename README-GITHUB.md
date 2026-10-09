@@ -12,6 +12,7 @@ Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.5.2 je
 
 ## Novo v 1.5.2
 
+- Zgodovina: trening, začet po nesreči, izbrišeš z »Izbriši trening« (serije in rekordi ostanejo; razveljavljivo).
 - Vnos trenutne serije ostane, ko vnaprej vpišeš naslednjo serijo ali dodaš/odstraniš serijo.
 
 ## Novo v 1.5.1

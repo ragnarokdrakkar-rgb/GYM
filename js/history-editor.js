@@ -43,6 +43,15 @@ function historyCorrectionV24(data,ref,expected,values){
   }
   return next;
 }
+// Removes ONE saved workout record from history (e.g. started by mistake). Only the
+// session record goes; the day's logged sets and PRs stay untouched, so nothing else
+// changes. Rejects a stale record and refuses to touch anything but that index.
+function historyDeleteSessionV35(data,si,expected){
+  const next=JSON.parse(JSON.stringify(data)),old=next.sessions?.[si];
+  if(!old||JSON.stringify(old)!==expected)throw new Error('Trening se je spremenil. Ponovno odpri zgodovino.');
+  next.sessions.splice(si,1);
+  return next;
+}
 let historySelectionV24=null,historyVisibleV24=[],historyLimitV24=50;
 function renderHistoryEditorV24(reset=true){
   const host=document.getElementById('history-results-v24');if(!host)return;

@@ -22,3 +22,13 @@ test('Numeric legacy PR remains editable without altering other stores',()=>{
   const next=ctx.historyCorrectionV24(d,{kind:'pr',key:'pr00'},JSON.stringify({kg:125,reps:1}),{kg:'120',reps:'1',rpe:'',name:'Bench'});
   assert.equal(next.prs.pr00.kg,120);assert.equal(next.prs.pr00.rpe,null);assert.equal(next.sets.c1w0d0e0[0].kg,100);
 });
+test('Deleting a workout from history removes only that session record; sets and PRs stay',()=>{
+  const d=fixture();d.sessions.push({date:'2026-10-09',dayName:'Noge',exercises:[]});
+  const before=JSON.stringify(d),expected=JSON.stringify(d.sessions[0]);
+  const next=ctx.historyDeleteSessionV35(d,0,expected);
+  assert.equal(next.sessions.length,1);assert.equal(next.sessions[0].dayName,'Noge');
+  assert.equal(JSON.stringify(next.sets),JSON.stringify(d.sets));assert.equal(JSON.stringify(next.prs),JSON.stringify(d.prs));
+  assert.equal(JSON.stringify(d),before,'input is not mutated');
+  assert.throws(()=>ctx.historyDeleteSessionV35(d,0,'{}'),/spremenil/,'stale record is rejected');
+  assert.throws(()=>ctx.historyDeleteSessionV35(d,5,expected),/spremenil/,'missing index is rejected');
+});

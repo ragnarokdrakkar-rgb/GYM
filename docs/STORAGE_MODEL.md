@@ -48,7 +48,8 @@ Getters/setters for all of these live in `js/core/state-storage.js` (`getSets`/`
 - **Written by**: `saveSets()` (state-storage.js), called from `addSet`, `removeSet`,
   set-toggle code (`workout-runtime.js:1028`, `all[key][si].done=!...`), `migrateSetExerciseIds`,
   `reconcilePositions` (workout-model.js), history editor commits
-  (`js/history-editor.js`, `js/compact-shell.js` — undo/redo of past sessions), plan-editor
+  (`js/history-editor.js`, `js/compact-shell.js` — undo/redo of past sessions, including
+  deleting one session record via `historyDeleteSessionV35`; sets/PRs stay), plan-editor
   commits (`js/compact-ui.js`, `wt_plan_undo_v26`).
 - **Backup**: exported as `sets` (`src/app/analytics-tools.js:1543`), validated key-by-key in
   `validateBackupV18` (`^c\d+w\d+d\d+e\d+$`, rows checked for numeric bounds). Restore: replace
