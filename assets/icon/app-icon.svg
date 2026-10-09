@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0e0505"/><stop offset="1" stop-color="#050404"/></linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff3b3b"/><stop offset="1" stop-color="#8f0a12"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="44" y="44" width="424" height="424" rx="92" fill="none" stroke="#e3232b" stroke-width="6" opacity=".55"/>
+  <!-- big W monogram -->
+  <path d="M96 150 L158 372 L220 226 L256 310 L292 226 L354 372 L416 150" fill="none" stroke="url(#red)" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M96 150 L158 372 L220 226 L256 310 L292 226 L354 372 L416 150" fill="none" stroke="#ffd7d7" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity=".35"/>
+  <!-- small plates as dots -->
+  <circle cx="256" cy="412" r="14" fill="#ff3b3b"/>
+  <circle cx="212" cy="412" r="9" fill="#8f0a12"/>
+  <circle cx="300" cy="412" r="9" fill="#8f0a12"/>
+</svg>
