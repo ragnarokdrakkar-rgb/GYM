@@ -227,7 +227,7 @@ test('Hero CSS: name row is a wrapping flex row with the chip right-aligned; the
 // ---- Program day card -------------------------------------------------------------------------------------------------
 function programCtx(days,list,hidden={}){
   const ctx=harness({esc:s=>String(s),icon:()=>'',clock:n=>String(n),button,PROG:{weeks:[{},{},{},{}]},cw:0,state:{day:0},navigationLocked:()=>false,
-    getCyc:()=>({num:1}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,exerciseTargetSetsV19:item=>Number(item?.targetSets)||4,restForEx:(id,n,r)=>r,getHiddenEx:()=>hidden,
+    getCyc:()=>({num:1}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,exerciseTargetSetsV19:item=>Number(item?.targetSets)||4,restForEx:(id,n,r)=>r,getHiddenEx:()=>hidden,exerciseInProgramV36:(e,c,w)=>!!e&&!e.programDisabled&&(!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w)),exerciseValidForWeekV36:(e,c,w)=>!e||!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w),
     getProgramMetaV6:()=>({days}),dayListFor:()=>list});
   inner(ctx,'activeDayWordV29');inner(ctx,'program');
   return ctx;

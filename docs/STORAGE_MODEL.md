@@ -237,6 +237,8 @@ const V6_KEYS={
 - `wt_hidden_ex` — **still active** (not folded away): per-set-key "hidden" flag map, read by
   `isExHidden()`/`getHiddenEx()`, cleaned up in `reconcilePositions` and the ghost-key sweep in
   `ensureDayLists()`. Exported/restored as `hidden_ex`.
+  Each roster item may carry `from:{c,w}` (added mid-cycle: it counts only from that cycle+week on, see `exerciseValidForWeekV36` in workout-model.js) and `sw:[{n,c,w}]` (name valid from that cycle+week, used by "Zamenjaj z drugo vajo"). Deleted days are marked `deleted:true` in `wt_program_meta_shared_v16` and keep their index.
+
 
 ## 4. Profile, phase and misc single-value keys
 
@@ -254,7 +256,7 @@ const V6_KEYS={
 | `wt_colors` | custom theme accent colors | `getStoredColors`/setter (ui-shell.js) | Yes, field `colors`; replace-only |
 | `wt_custom_rest` | per-exercise custom rest override | `getCustomRest`/`setCustomRestFor` (bootstrap.js) | Yes, field `custom_rest`; replace-only |
 | `wt_default_rest` | user default rest in seconds (30–600), used when an exercise has no custom rest; precedence in `restForEx`: custom > default > exercise type | `getDefaultRest` (bootstrap.js); written by Nastavitve → Privzeti počitek (`defaultRestSheet`, `safeSetRaw`/`safeRemoveRaw`) | Yes, field `default_rest`; replace-only (device preference, like `kg_step`) |
-| `wt_custom_ex` (via `CUST_KEY`) | user-added custom exercise definitions | direct set | Yes, field `custom_ex`; replace-only |
+| `wt_custom_ex` (via `CUST_KEY`) | user-added custom exercise definitions `{n, group}` (`group` = id from `MUSCLE_GROUPS_V36`, used by the muscle picker; older entries may carry `m` instead) | `safeSetRaw` from the picker (compact-shell.js) | Yes, field `custom_ex`; replace-only |
 | `wt_daylog` | free-form day log/journal | direct set | Yes, field `daylog`; replace-only |
 | `wt_rep_prs` | rep-based PR tracking | direct set, remapped in `reconcilePositions`-adjacent code | Yes, field `rep_prs`; replace-only |
 | `wt_phases` | historical phase-change log (array) | direct set | Yes, field `phases`; replace-only |

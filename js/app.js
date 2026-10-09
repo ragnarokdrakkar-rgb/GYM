@@ -183,12 +183,22 @@ function carryToNextSetV34(cur,next){
   return out;
 }
 // Keep original exercise indexes: filtering must never reassign saved set keys.
+// An exercise added mid-cycle carries from:{c,w}: it belongs to the program
+// from that cycle+week on and is not part of earlier weeks (their workouts and
+// counts stay as they were). No `from` = valid from the start.
+function exerciseValidForWeekV36(item,cycle,week){
+  const f=item&&item.from;if(!f)return true;
+  const c=Number(f.c),w=Number(f.w);if(!Number.isFinite(c)||!Number.isFinite(w))return true;
+  return cycle>c||(cycle===c&&week>=w);
+}
+// Exercises that count for (cycle, week, day): active in the program and valid for that week.
+function exerciseInProgramV36(item,cycle,week){return !!item&&!item.programDisabled&&exerciseValidForWeekV36(item,cycle,week);}
 function activeWorkoutEntriesV19(cycle,week,dayIndex){
   const day=typeof getProgramMetaV6==='function'?getProgramMetaV6().days?.[dayIndex]:PROG.days[dayIndex];
   if(!day||day.deleted===true||day.active===false)return [];
   const list=dayListFor(dayIndex,cycle,week),hidden=getHiddenEx();
   return list.map((item,exerciseIndex)=>({item,exerciseIndex,key:sdk(cycle,week,dayIndex,exerciseIndex)}))
-    .filter(({item,key})=>item&&!item.programDisabled&&!hidden[key]);
+    .filter(({item,key})=>exerciseInProgramV36(item,cycle,week)&&!hidden[key]);
 }
 function completedSetLabelV19(done,target){
   return done>target?`${done} opravljenih · cilj ${target}`:`${done}/${target}`;

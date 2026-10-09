@@ -147,6 +147,32 @@ function compactStrengthNavV30(series,currentSi,dir){
   if(next<0||next>=series.length)return currentSi;
   return series[next].si;
 }
+// Muscle groups for picking an exercise. `db` = the EXERCISE_DB `m` values that
+// belong to the group (the built-in DB is in English); order = how they are shown.
+const MUSCLE_GROUPS_V36=[
+  {id:'chest',name:'Prsa',db:['Chest']},
+  {id:'back',name:'Hrbet',db:['Back','Traps']},
+  {id:'shoulders',name:'Ramena',db:['Shoulders','Front Delt','Rear Delt']},
+  {id:'biceps',name:'Biceps',db:['Biceps']},
+  {id:'triceps',name:'Triceps',db:['Triceps']},
+  {id:'quads',name:'Stegna (kvadricepsi)',db:['Quads']},
+  {id:'hams',name:'Zadnje stegenske',db:['Hamstrings']},
+  {id:'glutes',name:'Zadnjica',db:['Glutes']},
+  {id:'calves',name:'Meča',db:['Calves']},
+  {id:'core',name:'Trebuh',db:['Core']},
+  {id:'forearms',name:'Podlakti',db:['Forearms']},
+  {id:'other',name:'Celo telo / drugo',db:['Full Body']}
+];
+function muscleGroupsV36(){return MUSCLE_GROUPS_V36;}
+function muscleGroupOfV36(dbMuscle){const g=MUSCLE_GROUPS_V36.find(x=>x.db.includes(dbMuscle));return g?g.id:'other';}
+// Exercises of one group: built-in ones by their `m`, custom ones by a stored
+// `group` (or `m`), unknown ones under 'other'. Sorted by name.
+function exercisesOfGroupV36(groupId,db,custom){
+  const rows=[];
+  (db||[]).forEach(e=>{if(muscleGroupOfV36(e.m)===groupId)rows.push({n:e.n,custom:false});});
+  (custom||[]).forEach(e=>{const g=e.group||(e.m?muscleGroupOfV36(e.m):'other');if(g===groupId&&!rows.some(x=>x.n===e.n))rows.push({n:e.n,custom:true});});
+  return rows.sort((a,b)=>a.n.localeCompare(b.n,'sl'));
+}
 if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact-shell')(function(){
   'use strict';
   const esc=safeHtml,fmt=n=>Number(n).toLocaleString('sl-SI',{maximumFractionDigits:2});
@@ -331,22 +357,22 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     const meta=getProgramMetaV6();if(!meta.days[state.day]||meta.days[state.day].deleted)state.day=meta.days.findIndex(d=>!d.deleted&&d.active!==false);
     const days=meta.days,locked=navigationLocked(),activeCount=days.filter(d=>!d.deleted&&d.active!==false).length;
     const selectedDay=days[state.day]||{},list=dayListFor(state.day,getCyc().num,cw),cyc=getCyc().num,hiddenThisWeek=getHiddenEx(),
-      countsThisWeek=(e,i)=>!e.programDisabled&&!hiddenThisWeek[sdk(cyc,cw,state.day,i)],
+      countsThisWeek=(e,i)=>exerciseInProgramV36(e,cyc,cw)&&!hiddenThisWeek[sdk(cyc,cw,state.day,i)],
       activeEx=list.filter(countsThisWeek),setsOf=(e,i)=>exerciseTargetSetsV19(e,PROG.weeks[cw],sdk(cyc,cw,state.day,i)),
       totalSets=list.reduce((n,e,i)=>n+(countsThisWeek(e,i)?setsOf(e,i):0),0);
     const title=`<div class="cg-title-row"><div><h1 class="cg-program-title">Program</h1><p class="cg-sub">${activeCount} ${activeDayWordV29(activeCount)} · Cut/Bulk ne spremeni vaj</p></div></div>`;
     const weeks=`<div class="cg-weeksel" role="group" aria-label="Teden za prikaz vaj">${PROG.weeks.map((_,w)=>`<button type="button" data-quick-week="${w}" class="${w===cw?'selected':''}" aria-pressed="${w===cw}" ${locked?'disabled':''}>T${w+1}</button>`).join('')}</div>`;
     const chips=`<div class="cg-pdays" aria-label="Dnevi programa">${days.map((d,i)=>{
       if(d.deleted)return '';
-      const active=d.active!==false,cnt=active?dayListFor(i,getCyc().num,cw).filter(e=>!e.programDisabled).length:0;
+      const active=d.active!==false,cnt=active?dayListFor(i,getCyc().num,cw).filter(e=>exerciseInProgramV36(e,getCyc().num,cw)).length:0;
       return `<button type="button" class="cg-pchip${active?'':' inactive'}${i===state.day?' selected':''}" data-act="program-day" data-index="${i}" aria-pressed="${i===state.day}"><strong>${esc(d.name||'Dan '+(i+1))}</strong><span>${active?cnt+' vaj':'neaktiven'}</span></button>`;
     }).join('')}${button('day-add','+ Dan','cg-pchip cg-pchip-add',days.length>=7?'disabled':'')}</div>`;
     const serij=totalSets===1?'serija':totalSets===2?'seriji':totalSets>=3&&totalSets<=4?'serije':'serij';
     const dayCard=`<section class="cg-hero cg-pcard"><div class="cg-hero-head"><h2 class="cg-hero-name">${esc(selectedDay.name||'Dan')}</h2></div>${selectedDay.sub?`<p class="cg-hero-sub">${esc(selectedDay.sub)}</p>`:''}<p class="cg-hero-line"><b>${activeEx.length}/${list.length}</b> aktivnih vaj · <b>${totalSets}</b> ${serij} · aktiven dan: <b>${selectedDay.active!==false?'Da':'Ne'}</b></p><div class="cg-hero-actions">${button('day-edit','Uredi dan','cg-quiet cg-nowrap')}</div></section>`;
     const label=`<div class="cg-section-label"><span>Vaje · vrstni red</span><span>stikalo = aktivna</span></div>`;
     const rows=list.map((e,i)=>{
-      const off=!!e.programDisabled,removed=!off&&!!hiddenThisWeek[sdk(cyc,cw,state.day,i)],n=setsOf(e,i),sub=`${n} ${n===1?'serija':n===2?'seriji':n<5?'serije':'serij'}${e.targetReps?' × '+esc(e.targetReps):''} · počitek ${clock(restForEx(e.id,e.n,e.r||90))}${off?' · neaktivna':''}${removed?` · odstranjena v tednu ${cw+1}`:''}`;
-      return `<div class="cg-prow${off?' off':''}"><span class="cg-order">${i+1}</span>${button('program-edit',`<strong>${esc(e.n)}${e.progMode==='531'?'<span class="cg-tag531">5/3/1</span>':''}</strong><small>${sub}</small>`,'cg-prow-main',`data-index="${i}" aria-label="Uredi ${esc(e.n)}"`)}${button('program-up',icon('up'),'cg-icon',`data-index="${i}" aria-label="Premakni ${esc(e.n)} navzgor" ${i===0?'disabled':''}`)}${button('program-down',icon('down'),'cg-icon',`data-index="${i}" aria-label="Premakni ${esc(e.n)} navzdol" ${i===list.length-1?'disabled':''}`)}<button type="button" class="cg-switch" role="switch" aria-checked="${!off}" data-act="program-toggle" data-index="${i}" aria-label="${off?'Vključi':'Izključi'} vajo ${esc(e.n)}"><span class="cg-switch-knob"></span></button></div>${removed?`<div class="cg-unhide-row">${button('program-unhide','Vrni v teden '+(cw+1),'cg-link',`data-index="${i}"`)}</div>`:''}`;
+      const off=!!e.programDisabled,notYet=!off&&!exerciseValidForWeekV36(e,cyc,cw),removed=!off&&!!hiddenThisWeek[sdk(cyc,cw,state.day,i)],n=setsOf(e,i),sub=`${n} ${n===1?'serija':n===2?'seriji':n<5?'serije':'serij'}${e.targetReps?' × '+esc(e.targetReps):''} · počitek ${clock(restForEx(e.id,e.n,e.r||90))}${off?' · neaktivna':''}${notYet?` · velja od cikla ${e.from.c}, tedna ${Number(e.from.w)+1}`:''}${removed?` · odstranjena v tednu ${cw+1}`:''}`;
+      return `<div class="cg-prow${off||notYet?' off':''}"><span class="cg-order">${i+1}</span>${button('program-edit',`<strong>${esc(e.n)}${e.progMode==='531'?'<span class="cg-tag531">5/3/1</span>':''}</strong><small>${sub}</small>`,'cg-prow-main',`data-index="${i}" aria-label="Uredi ${esc(e.n)}"`)}${button('program-up',icon('up'),'cg-icon',`data-index="${i}" aria-label="Premakni ${esc(e.n)} navzgor" ${i===0?'disabled':''}`)}${button('program-down',icon('down'),'cg-icon',`data-index="${i}" aria-label="Premakni ${esc(e.n)} navzdol" ${i===list.length-1?'disabled':''}`)}<button type="button" class="cg-switch" role="switch" aria-checked="${!off}" data-act="program-toggle" data-index="${i}" aria-label="${off?'Vključi':'Izključi'} vajo ${esc(e.n)}"><span class="cg-switch-knob"></span></button></div>${removed?`<div class="cg-unhide-row">${button('program-unhide','Vrni v teden '+(cw+1),'cg-link',`data-index="${i}"`)}</div>`:''}`;
     }).join('');
     const inactiveCount=days.filter(d=>!d.deleted&&d.active===false).length;
     const inactive=days.map((d,i)=>!d.deleted&&d.active===false?`<div class="cg-setrow"><span class="cg-setvalue">${button('inactive-day',esc(d.name),'cg-link',`data-index="${i}"`)}<small class="cg-small">dan ${i+1}</small></span></div>`:'').join('');
@@ -433,7 +459,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   }
   function programSummaryV31(){
     const meta=getProgramMetaV6(),cyc=getCyc().num;let days=0,exercises=0;
-    meta.days.forEach((d,i)=>{if(d.deleted||d.active===false)return;days++;exercises+=dayListFor(i,cyc,cw).filter(e=>!e.programDisabled).length;});
+    meta.days.forEach((d,i)=>{if(d.deleted||d.active===false)return;days++;exercises+=dayListFor(i,cyc,cw).filter(e=>exerciseInProgramV36(e,cyc,cw)).length;});
     return {days,exercises};
   }
   function equipmentView(){const gym=getGym(),presets=[[20,'Olimpijska palica · 20 kg'],[15,'Olimpijska palica · 15 kg'],[10,'Kratka palica · 10 kg'],[8,'EZ palica · 8 kg'],['custom','Teža po meri']],kind=presets.some(([v])=>v===gym.bar)?gym.bar:'custom';return subHeader('Oprema in plošče')+`<form data-equipment-form class="cg-equipment-form"><label class="cg-checkline"><input type="checkbox" name="show" ${getV6Settings().plateCalculator!==false?'checked':''}> Pokaži kalkulator pri vaji s palico</label><label class="cg-field-label">Vrsta palice<select name="barKind">${presets.map(([v,t])=>`<option value="${v}" ${v===kind?'selected':''}>${t}</option>`).join('')}</select></label><label class="cg-field-label">Teža palice (kg)<input name="bar" type="number" min="1" max="50" step="0.25" value="${gym.bar}" ${kind!=='custom'?'readonly':''} required></label><label class="cg-field-label">Varovalke (par, kg)<input name="collars" type="number" min="0" max="10" step="0.25" value="${getCollars()}" required></label><div class="cg-section-label"><span>Razpoložljive plošče</span></div><div class="cg-plate-choices">${[1.25,2.5,5,10,15,20,25,50].map(p=>`<label class="cg-checkline"><input type="checkbox" name="plate" value="${p}" ${gym.plates.includes(p)?'checked':''}> ${fmt(p)} kg</label>`).join('')}</div><p class="cg-footnote">Označi teže plošč, ki so na voljo v tvojem fitnesu.</p><button type="submit" class="cg-action cg-full">Shrani opremo</button></form>`;}
@@ -571,42 +597,119 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   function afterProgram(){applyProgramStateV6();ensureDayLists();showDay(getProgramMetaV6().days[cd]?.active!==false?cd:activeDayIndicesV6()[0]);draft.clear();notify('Program shranjen. Zgodovina ostane ohranjena.');}
   function editProgram(index){
     guardProgram();const di=state.day,list=getDayLists()[di],item=list[index],expected=JSON.stringify(item),name=dispNameForItem(item,getCyc().num,cw);
-    sheet('Uredi vajo',`<label>Ime vaje<input name="name" value="${esc(name)}" maxlength="100" required></label><div class="cg-two-fields"><label>Serije (prazno = program)<input type="number" name="sets" min="1" max="12" value="${item.targetSets||''}"></label><label>Ponovitve<input name="reps" value="${esc(item.targetReps||'')}" placeholder="npr. 6–8" maxlength="30"></label></div><label class="cg-checkline"><input name="active" type="checkbox" ${!item.programDisabled?'checked':''}> Aktivna vaja</label><details><summary>Napredne možnosti vaje</summary><label>Progresija<select name="mode">${[['auto','Pametno'],['linear','Linearno'],['double','Dvojna progresija'],['531','5/3/1'],['hold','Brez sprememb']].map(([v,t])=>`<option value="${v}" ${(item.progMode||'auto')===v?'selected':''}>${t}</option>`).join('')}</select></label><label>5/3/1 dvig<select name="lift">${['bench','squat','deadlift','ohp'].map(v=>`<option value="${v}" ${(item.lift531||infer531LiftV16(name))===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Ciljni RPE<input name="targetRpe" type="number" min="5" max="10" step="0.5" value="${item.targetRpe||''}"></label><label>Počitek (sekunde)<input name="rest" type="number" min="5" max="900" value="${item.r||90}" required></label><label class="cg-checkline"><input name="main" type="checkbox" ${item.m?'checked':''}> Glavna vaja</label><label>Navodilo<textarea name="description" maxlength="1000">${esc(item.d||'')}</textarea></label></details>`,data=>{
+    sheet('Uredi vajo',`<label>Ime vaje<input name="name" value="${esc(name)}" maxlength="100" required></label><div class="cg-two-fields"><label>Serije (prazno = program)<input type="number" name="sets" min="1" max="12" value="${item.targetSets||''}"></label><label>Ponovitve<input name="reps" value="${esc(item.targetReps||'')}" placeholder="npr. 6–8" maxlength="30"></label></div><label class="cg-checkline"><input name="active" type="checkbox" ${!item.programDisabled?'checked':''}> Aktivna vaja</label><div class="cg-two-fields cg-exercise-actions">${button('program-replace','Zamenjaj z drugo vajo','cg-quiet',`data-index="${index}"`)}${button('program-remove','Odstrani iz programa','cg-quiet cg-danger-btn',`data-index="${index}"`)}</div><details><summary>Napredne možnosti vaje</summary><label>Progresija<select name="mode">${[['auto','Pametno'],['linear','Linearno'],['double','Dvojna progresija'],['531','5/3/1'],['hold','Brez sprememb']].map(([v,t])=>`<option value="${v}" ${(item.progMode||'auto')===v?'selected':''}>${t}</option>`).join('')}</select></label><label>5/3/1 dvig<select name="lift">${['bench','squat','deadlift','ohp'].map(v=>`<option value="${v}" ${(item.lift531||infer531LiftV16(name))===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Ciljni RPE<input name="targetRpe" type="number" min="5" max="10" step="0.5" value="${item.targetRpe||''}"></label><label>Počitek (sekunde)<input name="rest" type="number" min="5" max="900" value="${item.r||90}" required></label><label class="cg-checkline"><input name="main" type="checkbox" ${item.m?'checked':''}> Glavna vaja</label><label>Navodilo<textarea name="description" maxlength="1000">${esc(item.d||'')}</textarea></label></details>`,data=>{
       guardProgram();const all=getDayLists(),it=all[di]?.[index];if(JSON.stringify(it)!==expected)throw Error('Program se je spremenil. Ponovno odpri vajo.');const n=plainImportedText(data.get('name'),100).trim();if(!n)throw Error('Vnesi ime.');if(n!==name){it.sw=(it.sw||[]).filter(s=>!(s.c===getCyc().num&&s.w===cw));it.sw.push({n,c:getCyc().num,w:cw});}
       Object.assign(it,{targetSets:data.get('sets')?Number(data.get('sets')):undefined,targetReps:plainImportedText(data.get('reps'),30),targetRpe:data.get('targetRpe')?Number(data.get('targetRpe')):undefined,programDisabled:!data.has('active'),progMode:data.get('mode'),r:Number(data.get('rest')),m:data.has('main'),d:plainImportedText(data.get('description'),1000)});if(it.progMode==='531')it.lift531=data.get('lift');else delete it.lift531;if(!saveDayLists(all))throw Error('Program ni shranjen.');afterProgram();
     });
   }
-  function exerciseCatalogV29(){return [...new Set([...EXERCISE_DB.map(e=>e.n),...getCustomExercises().map(e=>e.n)])];}
   function exerciseIsOnDayV29(di,name){return (getDayLists()[di]||[]).some(e=>compactNameV26(dispNameForItem(e,getCyc().num,cw))===compactNameV26(name));}
-  function exerciseResultsV29(di,query,catalog){
-    const q=compactNameV26(query).trim();
-    const names=(q?catalog.filter(n=>compactNameV26(n).includes(q)):[]).slice(0,40);
-    const exact=names.some(n=>compactNameV26(n)===q);
-    const rows=names.map(n=>{const dup=exerciseIsOnDayV29(di,n);return `<button type="button" class="cg-exresult" data-pick-exercise="${esc(n)}" ${dup||programWriteBusy?'disabled':''}>${esc(n)}${dup?'<small>že na tem dnevu</small>':''}</button>`;}).join('');
-    const trimmed=query.trim(),nova=(trimmed&&!exact)?`<button type="button" class="cg-exresult cg-exresult-new" data-pick-exercise="${esc(trimmed)}" ${programWriteBusy?'disabled':''}>Nova vaja: ${esc(trimmed)}</button>`:'';
-    return `<div class="cg-exresults" data-exercise-results>${rows}${nova}${!rows&&!nova?'<p class="cg-small cg-empty">Ni zadetkov.</p>':''}</div>`;
+
+  // Step 14: an exercise is picked by muscle group (grid → list of that group +
+  // search + "nova vaja"), then sets/reps/rest. The same picker serves
+  // "Dodaj vajo" and "Zamenjaj z drugo vajo".
+  function exercisePickerSheet({title,di,excludeIndex,onPick}){
+    guardProgram();const custom=getCustomExercises(),all=getDayLists()[di]||[],cyc=getCyc().num;
+    const onDay=name=>all.some((e,i)=>i!==excludeIndex&&compactNameV26(dispNameForItem(e,cyc,cw))===compactNameV26(name));
+    const groups=`<div class="cg-muscle-grid" data-muscle-grid>${MUSCLE_GROUPS_V36.map(g=>{const n=exercisesOfGroupV36(g.id,EXERCISE_DB,custom).length;return `<button type="button" class="cg-muscle" data-muscle="${g.id}"><strong>${esc(g.name)}</strong><small>${n} ${n===1?'vaja':n===2?'vaji':n<5?'vaje':'vaj'}</small></button>`;}).join('')}</div>`;
+    sheet(title,`<p class="cg-small" data-picker-hint>Izberi mišično skupino ali poišči vajo.</p><label>Iskanje<input name="search" data-exercise-search autocomplete="off" placeholder="Vpiši ime vaje" maxlength="100"></label><input type="hidden" name="name"><input type="hidden" name="group"><div data-picker-body>${groups}</div>`,async data=>{
+      const name=plainImportedText(data.get('name')||data.get('search'),100).trim();if(!name)throw Error('Izberi ali vpiši vajo.');
+      if(onDay(name))throw Error('Vaja je že na tem dnevu.');
+      await onPick(name,data.get('group')||'');
+    },'Naprej');
+    const searchInput=dialog.querySelector('[data-exercise-search]'),nameField=dialog.querySelector('input[name="name"]'),groupField=dialog.querySelector('input[name="group"]'),body=dialog.querySelector('[data-picker-body]'),hint=dialog.querySelector('[data-picker-hint]'),form=dialog.querySelector('form');
+    if(!searchInput||!nameField||!groupField||!body||!hint||!form)return;
+    const list=(rows,query,groupId)=>{const q=compactNameV26(query).trim();const shown=rows.filter(x=>!q||compactNameV26(x.n).includes(q)).slice(0,60);const exact=shown.some(x=>compactNameV26(x.n)===q);
+      const html=shown.map(x=>{const dup=onDay(x.n);return `<button type="button" class="cg-exresult" data-pick-exercise="${esc(x.n)}" ${dup?'disabled':''}>${esc(x.n)}${x.custom?'<small>moja</small>':''}${dup?'<small>že na tem dnevu</small>':''}</button>`;}).join('');
+      const trimmed=query.trim(),nova=trimmed&&!exact?`<button type="button" class="cg-exresult cg-exresult-new" data-pick-exercise="${esc(trimmed)}">Nova vaja: ${esc(trimmed)}</button>`:'';
+      return `<div class="cg-exresults" data-exercise-results>${html}${nova}${!html&&!nova?'<p class="cg-small cg-empty">Ni zadetkov.</p>':''}</div>`;};
+    const wire=()=>{body.querySelectorAll('[data-pick-exercise]').forEach(btn=>btn.addEventListener('click',()=>{if(programWriteBusy||btn.disabled)return;nameField.value=btn.dataset.pickExercise;form.requestSubmit();}));
+      body.querySelectorAll('[data-muscle]').forEach(btn=>btn.addEventListener('click',()=>{const g=MUSCLE_GROUPS_V36.find(x=>x.id===btn.dataset.muscle);groupField.value=g.id;hint.textContent=g.name+' · izberi vajo ali vpiši svojo.';body.innerHTML=button('picker-back','← Vse mišične skupine','cg-link')+list(exercisesOfGroupV36(g.id,EXERCISE_DB,custom),searchInput.value,g.id);wire();}));
+      body.querySelector('[data-act="picker-back"]')?.addEventListener('click',()=>{groupField.value='';hint.textContent='Izberi mišično skupino ali poišči vajo.';body.innerHTML=groups;wire();});};
+    searchInput.addEventListener('input',()=>{const g=groupField.value;if(g){const grp=MUSCLE_GROUPS_V36.find(x=>x.id===g);body.innerHTML=button('picker-back','← Vse mišične skupine','cg-link')+list(exercisesOfGroupV36(g,EXERCISE_DB,custom),searchInput.value,g);}
+      else if(searchInput.value.trim()){const rows=[...EXERCISE_DB.map(e=>({n:e.n,custom:false})),...custom.filter(c=>!EXERCISE_DB.some(e=>e.n===c.n)).map(c=>({n:c.n,custom:true}))];body.innerHTML=list(rows,searchInput.value,'');}
+      else body.innerHTML=groups;wire();});
+    wire();
+  }
+  // Sets / reps / rest for a newly picked exercise, then the write.
+  function exerciseDetailsSheet(name,groupId,onSave){
+    const db=EXERCISE_DB.find(e=>e.n===name),restDefault=db?.c==='compound'?120:75;
+    sheet(name,`<p class="cg-small">${db?esc(db.d):'Nova vaja. Velja od tega tedna naprej; prejšnji tedni ostanejo nespremenjeni.'}</p><div class="cg-two-fields"><label>Serije<input type="number" name="sets" min="1" max="12" value="3" required></label><label>Ponovitve<input name="reps" value="8–12" maxlength="30" required></label></div><label>Počitek (sekunde)<input type="number" name="rest" min="5" max="900" value="${restDefault}" required></label>`,async data=>{
+      await onSave({sets:Number(data.get('sets')),reps:plainImportedText(data.get('reps'),30),rest:Number(data.get('rest')),description:db?.d||'',group:groupId});
+    },'Dodaj');
   }
   function addExercise(){
-    guardProgram();const di=state.day,catalog=exerciseCatalogV29();
-    sheet('Dodaj vajo',`<label>Iskanje vaje<input name="search" data-exercise-search autocomplete="off" placeholder="Vpiši ime vaje" maxlength="100"></label><input type="hidden" name="name">${exerciseResultsV29(di,'',catalog)}<div class="cg-two-fields"><label>Serije<input type="number" name="sets" min="1" max="12" value="3" required></label><label>Ponovitve<input name="reps" value="8–12" maxlength="30" required></label></div>`,async data=>{
+    const di=state.day;
+    exercisePickerSheet({title:'Dodaj vajo',di,excludeIndex:-1,onPick:async(name,groupId)=>{
+      closeSheet(false);
+      exerciseDetailsSheet(name,groupId,async opts=>{
+        if(programWriteBusy)return;programWriteBusy=true;
+        try{
+          guardProgram();if(exerciseIsOnDayV29(di,name))throw Error('Vaja je že na tem dnevu.');
+          await autoBackupToIDB();guardProgram();if(exerciseIsOnDayV29(di,name))throw Error('Vaja je že na tem dnevu.');
+          const cyc=getCyc().num,from={c:cyc,w:cw};
+          if(!EXERCISE_DB.some(e=>e.n===name)){const customs=getCustomExercises();if(!customs.some(c=>c.n===name)){customs.push({n:name,group:opts.group||'other'});if(!safeSetRaw(CUST_KEY,JSON.stringify(customs)))throw Error('Vaja ni shranjena.');}}
+          mutateDayList(di,rows=>rows.push({id:_newExId(name),n0:name,m:false,r:opts.rest,d:opts.description,extra:true,progMode:'auto',targetSets:opts.sets,targetReps:opts.reps,from}));
+          if(storageHasPendingWrites())throw Error('Vaja ni varno shranjena. Ponovi shranjevanje ali izvozi podatke.');
+          afterProgram();notify(`»${name}« dodana od tedna ${cw+1} naprej.`);
+        }finally{programWriteBusy=false;}
+      });
+    }});
+  }
+  // Replace keeps the slot (history of the old name stays under the old name;
+  // the new name applies from this cycle+week on, like a rename).
+  function replaceExercise(index){
+    const di=state.day,list=getDayLists()[di],item=list?.[index];if(!item)return;const expected=JSON.stringify(item);
+    closeSheet(false);
+    exercisePickerSheet({title:'Zamenjaj vajo',di,excludeIndex:index,onPick:async(name,groupId)=>{
       if(programWriteBusy)return;programWriteBusy=true;
       try{
-        const name=plainImportedText(data.get('name')||data.get('search'),100).trim();if(!name)throw Error('Izberi ali vpiši vajo.');
-        if(exerciseIsOnDayV29(di,name))throw Error('Vaja je že na tem dnevu.');
-        guardProgram();await autoBackupToIDB();guardProgram();
-        if(exerciseIsOnDayV29(di,name))throw Error('Vaja je že na tem dnevu.');
-        const db=EXERCISE_DB.find(e=>e.n===name);
-        mutateDayList(di,rows=>rows.push({id:_newExId(name),n0:name,m:false,r:db?.c==='compound'?120:75,d:db?.d||'',extra:true,progMode:'auto',targetSets:Number(data.get('sets')),targetReps:plainImportedText(data.get('reps'),30)}));
-        if(storageHasPendingWrites())throw Error('Vaja ni varno shranjena. Ponovi shranjevanje ali izvozi podatke.');
-        afterProgram();
+        guardProgram();const all=getDayLists(),it=all[di]?.[index];if(JSON.stringify(it)!==expected)throw Error('Program se je spremenil. Ponovno odpri vajo.');
+        await autoBackupToIDB();guardProgram();
+        const cyc=getCyc().num;
+        if(!EXERCISE_DB.some(e=>e.n===name)){const customs=getCustomExercises();if(!customs.some(c=>c.n===name)){customs.push({n:name,group:groupId||'other'});if(!safeSetRaw(CUST_KEY,JSON.stringify(customs)))throw Error('Vaja ni shranjena.');}}
+        it.sw=(it.sw||[]).filter(s=>!(s.c===cyc&&s.w===cw));it.sw.push({n:name,c:cyc,w:cw});
+        const db=EXERCISE_DB.find(e=>e.n===name);if(db){it.d=db.d;}
+        if(!saveDayLists(all))throw Error('Program ni shranjen.');
+        afterProgram();notify(`Od tedna ${cw+1} naprej: »${name}«. Zgodovina prejšnje vaje ostane.`);
       }finally{programWriteBusy=false;}
-    },'Dodaj');
-    const searchInput=dialog.querySelector('[data-exercise-search]'),nameField=dialog.querySelector('input[name="name"]'),form=dialog.querySelector('form');
-    const wirePickButtons=()=>{dialog.querySelectorAll('[data-pick-exercise]').forEach(btn=>btn.addEventListener('click',()=>{if(programWriteBusy||btn.disabled)return;nameField.value=btn.dataset.pickExercise;form.requestSubmit();}));};
-    const updateResults=()=>{const host=dialog.querySelector('[data-exercise-results]');if(host){host.outerHTML=exerciseResultsV29(di,searchInput.value,catalog);wirePickButtons();}};
-    searchInput?.addEventListener('input',updateResults);wirePickButtons();
+    }});
   }
-  function editDay(){guardProgram();const index=state.day,meta=getProgramMetaV6(),day=meta.days[index],expected=JSON.stringify(day);sheet('Uredi dan',`<label>Ime dneva<input name="name" value="${esc(day.name)}" maxlength="50" required></label><label>Opis<input name="sub" value="${esc(day.sub||'')}" maxlength="120"></label><label class="cg-checkline"><input type="checkbox" name="active" ${day.active!==false?'checked':''}> Aktiven dan</label>${button('day-duplicate','Podvoji ta dan')}`,data=>{guardProgram();const next=getProgramMetaV6();if(JSON.stringify(next.days[index])!==expected)throw Error('Dan se je spremenil.');if(!data.has('active')&&!next.days.some((d,i)=>i!==index&&d.active!==false&&!d.deleted))throw Error('Vsaj en dan mora ostati aktiven.');Object.assign(next.days[index],{name:plainImportedText(data.get('name'),50),title:plainImportedText(data.get('name'),50),sub:plainImportedText(data.get('sub'),120),active:data.has('active')});commitStorageBatch([[V6_KEYS.metaShared,JSON.stringify(next)]]);afterProgram();});}
+  // Remove = the row leaves the program for every week; its logged sets stay
+  // in history (sessions are snapshots) and are kept in storage for undo via
+  // backup. Confirmed sets this week block it, same as in Focus.
+  async function removeExercise(index){
+    guardProgram();const di=state.day,list=getDayLists()[di],item=list?.[index];if(!item)return;const name=dispNameForItem(item,getCyc().num,cw),expected=JSON.stringify(item);
+    const key=sdk(getCyc().num,cw,di,index);
+    if(!compactCanRemoveExerciseV34(getSets()[key]))throw Error('Vaja ima ta teden zabeležene serije. Najprej jih razveljavi ali jo samo izključi.');
+    closeSheet(false);
+    if(!await ask(`Odstranim »${name}« iz programa? Zgodovina treningov ostane. Če jo želiš samo začasno izpustiti, jo raje izključi s stikalom.`,'Odstrani'))return;
+    if(programWriteBusy)return;programWriteBusy=true;
+    try{
+      guardProgram();const all=getDayLists(),it=all[di]?.[index];if(JSON.stringify(it)!==expected)throw Error('Program se je spremenil. Ponovno odpri vajo.');
+      await autoBackupToIDB();guardProgram();
+      mutateDayList(di,rows=>{rows.splice(index,1);});
+      if(storageHasPendingWrites())throw Error('Sprememba ni varno shranjena. Ponovi shranjevanje ali izvozi podatke.');
+      afterProgram();notify(`»${name}« odstranjena iz programa. Zgodovina ostane.`);
+    }finally{programWriteBusy=false;}
+  }
+  // Delete a day: marked deleted (index kept, so saved keys/history stay valid),
+  // never spliced. At least one active day must remain.
+  async function deleteDay(){
+    guardProgram();const index=state.day,meta=getProgramMetaV6(),day=meta.days[index];if(!day||day.deleted)return;const expected=JSON.stringify(day);
+    if(!meta.days.some((d,i)=>i!==index&&d.active!==false&&!d.deleted))throw Error('Vsaj en dan mora ostati aktiven.');
+    closeSheet(false);
+    if(!await ask(`Izbrišem dan »${day.name||'Dan '+(index+1)}« iz programa? Zgodovina treningov tega dne ostane. Dan se ne bo več prikazoval.`,'Izbriši dan'))return;
+    if(programWriteBusy)return;programWriteBusy=true;
+    try{
+      guardProgram();const next=getProgramMetaV6();if(JSON.stringify(next.days[index])!==expected)throw Error('Dan se je spremenil.');
+      await autoBackupToIDB();guardProgram();
+      Object.assign(next.days[index],{deleted:true,active:false,deletedAt:new Date().toISOString()});
+      commitStorageBatch([[V6_KEYS.metaShared,JSON.stringify(next)]]);
+      state.day=next.days.findIndex(d=>!d.deleted&&d.active!==false);
+      afterProgram();notify('Dan izbrisan. Zgodovina ostane.');
+    }finally{programWriteBusy=false;}
+  }
+  function editDay(){guardProgram();const index=state.day,meta=getProgramMetaV6(),day=meta.days[index],expected=JSON.stringify(day);sheet('Uredi dan',`<label>Ime dneva<input name="name" value="${esc(day.name)}" maxlength="50" required></label><label>Opis<input name="sub" value="${esc(day.sub||'')}" maxlength="120"></label><label class="cg-checkline"><input type="checkbox" name="active" ${day.active!==false?'checked':''}> Aktiven dan</label><div class="cg-two-fields cg-exercise-actions">${button('day-duplicate','Podvoji ta dan','cg-quiet')}${button('day-delete','Izbriši dan','cg-quiet cg-danger-btn')}</div>`,data=>{guardProgram();const next=getProgramMetaV6();if(JSON.stringify(next.days[index])!==expected)throw Error('Dan se je spremenil.');if(!data.has('active')&&!next.days.some((d,i)=>i!==index&&d.active!==false&&!d.deleted))throw Error('Vsaj en dan mora ostati aktiven.');Object.assign(next.days[index],{name:plainImportedText(data.get('name'),50),title:plainImportedText(data.get('name'),50),sub:plainImportedText(data.get('sub'),120),active:data.has('active')});commitStorageBatch([[V6_KEYS.metaShared,JSON.stringify(next)]]);afterProgram();});}
   async function addDay(duplicate=false){
     guardProgram();const before=getProgramMetaV6();if(before.days.length>=7)throw Error('Največ 7 dni.');if(duplicate)closeSheet(false);
     sheet(duplicate?'Podvoji dan':'Dodaj dan',`<label>Ime dneva<input name="name" value="${duplicate?esc(before.days[state.day].name+' kopija'):''}" maxlength="50" required></label>`,async data=>{
@@ -693,6 +796,9 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       else if(act==='program-current'){state.page='Program';state.day=cd;}
       else if(act==='program-edit'){editProgram(index);return;}
       else if(act==='program-add'){addExercise();return;}
+      else if(act==='program-replace'){replaceExercise(index);return;}
+      else if(act==='program-remove'){await removeExercise(index);return;}
+      else if(act==='day-delete'){await deleteDay();return;}
       else if(act==='program-up'){guardProgram();await autoBackupToIDB();guardProgram();moveBuilderExerciseV6(state.day,index,-1);afterProgram();}
       else if(act==='program-down'){guardProgram();await autoBackupToIDB();guardProgram();moveBuilderExerciseV6(state.day,index,1);afterProgram();}
       else if(act==='program-toggle'){guardProgram();const all=getDayLists(),it=all[state.day]?.[index];if(!it)throw Error('Vaja ni več na tem dnevu.');it.programDisabled=!it.programDisabled;if(!saveDayLists(all))throw Error('Program ni shranjen.');afterProgram();notify(it.programDisabled?'Vaja je neaktivna. Zgodovina ostane.':'Vaja je spet aktivna.');}

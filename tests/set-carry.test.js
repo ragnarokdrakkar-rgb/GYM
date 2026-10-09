@@ -98,3 +98,13 @@ test('planning a set in advance marks it manual; clearing it removes the plan; a
   const plannedSets=ctx.compactPlanChangeV26(rows,3,{type:'add',count:2,kg:'90',reps:'3'}).rows;
   assert.deepEqual([...plannedSets.slice(3).map(r=>r.manual)],[true,true],'"Dodaj načrtovane serije" with values is a manual plan');
 });
+
+test('an exercise added mid-cycle (from:{c,w}) counts only from that cycle+week on',()=>{
+  const ctx=vm.createContext({});vm.runInContext(section(model,'function exerciseValidForWeekV36(','function activeWorkoutEntriesV19('),ctx);
+  const v=ctx.exerciseValidForWeekV36,p=ctx.exerciseInProgramV36;
+  assert.equal(v({n0:'x'},1,0),true,'no from = always');
+  assert.equal(v({from:{c:1,w:2}},1,1),false);assert.equal(v({from:{c:1,w:2}},1,2),true);assert.equal(v({from:{c:1,w:2}},1,3),true);
+  assert.equal(v({from:{c:2,w:0}},1,3),false);assert.equal(v({from:{c:2,w:0}},2,0),true);assert.equal(v({from:{c:2,w:1}},3,0),true);
+  assert.equal(v({from:{c:'1',w:'2'}},1,2),true,'strings from JSON are fine');assert.equal(v({from:{c:'a'}},1,0),true,'garbage = always');
+  assert.equal(p({programDisabled:true},1,0),false);assert.equal(p({from:{c:1,w:1}},1,0),false);assert.equal(p({from:{c:1,w:1}},1,1),true);
+});

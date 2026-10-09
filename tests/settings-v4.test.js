@@ -13,6 +13,7 @@ function settingsCtx(overrides={}){
   const base={
     esc:s=>String(s),icon:name=>`<svg data-icon="${name}"></svg>`,fmt:n=>String(n),button,clock:n=>String(n),
     APP_VERSION:'v4-test',cw:0,cd:0,
+    exerciseInProgramV36:(e,c,w)=>!!e&&!e.programDisabled&&(!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w)),exerciseValidForWeekV36:(e,c,w)=>!e||!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w),
     V6_KEYS:{lastExternal:'wt_last_external_backup_v6'},
     localStorage:{getItem:()=>null},
     state:{settings:'',flagged:false,query:'',limit:50},

@@ -11,7 +11,7 @@ const noopDialog=()=>({querySelector:()=>null,querySelectorAll:()=>[]});
 
 function programCtx(overrides={}){
   const ctx=harness({esc:s=>String(s),icon:()=>'',clock:n=>String(n),button,
-    PROG:{weeks:[{},{},{},{}]},cw:0,state:{day:0},navigationLocked:()=>false,getCyc:()=>({num:1}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,exerciseTargetSetsV19:item=>Number(item?.targetSets)||4,restForEx:(id,n,r)=>r,getHiddenEx:()=>({}),
+    PROG:{weeks:[{},{},{},{}]},cw:0,state:{day:0},navigationLocked:()=>false,getCyc:()=>({num:1}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,exerciseTargetSetsV19:item=>Number(item?.targetSets)||4,exerciseInProgramV36:(e,c,w)=>!!e&&!e.programDisabled&&(!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w)),exerciseValidForWeekV36:(e,c,w)=>!e||!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w),restForEx:(id,n,r)=>r,getHiddenEx:()=>({}),
     ...overrides});
   inner(ctx,'activeDayWordV29');inner(ctx,'program');
   return ctx;
@@ -97,67 +97,115 @@ test('program-toggle flips programDisabled on a fresh read, saves via saveDayLis
   assert.throws(()=>toggle(9),/Vaja ni več na tem dnevu/);
 });
 
-function searchCtx(dayItems=[]){
-  return harness({EXERCISE_DB:[{n:'Barbell Bench Press',c:'compound',d:'d'},{n:'Bench Dip',c:'isolation',d:'d'}],
-    getCustomExercises:()=>[{n:'My Custom Bench'}],esc:s=>String(s),
-    getDayLists:()=>({0:dayItems}),getCyc:()=>({num:1}),cw:0,
-    dispNameForItem:it=>it.n0||it.n,programWriteBusy:false});
+// ---- Step 14: picker by muscle group, details sheet, from-week, replace/remove/delete ----
+const dbSample=[{n:'Barbell Bench Press',m:'Chest',c:'compound',d:'bench'},{n:'Bench Dip',m:'Triceps',c:'isolation',d:'dip'},{n:'Face Pulls',m:'Rear Delt',c:'isolation',d:'fp'},{n:'Shrugs',m:'Traps',c:'isolation',d:'sh'},{n:'Burpee',m:'Full Body',c:'compound',d:'b'}];
+test('Muscle groups cover every built-in DB muscle and sort custom exercises into their group',()=>{
+  const ctx=harness();
+  const groups=ctx.muscleGroupsV36();
+  assert.equal(groups.length,12);
+  for(const m of ['Chest','Back','Traps','Shoulders','Front Delt','Rear Delt','Biceps','Triceps','Quads','Hamstrings','Glutes','Calves','Core','Forearms','Full Body'])assert.notEqual(ctx.muscleGroupOfV36(m),undefined,m);
+  assert.equal(ctx.muscleGroupOfV36('Rear Delt'),'shoulders');assert.equal(ctx.muscleGroupOfV36('Traps'),'back');assert.equal(ctx.muscleGroupOfV36('Nekaj'),'other');
+  const custom=[{n:'Moj potisk',group:'chest'},{n:'Stara',m:'Quads'},{n:'Barbell Bench Press',group:'chest'}];
+  const chest=ctx.exercisesOfGroupV36('chest',dbSample,custom);
+  assert.deepEqual(JSON.parse(JSON.stringify(chest)),[{n:'Barbell Bench Press',custom:false},{n:'Moj potisk',custom:true}],'custom listed once, DB name not duplicated');
+  assert.equal(ctx.exercisesOfGroupV36('quads',dbSample,custom)[0].n,'Stara','legacy custom with m is mapped');
+  assert.equal(ctx.exercisesOfGroupV36('other',dbSample,[]).length,1);
+});
+
+function pickerCtx(dayItems=[]){
+  const sheets=[];
+  const ctx=harness({EXERCISE_DB:dbSample,getCustomExercises:()=>[{n:'Moj potisk',group:'chest'}],esc:s=>String(s),button,
+    getDayLists:()=>({0:dayItems}),getCyc:()=>({num:1}),cw:0,dispNameForItem:it=>it.n0||it.n,programWriteBusy:false,guardProgram:()=>{},
+    plainImportedText:(v,max)=>String(v||'').slice(0,max),dialog:noopDialog(),compactNameV26:s=>String(s).toLowerCase(),
+    sheet:(title,body,save,ok)=>{sheets.push({title,body,save,ok});}});
+  ctx.sheets=sheets;inner(ctx,'exercisePickerSheet');return ctx;
 }
-test('Exercise search filters case-insensitively, caps at 40 results, offers "Nova vaja" and disables duplicates',()=>{
-  const ctx=searchCtx([{n0:'Bench Dip'}]);
-  inner(ctx,'exerciseIsOnDayV29');inner(ctx,'exerciseResultsV29');
-  const html=ctx.exerciseResultsV29(0,'BENCH',['Barbell Bench Press','Bench Dip','My Custom Bench','Squat']);
-  assert.match(html,/Barbell Bench Press/);assert.match(html,/My Custom Bench/);
-  assert.doesNotMatch(html,/Squat/);
-  assert.match(html,/data-pick-exercise="Bench Dip" disabled/);assert.match(html,/že na tem dnevu/);
-  assert.match(html,/Nova vaja: BENCH/); // no catalog name equals "bench" exactly, so the free-text option is offered
-  const exact=ctx.exerciseResultsV29(0,'bench dip',['Barbell Bench Press','Bench Dip']);
-  assert.doesNotMatch(exact,/Nova vaja/); // case-insensitive exact match suppresses "Nova vaja"
-  const noMatch=ctx.exerciseResultsV29(0,'Zzz Novo Ime',['Barbell Bench Press']);
-  assert.match(noMatch,/Nova vaja: Zzz Novo Ime/);
-  const many=['Curl'].concat(Array.from({length:60},(_,i)=>'Curl Variant '+i));
-  const capped=ctx.exerciseResultsV29(0,'Curl',many); // exact match ("Curl") among the 61 matches → no extra "Nova vaja" button
-  assert.doesNotMatch(capped,/Nova vaja/);
-  assert.equal((capped.match(/data-pick-exercise/g)||[]).length,40);
+test('The picker opens with the muscle grid and counts, and rejects a pick that is already on the day',async()=>{
+  const ctx=pickerCtx([{n0:'Bench Dip'}]);let picked=null;
+  ctx.exercisePickerSheet({title:'Dodaj vajo',di:0,excludeIndex:-1,onPick:async(n,g)=>{picked=[n,g];}});
+  const s=ctx.sheets[0];
+  assert.equal(s.title,'Dodaj vajo');assert.equal(s.ok,'Naprej');
+  assert.equal((s.body.match(/data-muscle="/g)||[]).length,12);
+  assert.match(s.body,/data-muscle="chest"><strong>Prsa<\/strong><small>2 vaji<\/small>/,'DB + custom counted');
+  assert.match(s.body,/data-muscle="shoulders"><strong>Ramena<\/strong><small>1 vaja<\/small>/);
+  assert.match(s.body,/data-exercise-search/);
+  await assert.rejects(()=>s.save(new Map([['name','Bench Dip'],['group','triceps']])),/že na tem dnevu/);
+  await assert.rejects(()=>s.save(new Map([['name',''],['search','  ']])),/Izberi ali vpiši vajo/);
+  await s.save(new Map([['name',''],['search','Nova moja'],['group','']]));
+  assert.deepEqual(picked,['Nova moja','']);
+});
+test('Replacing: the exercise itself is excluded from the duplicate check, other rows are not',async()=>{
+  const ctx=pickerCtx([{n0:'Bench Dip'},{n0:'Shrugs'}]);let picked=null;
+  ctx.exercisePickerSheet({title:'Zamenjaj vajo',di:0,excludeIndex:0,onPick:async n=>{picked=n;}});
+  const s=ctx.sheets[0];
+  await s.save(new Map([['name','Bench Dip'],['group','triceps']]));assert.equal(picked,'Bench Dip');
+  await assert.rejects(()=>s.save(new Map([['name','Shrugs'],['group','back']])),/že na tem dnevu/);
 });
 
 function addExerciseCtx(){
-  const store={0:[]},calls=[];
-  const ctx=harness({EXERCISE_DB:[{n:'Squat',c:'compound',d:'desc'}],getCustomExercises:()=>[],
-    getCyc:()=>({num:1}),cw:0,dispNameForItem:it=>it.n0,plainImportedText:(v,max)=>String(v||'').slice(0,max),
-    _newExId:n=>'id-'+n,state:{day:0},dialog:noopDialog(),
+  const store={0:[]},calls=[],sheets=[],customs=[];
+  const ctx=harness({EXERCISE_DB:dbSample,getCustomExercises:()=>customs,CUST_KEY:'wt_custom_ex',safeSetRaw:(k,v)=>{calls.push(['set',k,v]);return true;},
+    getCyc:()=>({num:2}),cw:1,dispNameForItem:it=>it.n0,plainImportedText:(v,max)=>String(v||'').slice(0,max),esc:s=>String(s),button,compactNameV26:s=>String(s).toLowerCase(),
+    _newExId:n=>'id-'+n,state:{day:0},dialog:noopDialog(),closeSheet:()=>{},notify:(t)=>calls.push(['notify',t]),
     guardProgram:()=>{},programWriteBusy:false,getDayLists:()=>JSON.parse(JSON.stringify(store)),
     mutateDayList:(di,fn)=>{const arr=store[di]||(store[di]=[]);fn(arr);calls.push(['mutate',JSON.parse(JSON.stringify(arr))]);},
     afterProgram:()=>calls.push('after'),
-    sheet:(title,body,save)=>{ctx._save=save;},
+    sheet:(title,body,save,ok)=>{sheets.push({title,body,save,ok});},
     autoBackupToIDB:()=>Promise.resolve(true),storageHasPendingWrites:()=>false});
-  ctx.store=store;ctx.calls=calls;
-  inner(ctx,'exerciseCatalogV29');inner(ctx,'exerciseIsOnDayV29');inner(ctx,'exerciseResultsV29');inner(ctx,'addExercise');
+  ctx.store=store;ctx.calls=calls;ctx.sheets=sheets;ctx.customs=customs;
+  inner(ctx,'exerciseIsOnDayV29');inner(ctx,'exercisePickerSheet');inner(ctx,'exerciseDetailsSheet');inner(ctx,'addExercise');
   return ctx;
 }
-test('addExercise adds exactly once per submit, rejects existing names, and the busy guard blocks a concurrent second add',async()=>{
+test('addExercise: pick → details (sets/reps/rest) → one write with from:{cycle,week}; a new name is saved as a custom exercise of its group',async()=>{
   const ctx=addExerciseCtx();
   ctx.addExercise();
-  await ctx._save(new Map([['name','Squat'],['sets','3'],['reps','5']]));
+  await ctx.sheets[0].save(new Map([['name','Barbell Bench Press'],['group','chest']]));
+  const details=ctx.sheets[1];assert.equal(details.title,'Barbell Bench Press');assert.match(details.body,/name="rest"[^>]*value="120"/,'compound default rest');
+  await details.save(new Map([['sets','4'],['reps','6–8'],['rest','150']]));
   assert.equal(ctx.calls.filter(c=>c[0]==='mutate').length,1);
-  assert.equal(ctx.store[0].length,1);assert.equal(ctx.store[0][0].n0,'Squat');
-  await assert.rejects(()=>ctx._save(new Map([['name','Squat'],['sets','3'],['reps','5']])),/že na tem dnevu/);
-  assert.equal(ctx.store[0].length,1);
-});
-test('addExercise busy guard: a concurrent second submit is a silent no-op, and the post-await duplicate re-check rejects a name added meanwhile',async()=>{
-  let resolveBackup;
-  const ctx=addExerciseCtx();
-  ctx.autoBackupToIDB=()=>new Promise(r=>{resolveBackup=r;});
+  const row=ctx.store[0][0];
+  assert.equal(row.n0,'Barbell Bench Press');assert.equal(row.targetSets,4);assert.equal(row.targetReps,'6–8');assert.equal(row.r,150);assert.equal(row.d,'bench');
+  assert.deepEqual(JSON.parse(JSON.stringify(row.from)),{c:2,w:1},'valid from the current cycle+week');
+  assert.equal(ctx.customs.length,0,'a DB exercise is not stored as custom');
+  assert.match(ctx.calls.find(c=>c[0]==='notify')[1],/od tedna 2 naprej/);
+  // a brand-new name becomes a custom exercise of the chosen group
   ctx.addExercise();
-  const first=ctx._save(new Map([['name','Squat'],['sets','3'],['reps','5']]));
-  // Second concurrent submit while the first is awaiting autoBackupToIDB: silent no-op, no throw.
-  await assert.doesNotReject(ctx._save(new Map([['name','Bench'],['sets','3'],['reps','5']])));
-  assert.equal(ctx.store[0].length,0,'busy guard must not let a second write through while the first is in flight');
-  // Simulate another write landing on the day list while the first add is awaiting the backup.
-  ctx.store[0].push({n0:'Squat'});
-  resolveBackup(true);
-  await assert.rejects(first,/že na tem dnevu/);
-  assert.equal(ctx.store[0].length,1,'the post-await duplicate re-check must reject rather than double-add');
+  await ctx.sheets[2].save(new Map([['name',''],['search','Moj potisk'],['group','chest']]));
+  await ctx.sheets[3].save(new Map([['sets','3'],['reps','10'],['rest','60']]));
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx.customs)),[{n:'Moj potisk',group:'chest'}]);
+  assert.equal(ctx.store[0].length,2);
+});
+test('addExercise busy guard and post-backup duplicate re-check still hold',async()=>{
+  let resolveBackup;const ctx=addExerciseCtx();ctx.autoBackupToIDB=()=>new Promise(r=>{resolveBackup=r;});
+  ctx.addExercise();await ctx.sheets[0].save(new Map([['name','Barbell Bench Press'],['group','chest']]));
+  const first=ctx.sheets[1].save(new Map([['sets','3'],['reps','5'],['rest','90']]));
+  await assert.doesNotReject(ctx.sheets[1].save(new Map([['sets','3'],['reps','5'],['rest','90']])));
+  assert.equal(ctx.store[0].length,0,'busy guard');
+  ctx.store[0].push({n0:'Barbell Bench Press'});resolveBackup(true);
+  await assert.rejects(first,/že na tem dnevu/);assert.equal(ctx.store[0].length,1);
+});
+test('removeExercise and deleteDay: guarded, confirmed, index-preserving, history untouched',()=>{
+  const body=name=>{const a=shell.indexOf('  async function '+name+'(');return shell.slice(a,shell.indexOf('\n  }\n',a));};
+  const rm=body('removeExercise');
+  assert.match(rm,/compactCanRemoveExerciseV34\(getSets\(\)\[key\]\)/,'blocked while sets are confirmed this week');
+  assert.match(rm,/await ask\(/);assert.match(rm,/mutateDayList\(di,rows=>\{rows\.splice\(index,1\);\}\)/,'goes through mutateDayList → reconcilePositions');
+  assert.match(rm,/storageHasPendingWrites\(\)/);
+  const dd=body('deleteDay');
+  assert.match(dd,/Vsaj en dan mora ostati aktiven/);
+  assert.match(dd,/Object\.assign\(next\.days\[index\],\{deleted:true,active:false,deletedAt/,'marked, never spliced: indexes stay');
+  assert.doesNotMatch(dd,/days\.splice/);
+  assert.match(dd,/commitStorageBatch\(\[\[V6_KEYS\.metaShared/);
+  assert.match(shell,/else if\(act==='program-replace'\)\{replaceExercise\(index\);return;\}/);
+  assert.match(shell,/else if\(act==='program-remove'\)\{await removeExercise\(index\);return;\}/);
+  assert.match(shell,/else if\(act==='day-delete'\)\{await deleteDay\(\);return;\}/);
+});
+test('Program rows and counters respect "valid from week": an exercise added in week 3 is greyed and not counted in week 1',()=>{
+  const list=[ex('Bench',{targetSets:3}),ex('Curl',{targetSets:4,from:{c:1,w:2}})];
+  const ctx=programCtx({getProgramMetaV6:()=>({days:[day('Push')]}),dayListFor:()=>list,exerciseInProgramV36:(e,c,w)=>!e.programDisabled&&(!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w)),exerciseValidForWeekV36:(e,c,w)=>!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w)});
+  const html=ctx.program();
+  assert.match(html,/<b>1\/2<\/b> aktivnih vaj · <b>3<\/b> serije/);
+  assert.match(html,/velja od cikla 1, tedna 3/);
+  assert.match(html,/cg-prow off"><span class="cg-order">2<\/span>/);
 });
 
 function addDayCtx(days){
@@ -188,9 +236,4 @@ test('addDay busy guard silently no-ops a concurrent second submit while the fir
   await first;
   assert.equal(ctx.calls.filter(c=>c[0]==='commit').length,1);
   assert.equal(ctx.meta.days.length,2);assert.equal(ctx.meta.days[1].name,'Legs');
-});
-test('addExercise uses typed search text when no result was tapped and never reports success on a failed write',()=>{
-  const shell=require('node:fs').readFileSync(require('node:path').join(__dirname,'..','js/compact-shell.js'),'utf8'),body=shell.slice(shell.indexOf('  function addExercise('),shell.indexOf('\n  }\n',shell.indexOf('  function addExercise(')));
-  assert.match(body,/data\.get\('name'\)\|\|data\.get\('search'\)/);
-  assert.ok(body.indexOf('storageHasPendingWrites()')>body.indexOf('mutateDayList(')&&body.indexOf('storageHasPendingWrites()')<body.indexOf('afterProgram()'));
 });

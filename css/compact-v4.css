@@ -466,3 +466,14 @@
 
 /* Step 13: deleting one workout from history (started by mistake). */
 #cg-app .cg-history-summary .cg-danger-btn{color:var(--cg-pending);margin-left:8px;}
+
+/* Step 14: exercise picker by muscle group; replace/remove and delete-day actions. */
+#cg-app .cg-muscle-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 12px;}
+#cg-app .cg-muscle{min-height:58px;padding:10px 12px;border-radius:12px;background:var(--cg-raised);border:1px solid var(--cg-line);text-align:left;display:flex;flex-direction:column;justify-content:center;gap:2px;}
+#cg-app .cg-muscle strong{font-size:15px;font-weight:700;color:var(--cg-text);}
+#cg-app .cg-muscle small{font-size:11.5px;color:var(--cg-muted);}
+#cg-app .cg-muscle:active{border-color:var(--cg-accent);background:color-mix(in srgb,var(--cg-accent) 12%,var(--cg-raised));}
+#cg-app .cg-exercise-actions{margin:4px 0 10px;}
+#cg-app .cg-exercise-actions .cg-quiet{min-height:44px;font-size:14px;}
+#cg-app .cg-exercise-actions .cg-danger-btn{color:var(--cg-pending);border-color:color-mix(in srgb,var(--cg-pending) 45%,var(--cg-line));}
+#cg-app .cg-sheet [data-act="picker-back"]{padding:6px 0 10px;}
