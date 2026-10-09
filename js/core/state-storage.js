@@ -95,14 +95,21 @@ function recoverStorageJournal(){
     storageRecoveryError=false;return true;
   }catch(error){storageRecoveryError=true;return false;}
 }
+// Keys whose only job is a one-step user undo. They carry no data of their own, so
+// the crash-recovery journal does not duplicate them (a history edit would
+// otherwise hold the whole history four times at once and overflow the quota).
+const STORAGE_UNDO_KEYS=new Set(['wt_history_undo_v24','wt_plan_undo_v26','wt_bw_undo_v27']);
+// Writes that did not fit even after rolling back are not kept as pending: the
+// retry would fail the same way and the "not saved" banner would never clear.
+function storageWriteCannotFit(error){return !!error&&(error.name==='QuotaExceededError'||error.name==='NS_ERROR_DOM_QUOTA_REACHED'||error.code===22||error.code===1014);}
 function commitStorageBatch(changes){
   if(storageHasPendingWrites())throw new Error('Najprej ponovno shrani čakajoče vnose.');
   const entries=[...changes];
   const before=entries.map(([key])=>[key,localStorage.getItem(key)]);
-  let journalWritten=false;
+  let journalWritten=false,failure=null;
   try{
-    // The durable undo journal is acknowledged before any active data changes.
-    localStorage.setItem(STORAGE_JOURNAL_KEY,JSON.stringify(before));
+    // The durable recovery journal is acknowledged before any active data changes.
+    localStorage.setItem(STORAGE_JOURNAL_KEY,JSON.stringify(before.filter(([key])=>!STORAGE_UNDO_KEYS.has(key))));
     journalWritten=true;
     entries.filter(([,value])=>value===null).forEach(([key])=>localStorage.removeItem(key));
     entries.filter(([,value])=>value!==null).forEach(([key,value])=>{
@@ -112,6 +119,7 @@ function commitStorageBatch(changes){
     localStorage.removeItem(STORAGE_JOURNAL_KEY);
     refreshStorageStatus();return true;
   }catch(error){
+    failure=error;
     if(journalWritten){
       try{restoreStorageEntries(before);localStorage.removeItem(STORAGE_JOURNAL_KEY);}
       catch(rollbackError){storageRecoveryError=true;}
@@ -123,9 +131,10 @@ function commitStorageBatch(changes){
     // the "not saved" indicator back to "saved" within a second, even though this
     // edit was silently dropped. retryPendingStorageWrites() replays the same
     // batch atomically through commitStorageBatch again.
-    pendingBatchWrites={entries,before};
-    refreshStorageStatus('error');
-    throw new Error(storageRecoveryError?'Obnova ni dokončana. Ne zapri aplikacije; uporabi Ponovi shranjevanje.':'Zapis ni uspel. Prejšnji podatki so ostali ohranjeni.');
+    const tooBig=!storageRecoveryError&&storageWriteCannotFit(failure);
+    pendingBatchWrites=tooBig?null:{entries,before};
+    refreshStorageStatus(tooBig?'saved':'error');
+    throw new Error(storageRecoveryError?'Obnova ni dokončana. Ne zapri aplikacije; uporabi Ponovi shranjevanje.':tooBig?'Pomnilnik aplikacije je poln, zapis ne gre vanj. Prejšnji podatki so ohranjeni. Izvozi varnostno kopijo (Nastavitve → Varnostna kopija).':'Zapis ni uspel. Prejšnji podatki so ostali ohranjeni.');
   }
 }
 recoverStorageJournal();

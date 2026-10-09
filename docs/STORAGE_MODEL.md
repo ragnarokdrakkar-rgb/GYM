@@ -428,14 +428,16 @@ All of this lives in `js/core/state-storage.js`.
 These hold exactly one "before" snapshot each, to support a single Undo action in their
 respective editors. None of them appear in the backup export. `wt_undo_v15` is cleared by a
 replace-mode restore (it's in the `managed` array in `buildRestorePlanV18`), and
-**`wt_history_undo_v24`, `wt_plan_undo_v26` and `wt_bw_undo_v27` are cleared by every restore,
+**`wt_history_undo_v24`, `wt_plan_undo_v26` and `wt_bw_undo_v27` are cleared by every restore, and the crash-recovery journal
+(`wt_storage_journal_v18`) never duplicates them (`STORAGE_UNDO_KEYS` in state-storage.js);
+a batch that fails with a quota error is rolled back and dropped, not kept pending. They
 replace and merge** — replaying a pre-restore snapshot would overwrite imported data
 (`tests/restore-clears-undo.test.js`).
 
 | Key | Set by | Undone by |
 |---|---|---|
 | `wt_undo_v15` | v6-core.js save-state helper | (save-state internal use; cleared by replace-restore) |
-| `wt_history_undo_v24` | `js/history-editor.js` / `js/compact-shell.js` history edits | same files' "Razveljavi" (undo) action |
+| `wt_history_undo_v24` | `js/history-editor.js` / `js/compact-shell.js` history edits — since v35 only the changed stores' previous value plus a fingerprint of the result (`historyUndoSnapshotV35`), never a full before+after copy | same files' "Razveljavi" (undo) action |
 | `wt_plan_undo_v26` | `js/compact-ui.js` / `js/compact-shell.js` plan/day editor edits | same files |
 | `wt_bw_undo_v27` | `js/compact-shell.js` `editWeight()` | (referenced as the rollback snapshot for that edit) |
 | `wt_previous_day_draft_v18` | `transitionSessionV18()` when starting a new attempt over an already-completed day | `restorePreviousDayDraftV18()` |

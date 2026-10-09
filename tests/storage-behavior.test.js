@@ -10,7 +10,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 function harness(initial={}){
   const data=new Map(Object.entries(initial)),states=[];
   let reject=null;
-  const localStorage={getItem:k=>data.get(k)??null,setItem(k,v){if(reject?.(k,String(v)))throw Object.assign(new Error('full'),{name:'QuotaExceededError'});data.set(k,String(v));},removeItem:k=>data.delete(k)};
+  const localStorage={getItem:k=>data.get(k)??null,setItem(k,v){const r=reject?.(k,String(v));if(r)throw Object.assign(new Error('full'),typeof r==='object'?r:{name:'QuotaExceededError'});data.set(k,String(v));},removeItem:k=>data.delete(k)};
   const context=vm.createContext({localStorage,window:{markSaveStateV15:s=>states.push(s)},document:{getElementById:()=>null,addEventListener(){}},setTimeout(){},alert(){},console,LS:{sets:'wt_s6',sessions:'wt_sess6',cycle:'wt_c6',pr:'wt_pr',notes:'wt_notes',bw:'wt_bw',meas:'wt_meas',gym:'wt_gym',pain:'wt_pain',cynotes:'wt_cyn',restplan:'wt_rest',setcounts:'wt_counts',theme:'wt_theme'},V6_KEYS:{settings:'wt_v6_settings',restLog:'wt_rest_log_v6',metaShared:'wt_program_meta_shared_v16',lastExternal:'wt_last_external_backup_v6'},MANAGED_LOCAL_KEYS:['wt_s6','wt_sess6','wt_profile'],CUST_KEY:'wt_custom_ex',getRestLogV6:()=>[],mergeSessions:(a,b)=>[...new Map([...a,...b].map(x=>[x.id,x])).values()]});
   vm.runInContext(read('js/core/state-storage.js')+'\n'+read('js/core/backup.js'),context);
   return {context,data,states,run:s=>vm.runInContext(s,context),rejectWith:fn=>{reject=fn;}};
@@ -106,7 +106,8 @@ test('full storage refuses transaction before changing active data if journal do
 
 test('a failed commitStorageBatch keeps storageHasPendingWrites() true (so the header stays "not saved" instead of a periodic status poll flipping it back to "saved") and a retry re-applies the change',()=>{
   const h=harness({wt_s6:'old sets',wt_sess6:'old sessions'});
-  h.rejectWith((k,v)=>k==='wt_sess6'&&v==='new sessions');
+  // A transient failure (not a quota error): the write is kept pending for a retry.
+  h.rejectWith((k,v)=>k==='wt_sess6'&&v==='new sessions'?{name:'UnknownError'}:false);
   assert.throws(()=>h.run("commitStorageBatch(new Map([['wt_s6','new sets'],['wt_sess6','new sessions']]))"));
   // Data on disk was safely rolled back...
   assert.equal(h.data.get('wt_s6'),'old sets');
@@ -120,6 +121,20 @@ test('a failed commitStorageBatch keeps storageHasPendingWrites() true (so the h
   assert.equal(h.run('storageHasPendingWrites()'),false);
   assert.equal(h.data.get('wt_s6'),'new sets');
   assert.equal(h.data.get('wt_sess6'),'new sessions');
+});
+
+test('the recovery journal never duplicates undo-only keys, and a batch that cannot fit is dropped instead of kept pending',()=>{
+  const h=harness({wt_s6:'old sets'});
+  let journal='';h.rejectWith((k,v)=>{if(k==='wt_storage_journal_v18')journal=v;return k==='wt_s6'&&v==='new sets';});
+  assert.throws(()=>h.run("commitStorageBatch(new Map([['wt_s6','new sets'],['wt_history_undo_v24','{\"before\":{}}']]))"));
+  assert.doesNotMatch(journal,/wt_history_undo_v24/,'undo key is not in the journal');
+  assert.match(journal,/wt_s6/);
+  // Quota-like failure: rolled back, NOT kept as pending (a retry would fail the same way).
+  const q=harness({wt_s6:'old sets'});
+  q.rejectWith((k,v)=>k==='wt_s6'&&v==='huge');
+  assert.throws(()=>q.run("commitStorageBatch(new Map([['wt_s6','huge']]))"),/poln/);
+  assert.equal(q.data.get('wt_s6'),'old sets');
+  assert.equal(q.run('storageHasPendingWrites()'),false,'no stuck "not saved" banner');
 });
 
 test('a failed batch never overwrites a newer successful write when retried',()=>{

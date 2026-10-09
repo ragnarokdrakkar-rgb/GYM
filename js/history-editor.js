@@ -52,6 +52,38 @@ function historyDeleteSessionV35(data,si,expected){
   next.sessions.splice(si,1);
   return next;
 }
+// One-step undo for a history edit: only the stores that actually change, and
+// only their previous value. (Storing both full "before" and "after" of sets,
+// sessions and PRs held the whole history four times at once during the commit
+// and overflowed localStorage on real phones.) `fingerprint` of the result lets
+// undo check that nothing else changed in between.
+function historyUndoSnapshotV35(before,next){
+  const changed={};
+  for(const store of ['sets','sessions','prs']){const b=JSON.stringify(before[store]),a=JSON.stringify(next[store]);if(b!==a)changed[store]=before[store];}
+  return {version:35,before:changed,after:historyFingerprintV35(next)};
+}
+function historyFingerprintV35(data){
+  const text=JSON.stringify([data.sets,data.sessions,data.prs]);let h=0;
+  for(let i=0;i<text.length;i++)h=(h*31+text.charCodeAt(i))>>>0;
+  return text.length+':'+h.toString(16);
+}
+// The batch of a history edit: changed stores plus the slim undo snapshot.
+function historyCommitEntriesV35(before,next){
+  const undo=historyUndoSnapshotV35(before,next),entries=[];
+  for(const [store,key] of [['sets',LS.sets],['sessions',LS.sessions],['prs',LS.pr]])if(store in undo.before)entries.push([key,JSON.stringify(next[store])]);
+  entries.push(['wt_history_undo_v24',JSON.stringify(undo)]);
+  return entries;
+}
+// Entries that restore the snapshot. Returns null when the current data is not
+// what the edit produced (then an automatic undo is not safe).
+function historyUndoEntriesV35(undo,current){
+  if(!undo||undo.version!==35||!undo.before||typeof undo.before!=='object')return null;
+  if(historyFingerprintV35(current)!==undo.after)return null;
+  const entries=[];
+  for(const [store,key] of [['sets',LS.sets],['sessions',LS.sessions],['prs',LS.pr]])if(store in undo.before)entries.push([key,JSON.stringify(undo.before[store])]);
+  entries.push(['wt_history_undo_v24',null]);
+  return entries;
+}
 let historySelectionV24=null,historyVisibleV24=[],historyLimitV24=50;
 function renderHistoryEditorV24(reset=true){
   const host=document.getElementById('history-results-v24');if(!host)return;
@@ -76,7 +108,7 @@ function saveHistoryEditV24(){
     for(const field of ['name','kg','reps','rpe'])values[field]=document.getElementById('history-edit-'+field).value;
     const next=historyCorrectionV24(before,historySelectionV24.ref,historySelectionV24.expected,values);
     // A durable one-step undo and all affected stores commit together or roll back.
-    commitStorageBatch([[LS.sets,JSON.stringify(next.sets)],[LS.sessions,JSON.stringify(next.sessions)],[LS.pr,JSON.stringify(next.prs)],['wt_history_undo_v24',JSON.stringify({before,after:next})]]);
+    commitStorageBatch(historyCommitEntriesV35(before,next));
     document.getElementById('history-dialog-v24').close();historySelectionV24=null;renderHistoryEditorV24();toast('Popravek shranjen. Drugi viri in program ostanejo nespremenjeni.','ok');
   }catch(error){toast(error.message,'err');}
 }
@@ -84,10 +116,11 @@ async function undoHistoryEditV24(){
   if(stRun||window.v6RecoveryPending){toast('Najprej zaključi trening.','err');return;}
   try{
     const undo=JSON.parse(readStorageRaw('wt_history_undo_v24')||'null');if(!undo){toast('Ni popravka za razveljavitev.','err');return;}
-    if(JSON.stringify({sets:getSets(),sessions:getSessions(),prs:getPRs()})!==JSON.stringify(undo.after))throw new Error('Podatki so se od popravka spremenili. Samodejna razveljavitev ni varna.');
+    if(!historyUndoEntriesV35(undo,{sets:getSets(),sessions:getSessions(),prs:getPRs()}))throw new Error('Podatki so se od popravka spremenili. Samodejna razveljavitev ni varna.');
     if(!await uiConfirm('Razveljavim zadnji popravek zgodovine?'))return;
-    if(stRun||window.v6RecoveryPending||JSON.stringify({sets:getSets(),sessions:getSessions(),prs:getPRs()})!==JSON.stringify(undo.after))throw new Error('Podatki so se spremenili. Ponovno odpri zgodovino.');
-    commitStorageBatch([[LS.sets,JSON.stringify(undo.before.sets)],[LS.sessions,JSON.stringify(undo.before.sessions)],[LS.pr,JSON.stringify(undo.before.prs)],['wt_history_undo_v24',null]]);
+    const entries=stRun||window.v6RecoveryPending?null:historyUndoEntriesV35(undo,{sets:getSets(),sessions:getSessions(),prs:getPRs()});
+    if(!entries)throw new Error('Podatki so se spremenili. Ponovno odpri zgodovino.');
+    commitStorageBatch(entries);
     renderHistoryEditorV24();toast('Zadnji popravek razveljavljen.','ok');
   }catch(error){toast(error.message,'err');}
 }
