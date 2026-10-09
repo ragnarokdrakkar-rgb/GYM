@@ -1,18 +1,21 @@
-# Workout Tracker 1.5.2 — Temno-rdeča prenova in hitrejši vnos serij
+# Workout Tracker 1.5.3 — Temno-rdeča prenova in hitrejši vnos serij
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
-2. Prenesi [APK izdaje 1.5.2](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.5.2/Workout-Tracker-v1.5.2.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+2. Prenesi [APK izdaje 1.5.3](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.5.3/Workout-Tracker-v1.5.3.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.5.2 je 74. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.5.3 je 75. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Novo v 1.5.3
+
+- Zgodovina: trening, začet po nesreči, izbrišeš z »Izbriši trening« (serije in rekordi ostanejo; razveljavljivo).
 
 ## Novo v 1.5.2
 
-- Zgodovina: trening, začet po nesreči, izbrišeš z »Izbriši trening« (serije in rekordi ostanejo; razveljavljivo).
 - Vnos trenutne serije ostane, ko vnaprej vpišeš naslednjo serijo ali dodaš/odstraniš serijo.
 
 ## Novo v 1.5.1
