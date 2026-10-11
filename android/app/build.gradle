@@ -28,7 +28,7 @@ android {
 
         // Pri vsaki novi APK-verziji povečaj versionCode.
         versionCode 78
-        versionName "1.6.1"
+        versionName "1.6.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
