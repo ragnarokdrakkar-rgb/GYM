@@ -29,6 +29,7 @@ test('weightVerdictV30: bulk above the guideline range is a warn "hitreje"',()=>
 test('weightVerdictV30: cut in range is ok and says "pada"',()=>{
   const r=topCtx().weightVerdictV30('cut',-0.4);
   assert.equal(r.tone,'ok');assert.match(r.text,/pada/);assert.match(r.text,/v cilju/);
+  assert.match(r.text,/Cilj za Cut je 0,25–0,75 kg na teden/,'the range reads small to large, not reversed');
 });
 test('weightVerdictV30: cut losing weight slower than the goal (closer to 0) warns "počasneje"',()=>{
   const r=topCtx().weightVerdictV30('cut',-0.1);
@@ -37,6 +38,22 @@ test('weightVerdictV30: cut losing weight slower than the goal (closer to 0) war
 test('weightVerdictV30: cut losing weight faster than the goal warns "hitreje"',()=>{
   const r=topCtx().weightVerdictV30('cut',-1.0);
   assert.equal(r.tone,'warn');assert.match(r.text,/hitreje od cilja/);
+});
+test('weightVerdictV30: the verb follows the measured direction, not the phase (a bulk that loses weight says "pada")',()=>{
+  const bulkDown=topCtx().weightVerdictV30('bulk',-0.23);
+  assert.equal(bulkDown.tone,'warn');
+  assert.match(bulkDown.text,/^Teža pada za približno 0,23 kg na teden\. Cilj za Bulk je 0,25–0,5 kg na teden: pada namesto da bi rasla\.$/);
+  assert.doesNotMatch(bulkDown.text,/raste/);
+  const cutUp=topCtx().weightVerdictV30('cut',0.3);
+  assert.equal(cutUp.tone,'warn');
+  assert.match(cutUp.text,/^Teža raste za približno 0,3 kg na teden\. Cilj za Cut je 0,25–0,75 kg na teden: raste namesto da bi padala\.$/);
+});
+test('weightVerdictV30: a flat trend (0 or below display precision) says "miruje" instead of "raste za 0 kg"',()=>{
+  for(const v of [0,0.004,-0.004]){
+    const bulk=topCtx().weightVerdictV30('bulk',v);
+    assert.equal(bulk.tone,'warn');assert.match(bulk.text,/^Teža miruje\. Cilj za Bulk je 0,25–0,5 kg na teden: ne raste\.$/);
+  }
+  assert.match(topCtx().weightVerdictV30('cut',0).text,/^Teža miruje\. .*: ne pada\.$/);
 });
 test('weightVerdictV30: null weekly trend is a neutral explanation, not ok/warn',()=>{
   for(const v of [null,undefined,NaN]){

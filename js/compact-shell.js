@@ -51,14 +51,20 @@ function weightVerdictV30(phaseType,weeklyKgOrNull){
   const type=phaseType==='cut'?'cut':'bulk',label=type==='bulk'?'Bulk':'Cut';
   if(weeklyKgOrNull===null||weeklyKgOrNull===undefined||!Number.isFinite(weeklyKgOrNull))
     return {tone:'neutral',text:`Za trend faze ${label} potrebujemo vsaj 3 meritve v tej fazi, ki pokrivajo 7 dni, ali nastavljen datum začetka faze v Nastavitvah.`};
-  const g=WEIGHT_GUIDELINES_V30[type],verb=type==='bulk'?'raste':'pada',
+  const g=WEIGHT_GUIDELINES_V30[type],
     fmtSl=n=>Math.abs(n).toLocaleString('sl-SI',{maximumFractionDigits:2}),
-    rate=fmtSl(weeklyKgOrNull),lo=fmtSl(Math.min(g.min,g.max)),hi=fmtSl(Math.max(g.min,g.max)),
+    rate=fmtSl(weeklyKgOrNull),lo=fmtSl(Math.min(Math.abs(g.min),Math.abs(g.max))),hi=fmtSl(Math.max(Math.abs(g.min),Math.abs(g.max))),
     goal=`Cilj za ${label} je ${lo}–${hi} kg na teden`;
+  // The verb follows the measured direction, never the phase: a bulk can lose
+  // weight and a cut can gain it, and that is the first thing to say.
+  const rounded=Number(weeklyKgOrNull.toFixed(2)),dir=rounded>0?'raste':rounded<0?'pada':'',wanted=type==='bulk'?'raste':'pada';
+  if(!dir)return {tone:'warn',text:`Teža miruje. ${goal}: ${type==='bulk'?'ne raste':'ne pada'}.`};
+  const trend=`Teža ${dir} za približno ${rate} kg na teden.`;
+  if(dir!==wanted)return {tone:'warn',text:`${trend} ${goal}: ${type==='bulk'?'pada namesto da bi rasla':'raste namesto da bi padala'}.`};
   const belowMin=weeklyKgOrNull<g.min,aboveMax=weeklyKgOrNull>g.max;
-  if(!belowMin&&!aboveMax)return {tone:'ok',text:`Teža ${verb} za približno ${rate} kg na teden. ${goal}: v cilju.`};
+  if(!belowMin&&!aboveMax)return {tone:'ok',text:`${trend} ${goal}: v cilju.`};
   const slower=type==='bulk'?belowMin:aboveMax;
-  return {tone:'warn',text:`Teža ${verb} za približno ${rate} kg na teden. ${goal}: ${verb} ${slower?'počasneje':'hitreje'} od cilja.`};
+  return {tone:'warn',text:`${trend} ${goal}: ${dir} ${slower?'počasneje':'hitreje'} od cilja.`};
 }
 // === PR audit (Settings → Napredno → Preveri rekorde) ===
 // Resolves a wt_p6 key ("pr"+dayIdx+exIdx) to the exercise name currently at

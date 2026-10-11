@@ -12,4 +12,7 @@
 - Vaja, dodana samo za en teden, je označena »samo ta teden«; v drugih tednih je siva z oznako »samo v ciklu X, tednu Y«. Vajo lahko kadarkoli odstraniš ali zamenjaš kot vsako drugo.
 - Vajo, ki je bila dodana samo za en pretekli teden, lahko dodaš znova; ne šteje več kot »že na tem dnevu«.
 
+### Popravek
+- Napredek → Teža: ocena faze je pri padajoči teži v Bulku pisala »teža raste … raste počasneje od cilja«. Zdaj glagol sledi izmerjenemu trendu: »Teža pada za približno 0,23 kg na teden. Cilj za Bulk je 0,25–0,5 kg na teden: pada namesto da bi rasla.« Enako za Cut pri naraščajoči teži; pri trendu 0 piše »Teža miruje«. Cilj za Cut je izpisan kot 0,25–0,75 (prej obrnjeno).
+
 Pred nadgradnjo naredi zunanjo JSON varnostno kopijo (Nastavitve → Varnostna kopija). APK namesti kot posodobitev; stare aplikacije ne odstranjuj.

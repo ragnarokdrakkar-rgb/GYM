@@ -13,6 +13,7 @@ Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.6.2 je
 ## Novo v 1.6.2
 
 - Trening: med tekočim treningom dodaš vajo (gumb »+ Dodaj vajo« pod seznamom ali ⋯ v Fokusu → »Dodaj vajo v ta trening«), samo za ta trening ali v program od tega tedna naprej. Odstranitev iz treninga je v istem meniju.
+- Napredek: ocena faze pravilno pove, da teža pada (ali raste) v nasprotni smeri od cilja faze; prej je v Bulku pri padajoči teži pisalo »raste«.
 
 ## Novo v 1.6.1
 
