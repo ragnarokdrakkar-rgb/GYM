@@ -187,9 +187,26 @@ function carryToNextSetV34(cur,next){
 // from that cycle+week on and is not part of earlier weeks (their workouts and
 // counts stay as they were). No `from` = valid from the start.
 function exerciseValidForWeekV36(item,cycle,week){
-  const f=item&&item.from;if(!f)return true;
-  const c=Number(f.c),w=Number(f.w);if(!Number.isFinite(c)||!Number.isFinite(w))return true;
-  return cycle>c||(cycle===c&&week>=w);
+  return exerciseFromReachedV38(item,cycle,week)&&!exerciseUntilPassedV38(item,cycle,week);
+}
+// from:{c,w} = first cycle+week the exercise counts in; until:{c,w} = last one
+// (an exercise added "samo ta trening" has from and until on the same week).
+// A missing or unreadable bound never restricts anything.
+function exerciseBoundV38(bound){
+  if(!bound)return null;const c=Number(bound.c),w=Number(bound.w);
+  return Number.isFinite(c)&&Number.isFinite(w)?{c,w}:null;
+}
+function exerciseFromReachedV38(item,cycle,week){
+  const f=exerciseBoundV38(item&&item.from);if(!f)return true;
+  return cycle>f.c||(cycle===f.c&&week>=f.w);
+}
+function exerciseUntilPassedV38(item,cycle,week){
+  const u=exerciseBoundV38(item&&item.until);if(!u)return false;
+  return cycle>u.c||(cycle===u.c&&week>u.w);
+}
+function exerciseOnlyOneWeekV38(item){
+  const f=exerciseBoundV38(item&&item.from),u=exerciseBoundV38(item&&item.until);
+  return !!(f&&u&&f.c===u.c&&f.w===u.w);
 }
 // Exercises that count for (cycle, week, day): active in the program and valid for that week.
 function exerciseInProgramV36(item,cycle,week){return !!item&&!item.programDisabled&&exerciseValidForWeekV36(item,cycle,week);}

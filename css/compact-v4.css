@@ -485,3 +485,15 @@
 #cg-app .cg-body .cg-body-m:hover,#cg-app .cg-body .cg-body-m:focus-visible{fill:color-mix(in srgb,var(--cg-accent) 62%,var(--cg-raised));stroke:var(--cg-accent);}
 #cg-app .cg-body .cg-body-m:active{fill:var(--cg-accent-fill);stroke:var(--cg-on-accent);}
 #cg-app .cg-body text{fill:var(--cg-muted);stroke:none;font:500 9px/1 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:.04em;text-anchor:middle;}
+/* Step 16: add an exercise during a workout; "samo ta trening" scope choice. */
+#cg-app .cg-workout-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:15px;}
+#cg-app .cg-workout-actions.two{grid-template-columns:1fr 1fr;}
+#cg-app .cg-workout-actions .cg-add{margin:0;}
+#cg-app .cg-scope{border:0;padding:0;margin:10px 0 4px;display:flex;flex-direction:column;gap:8px;min-width:0;}
+#cg-app .cg-scope legend{font-size:12.5px;color:var(--cg-muted);padding:0;margin-bottom:6px;}
+#cg-app .cg-choice{display:flex;align-items:flex-start;gap:10px;margin:0;padding:10px 12px;border-radius:12px;border:1px solid var(--cg-line);background:var(--cg-raised);cursor:pointer;}
+#cg-app .cg-choice input{width:18px;height:18px;min-height:0;margin:3px 0 0;padding:0;flex:none;accent-color:var(--cg-accent);}
+#cg-app .cg-choice span{display:flex;flex-direction:column;gap:2px;min-width:0;}
+#cg-app .cg-choice strong{font-size:15px;color:var(--cg-text);}
+#cg-app .cg-choice small{font-size:12px;color:var(--cg-muted);}
+#cg-app .cg-choice:has(input:checked){border-color:var(--cg-accent);background:color-mix(in srgb,var(--cg-accent) 10%,var(--cg-raised));}

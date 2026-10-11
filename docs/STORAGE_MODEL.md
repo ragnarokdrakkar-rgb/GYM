@@ -237,7 +237,7 @@ const V6_KEYS={
 - `wt_hidden_ex` — **still active** (not folded away): per-set-key "hidden" flag map, read by
   `isExHidden()`/`getHiddenEx()`, cleaned up in `reconcilePositions` and the ghost-key sweep in
   `ensureDayLists()`. Exported/restored as `hidden_ex`.
-  Each roster item may carry `from:{c,w}` (added mid-cycle: it counts only from that cycle+week on, see `exerciseValidForWeekV36` in workout-model.js) and `sw:[{n,c,w}]` (name valid from that cycle+week, used by "Zamenjaj z drugo vajo"). Deleted days are marked `deleted:true` in `wt_program_meta_shared_v16` and keep their index.
+  Each roster item may carry `from:{c,w}` (added mid-cycle: it counts only from that cycle+week on), `until:{c,w}` (last cycle+week it counts in; an exercise added during a workout as "samo ta trening" has `from` and `until` on the same week; see `exerciseValidForWeekV36` / `exerciseFromReachedV38` / `exerciseUntilPassedV38` in workout-model.js) and `sw:[{n,c,w}]` (name valid from that cycle+week, used by "Zamenjaj z drugo vajo"). Deleted days are marked `deleted:true` in `wt_program_meta_shared_v16` and keep their index.
 
 
 ## 4. Profile, phase and misc single-value keys

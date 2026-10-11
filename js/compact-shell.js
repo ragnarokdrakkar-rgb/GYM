@@ -378,7 +378,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     const picker=state.focus?'':quickNavigation();
     const overview=weekOverview(cw),cdOverview=overview.days.find(d=>d.dayIndex===cd)||{status:'pending',done:0,total:0,completed:false,date:''};
     const rows=workoutCache.map(e=>{const open=e.key===state.openRow;return `<section class="cg-workrow ${open?'open':''}"><button type="button" class="cg-exrow" data-ex="${e.key}" aria-expanded="${open}">${progressRing(e)}<span class="cg-exrow-main"><span class="cg-exrow-name">${esc(e.name)}${e.item.progMode==='531'?'<span class="cg-tag531">5/3/1</span>':''}</span><span class="cg-exrow-sub">${e.target} serij${e.last?` · zadnjič ${fmt(e.last.kg)}×${esc(e.last.reps)}`:''}</span></span>${icon(open?'up':'down')}</button>${open?logger(e):''}</section>`;}).join('');
-    return cycleHeader(overview)+picker+heroCard(cdOverview,day,total,target,workoutCache.length)+'<div class="cg-rest-host">'+restBar()+'</div>'+`<div class="cg-section-label"><span>Vaje</span><span>${workoutCache.filter(e=>e.status==='done').length}/${workoutCache.length} opravljenih</span></div>${rows}${removedNote()}${button('program-current','Uredi vaje tega dne','cg-add')}`;
+    return cycleHeader(overview)+picker+heroCard(cdOverview,day,total,target,workoutCache.length)+'<div class="cg-rest-host">'+restBar()+'</div>'+`<div class="cg-section-label"><span>Vaje</span><span>${workoutCache.filter(e=>e.status==='done').length}/${workoutCache.length} opravljenih</span></div>${rows}${removedNote()}<div class="cg-workout-actions${navigationLocked()?'':' two'}">${button('workout-add','+ Dodaj vajo','cg-add')}${navigationLocked()?'':button('program-current','Uredi vaje tega dne','cg-add')}</div>`;
   }
   function removedNote(){const list=hiddenHere();return list.length?`<div class="cg-removed"><span><b>Odstranjene iz tega treninga:</b> ${list.map(x=>esc(x.it.n)).join(', ')}</span>${button('day-unhide','Vrni','cg-link cg-nowrap')}</div>`:'';}
   function activeDayWordV29(n){return n===1?'aktiven dan':n===2?'aktivna dneva':n>=3&&n<=4?'aktivni dnevi':'aktivnih dni';}
@@ -400,8 +400,8 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     const dayCard=`<section class="cg-hero cg-pcard"><div class="cg-hero-head"><h2 class="cg-hero-name">${esc(selectedDay.name||'Dan')}</h2></div>${selectedDay.sub?`<p class="cg-hero-sub">${esc(selectedDay.sub)}</p>`:''}<p class="cg-hero-line"><b>${activeEx.length}/${list.length}</b> aktivnih vaj · <b>${totalSets}</b> ${serij} · aktiven dan: <b>${selectedDay.active!==false?'Da':'Ne'}</b></p><div class="cg-hero-actions">${button('day-edit','Uredi dan','cg-quiet cg-nowrap')}</div></section>`;
     const label=`<div class="cg-section-label"><span>Vaje · vrstni red</span><span>stikalo = aktivna</span></div>`;
     const rows=list.map((e,i)=>{
-      const off=!!e.programDisabled,notYet=!off&&!exerciseValidForWeekV36(e,cyc,cw),removed=!off&&!!hiddenThisWeek[sdk(cyc,cw,state.day,i)],n=setsOf(e,i),sub=`${n} ${n===1?'serija':n===2?'seriji':n<5?'serije':'serij'}${e.targetReps?' × '+esc(e.targetReps):''} · počitek ${clock(restForEx(e.id,e.n,e.r||90))}${off?' · neaktivna':''}${notYet?` · velja od cikla ${e.from.c}, tedna ${Number(e.from.w)+1}`:''}${removed?` · odstranjena v tednu ${cw+1}`:''}`;
-      return `<div class="cg-prow${off||notYet?' off':''}"><span class="cg-order">${i+1}</span>${button('program-edit',`<strong>${esc(e.n)}${e.progMode==='531'?'<span class="cg-tag531">5/3/1</span>':''}</strong><small>${sub}</small>`,'cg-prow-main',`data-index="${i}" aria-label="Uredi ${esc(e.n)}"`)}${button('program-up',icon('up'),'cg-icon',`data-index="${i}" aria-label="Premakni ${esc(e.n)} navzgor" ${i===0?'disabled':''}`)}${button('program-down',icon('down'),'cg-icon',`data-index="${i}" aria-label="Premakni ${esc(e.n)} navzdol" ${i===list.length-1?'disabled':''}`)}<button type="button" class="cg-switch" role="switch" aria-checked="${!off}" data-act="program-toggle" data-index="${i}" aria-label="${off?'Vključi':'Izključi'} vajo ${esc(e.n)}"><span class="cg-switch-knob"></span></button></div>${removed?`<div class="cg-unhide-row">${button('program-unhide','Vrni v teden '+(cw+1),'cg-link',`data-index="${i}"`)}</div>`:''}`;
+      const off=!!e.programDisabled,notYet=!off&&!exerciseFromReachedV38(e,cyc,cw),expired=!off&&exerciseUntilPassedV38(e,cyc,cw),once=!off&&exerciseOnlyOneWeekV38(e),removed=!off&&!!hiddenThisWeek[sdk(cyc,cw,state.day,i)],n=setsOf(e,i),when=once?(notYet||expired?` · samo v ciklu ${e.from.c}, tednu ${Number(e.from.w)+1}`:' · samo ta teden'):notYet?` · velja od cikla ${e.from.c}, tedna ${Number(e.from.w)+1}`:expired?` · veljala do cikla ${e.until.c}, tedna ${Number(e.until.w)+1}`:'',sub=`${n} ${n===1?'serija':n===2?'seriji':n<5?'serije':'serij'}${e.targetReps?' × '+esc(e.targetReps):''} · počitek ${clock(restForEx(e.id,e.n,e.r||90))}${off?' · neaktivna':''}${when}${removed?` · odstranjena v tednu ${cw+1}`:''}`;
+      return `<div class="cg-prow${off||notYet||expired?' off':''}"><span class="cg-order">${i+1}</span>${button('program-edit',`<strong>${esc(e.n)}${e.progMode==='531'?'<span class="cg-tag531">5/3/1</span>':''}</strong><small>${sub}</small>`,'cg-prow-main',`data-index="${i}" aria-label="Uredi ${esc(e.n)}"`)}${button('program-up',icon('up'),'cg-icon',`data-index="${i}" aria-label="Premakni ${esc(e.n)} navzgor" ${i===0?'disabled':''}`)}${button('program-down',icon('down'),'cg-icon',`data-index="${i}" aria-label="Premakni ${esc(e.n)} navzdol" ${i===list.length-1?'disabled':''}`)}<button type="button" class="cg-switch" role="switch" aria-checked="${!off}" data-act="program-toggle" data-index="${i}" aria-label="${off?'Vključi':'Izključi'} vajo ${esc(e.n)}"><span class="cg-switch-knob"></span></button></div>${removed?`<div class="cg-unhide-row">${button('program-unhide','Vrni v teden '+(cw+1),'cg-link',`data-index="${i}"`)}</div>`:''}`;
     }).join('');
     const inactiveCount=days.filter(d=>!d.deleted&&d.active===false).length;
     const inactive=days.map((d,i)=>!d.deleted&&d.active===false?`<div class="cg-setrow"><span class="cg-setvalue">${button('inactive-day',esc(d.name),'cg-link',`data-index="${i}"`)}<small class="cg-small">dan ${i+1}</small></span></div>`:'').join('');
@@ -593,7 +593,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     const e=activeExercise();if(!e)return;
     const removable=compactCanRemoveExerciseV34(e.rows),locked=navigationLocked(),doneNote='Ima zabeležene serije. Najprej jih razveljavi.';
     const item=(act,title,sub,cls,enabled=true)=>`<button type="button" class="cg-menu-item${cls?' '+cls:''}" data-act="${act}" ${enabled?'':'disabled'}><strong>${title}</strong><small>${sub}</small></button>`;
-    sheet(e.name,`<div class="cg-menu">${item('exercise-info','Opis, plošče in bolečina','Navodilo vaje in kalkulator plošč')}${item('rest-settings','Počitek · '+clock(e.rest),'Velja samo za to vajo')}${item('exercise-remove-week','Odstrani iz tega treninga',removable?`Samo teden ${cw+1}. Vrneš jo na seznamu vaj.`:doneNote,'cg-menu-danger',removable)}${item('exercise-disable','Izključi iz programa',!removable?doneNote:locked?'Po koncu treninga: Program → stikalo.':'Vsi tedni. Zgodovina ostane.','cg-menu-danger',removable&&!locked)}</div><p class="cg-footnote">Opravljene serije in zgodovina ostanejo shranjene.</p>`,()=>{},'Zapri',undefined,true);
+    sheet(e.name,`<div class="cg-menu">${item('exercise-info','Opis, plošče in bolečina','Navodilo vaje in kalkulator plošč')}${item('rest-settings','Počitek · '+clock(e.rest),'Velja samo za to vajo')}${item('exercise-add','Dodaj vajo v ta trening','Na konec treninga. Samo danes ali v program.')}${item('exercise-remove-week','Odstrani iz tega treninga',removable?`Samo teden ${cw+1}. Vrneš jo na seznamu vaj.`:doneNote,'cg-menu-danger',removable)}${item('exercise-disable','Izključi iz programa',!removable?doneNote:locked?'Po koncu treninga: Program → stikalo.':'Vsi tedni. Zgodovina ostane.','cg-menu-danger',removable&&!locked)}</div><p class="cg-footnote">Opravljene serije in zgodovina ostanejo shranjene.</p>`,()=>{},'Zapri',undefined,true);
   }
   function backInWorkoutText(n){return n===1?'Vaja je spet v treningu.':`${n} ${n===2?'vaji sta':n<5?'vaje so':'vaj je'} spet v treningu.`;}
   function hiddenHere(){
@@ -644,14 +644,15 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       Object.assign(it,{targetSets:data.get('sets')?Number(data.get('sets')):undefined,targetReps:plainImportedText(data.get('reps'),30),targetRpe:data.get('targetRpe')?Number(data.get('targetRpe')):undefined,programDisabled:!data.has('active'),progMode:data.get('mode'),r:Number(data.get('rest')),m:data.has('main'),d:plainImportedText(data.get('description'),1000)});if(it.progMode==='531')it.lift531=data.get('lift');else delete it.lift531;if(!saveDayLists(all))throw Error('Program ni shranjen.');afterProgram();
     });
   }
-  function exerciseIsOnDayV29(di,name){return (getDayLists()[di]||[]).some(e=>compactNameV26(dispNameForItem(e,getCyc().num,cw))===compactNameV26(name));}
+  function exerciseIsOnDayV29(di,name){const cyc=getCyc().num;return (getDayLists()[di]||[]).some(e=>!exerciseUntilPassedV38(e,cyc,cw)&&compactNameV26(dispNameForItem(e,cyc,cw))===compactNameV26(name));}
+  function saveCustomExerciseV38(name,group){if(EXERCISE_DB.some(e=>e.n===name))return;const customs=getCustomExercises();if(customs.some(c=>c.n===name))return;customs.push({n:name,group:group||'other'});if(!safeSetRaw(CUST_KEY,JSON.stringify(customs)))throw Error('Vaja ni shranjena.');}
 
   // Step 14: an exercise is picked by muscle group (grid → list of that group +
   // search + "nova vaja"), then sets/reps/rest. The same picker serves
   // "Dodaj vajo" and "Zamenjaj z drugo vajo".
-  function exercisePickerSheet({title,di,excludeIndex,onPick}){
-    guardProgram();const custom=getCustomExercises(),all=getDayLists()[di]||[],cyc=getCyc().num;
-    const onDay=name=>all.some((e,i)=>i!==excludeIndex&&compactNameV26(dispNameForItem(e,cyc,cw))===compactNameV26(name));
+  function exercisePickerSheet({title,di,excludeIndex,onPick,guard=guardProgram}){
+    guard();const custom=getCustomExercises(),all=getDayLists()[di]||[],cyc=getCyc().num;
+    const onDay=name=>all.some((e,i)=>i!==excludeIndex&&!exerciseUntilPassedV38(e,cyc,cw)&&compactNameV26(dispNameForItem(e,cyc,cw))===compactNameV26(name));
     const hint0='Tapni mišico na telesu, izberi skupino spodaj ali poišči vajo.';const groups=muscleBodySvgV37()+`<div class="cg-muscle-grid" data-muscle-grid>${MUSCLE_GROUPS_V36.map(g=>{const n=exercisesOfGroupV36(g.id,EXERCISE_DB,custom).length;return `<button type="button" class="cg-muscle" data-muscle="${g.id}"><strong>${esc(g.name)}</strong><small>${n} ${n===1?'vaja':n===2?'vaji':n<5?'vaje':'vaj'}</small></button>`;}).join('')}</div>`;
     sheet(title,`<p class="cg-small" data-picker-hint>${hint0}</p><label>Iskanje<input name="search" data-exercise-search autocomplete="off" placeholder="Vpiši ime vaje" maxlength="100"></label><input type="hidden" name="name"><input type="hidden" name="group"><div data-picker-body>${groups}</div>`,async data=>{
       const name=plainImportedText(data.get('name')||data.get('search'),100).trim();if(!name)throw Error('Izberi ali vpiši vajo.');
@@ -673,10 +674,11 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     wire();
   }
   // Sets / reps / rest for a newly picked exercise, then the write.
-  function exerciseDetailsSheet(name,groupId,onSave){
+  function exerciseDetailsSheet(name,groupId,onSave,scope){
     const db=EXERCISE_DB.find(e=>e.n===name),restDefault=db?.c==='compound'?120:75;
-    sheet(name,`<p class="cg-small">${db?esc(db.d):'Nova vaja. Velja od tega tedna naprej; prejšnji tedni ostanejo nespremenjeni.'}</p><div class="cg-two-fields"><label>Serije<input type="number" name="sets" min="1" max="12" value="3" required></label><label>Ponovitve<input name="reps" value="8–12" maxlength="30" required></label></div><label>Počitek (sekunde)<input type="number" name="rest" min="5" max="900" value="${restDefault}" required></label>`,async data=>{
-      await onSave({sets:Number(data.get('sets')),reps:plainImportedText(data.get('reps'),30),rest:Number(data.get('rest')),description:db?.d||'',group:groupId});
+    const where=scope?`<fieldset class="cg-scope"><legend>Kje velja</legend><label class="cg-choice"><input type="radio" name="scope" value="once" checked><span><strong>Samo ta trening</strong><small>Teden ${scope.week}. V drugih tednih je ni.</small></span></label><label class="cg-choice"><input type="radio" name="scope" value="program"><span><strong>V program od tedna ${scope.week} naprej</strong><small>Prejšnji tedni ostanejo nespremenjeni.</small></span></label></fieldset>`:'';
+    sheet(name,`<p class="cg-small">${db?esc(db.d):scope?'Nova vaja.':'Nova vaja. Velja od tega tedna naprej; prejšnji tedni ostanejo nespremenjeni.'}</p><div class="cg-two-fields"><label>Serije<input type="number" name="sets" min="1" max="12" value="3" required></label><label>Ponovitve<input name="reps" value="8–12" maxlength="30" required></label></div><label>Počitek (sekunde)<input type="number" name="rest" min="5" max="900" value="${restDefault}" required></label>${where}`,async data=>{
+      await onSave({sets:Number(data.get('sets')),reps:plainImportedText(data.get('reps'),30),rest:Number(data.get('rest')),description:db?.d||'',group:groupId,scope:scope?(data.get('scope')==='program'?'program':'once'):''});
     },'Dodaj');
   }
   function addExercise(){
@@ -689,12 +691,39 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
           guardProgram();if(exerciseIsOnDayV29(di,name))throw Error('Vaja je že na tem dnevu.');
           await autoBackupToIDB();guardProgram();if(exerciseIsOnDayV29(di,name))throw Error('Vaja je že na tem dnevu.');
           const cyc=getCyc().num,from={c:cyc,w:cw};
-          if(!EXERCISE_DB.some(e=>e.n===name)){const customs=getCustomExercises();if(!customs.some(c=>c.n===name)){customs.push({n:name,group:opts.group||'other'});if(!safeSetRaw(CUST_KEY,JSON.stringify(customs)))throw Error('Vaja ni shranjena.');}}
+          saveCustomExerciseV38(name,opts.group);
           mutateDayList(di,rows=>rows.push({id:_newExId(name),n0:name,m:false,r:opts.rest,d:opts.description,extra:true,progMode:'auto',targetSets:opts.sets,targetReps:opts.reps,from}));
           if(storageHasPendingWrites())throw Error('Vaja ni varno shranjena. Ponovi shranjevanje ali izvozi podatke.');
           afterProgram();notify(`»${name}« dodana od tedna ${cw+1} naprej.`);
         }finally{programWriteBusy=false;}
       });
+    }});
+  }
+  // Step 16: add an exercise from the Trening screen or the Focus ⋯ menu, also
+  // while a workout is running. The row is appended, so no saved set key moves;
+  // the running session picks it up because its record is built from the
+  // roster when the workout ends. "Samo ta trening" = from and until on the
+  // current cycle+week. The current set's draft is kept (no draft.clear()).
+  function guardWorkoutAdd(){if(window.v6RecoveryPending)throw Error('Najprej nadaljuj ali zavrzi najdeni trening.');if(getProgramMetaV6().days[cd]?.active===false||getProgramMetaV6().days[cd]?.deleted)throw Error('Ta dan ni aktiven.');}
+  function addExerciseToWorkout(){
+    const di=cd;
+    exercisePickerSheet({title:'Dodaj vajo v trening',di,excludeIndex:-1,guard:guardWorkoutAdd,onPick:async(name,groupId)=>{
+      closeSheet(false);
+      exerciseDetailsSheet(name,groupId,async opts=>{
+        if(programWriteBusy)return;programWriteBusy=true;
+        try{
+          guardWorkoutAdd();if(exerciseIsOnDayV29(di,name))throw Error('Vaja je že na tem dnevu.');
+          await autoBackupToIDB();guardWorkoutAdd();if(exerciseIsOnDayV29(di,name))throw Error('Vaja je že na tem dnevu.');
+          const week={c:getCyc().num,w:cw},once=opts.scope!=='program';
+          saveCustomExerciseV38(name,opts.group);
+          let index=-1;
+          mutateDayList(di,rows=>{index=rows.push({id:_newExId(name),n0:name,m:false,r:opts.rest,d:opts.description,extra:true,progMode:'auto',targetSets:opts.sets,targetReps:opts.reps,from:week,...(once?{until:week}:{})})-1;});
+          if(storageHasPendingWrites())throw Error('Vaja ni varno shranjena. Ponovi shranjevanje ali izvozi podatke.');
+          showDay(cd);workoutCache=currentRows();const added=workoutCache.find(x=>x.ei===index);
+          if(added&&!state.focus&&!state.openRow)state.openRow=added.key;
+          notify(once?`»${name}« dodana na konec tega treninga.`:`»${name}« dodana v program od tedna ${cw+1} naprej.`);
+        }finally{programWriteBusy=false;}
+      },{week:cw+1});
     }});
   }
   // Replace keeps the slot (history of the old name stays under the old name;
@@ -810,6 +839,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       else if(act==='rest-settings'){editRestSheet();return;}
       else if(act==='kg-step'||act==='reps-step'){const field=act==='kg-step'?'kg':'reps',input=b.closest('[data-log-form]')?.querySelector(`[data-field="${field}"]`);if(!input)return;input.value=compactStepValueV34(input.value,Number(b.dataset.dir),field==='kg'?getKgStep():getRepsStep(),field);input.dispatchEvent(new Event('input',{bubbles:true}));return;}
       else if(act==='exercise-menu'){exerciseMenu();return;}
+      else if(act==='exercise-add'||act==='workout-add'){addExerciseToWorkout();return;}
       else if(act==='exercise-remove-week'){
         if(!compactCanRemoveExerciseV34(getSets()[e.key]))throw Error('Vaja ima zabeležene serije. Najprej jih razveljavi.');
         if(!await ask(`Odstranim »${e.name}« iz tega treninga? Velja samo za teden ${cw+1}. Vrneš jo na seznamu vaj ali v Programu.`,'Odstrani'))return;

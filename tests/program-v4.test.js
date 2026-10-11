@@ -3,7 +3,8 @@
 // rows with a toggle switch, and a reliable "Dodaj vajo"/"Dodaj dan" flow.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8'),shell=read('js/compact-shell.js'),compactUi=read('js/compact-ui.js');
-function harness(extra={}){const ctx=vm.createContext(extra);vm.runInContext(compactUi,ctx);vm.runInContext(shell,ctx);return ctx;}
+const modelWeek=(s=>s.slice(s.indexOf('function exerciseValidForWeekV36('),s.indexOf('function activeWorkoutEntriesV19(')))(fs.readFileSync(path.join(__dirname,'..','src/app/workout-model.js'),'utf8'));
+function harness(extra={}){const ctx=vm.createContext(extra);vm.runInContext(modelWeek,ctx);vm.runInContext(compactUi,ctx);vm.runInContext(shell,ctx);return ctx;}
 function inner(ctx,name){const start=shell.indexOf('  function '+name+'('),end=shell.indexOf('\n  function ',start+1);assert.ok(start>=0&&end>start,'function '+name+' not found');vm.runInContext(shell.slice(start,end),ctx);}
 function innerAsync(ctx,name,nextMarker){const start=shell.indexOf('  async function '+name+'('),end=shell.indexOf(nextMarker,start+1);assert.ok(start>=0&&end>start,'async function '+name+' not found');vm.runInContext(shell.slice(start,end),ctx);}
 const button=(act,label,cls,attrs)=>`<button type="button" class="${cls||'cg-link'}" data-act="${act}" ${attrs||''}>${label}</button>`;
@@ -11,7 +12,7 @@ const noopDialog=()=>({querySelector:()=>null,querySelectorAll:()=>[]});
 
 function programCtx(overrides={}){
   const ctx=harness({esc:s=>String(s),icon:()=>'',clock:n=>String(n),button,
-    PROG:{weeks:[{},{},{},{}]},cw:0,state:{day:0},navigationLocked:()=>false,getCyc:()=>({num:1}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,exerciseTargetSetsV19:item=>Number(item?.targetSets)||4,exerciseInProgramV36:(e,c,w)=>!!e&&!e.programDisabled&&(!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w)),exerciseValidForWeekV36:(e,c,w)=>!e||!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w),restForEx:(id,n,r)=>r,getHiddenEx:()=>({}),
+    PROG:{weeks:[{},{},{},{}]},cw:0,state:{day:0},navigationLocked:()=>false,getCyc:()=>({num:1}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,exerciseTargetSetsV19:item=>Number(item?.targetSets)||4,restForEx:(id,n,r)=>r,getHiddenEx:()=>({}),
     ...overrides});
   inner(ctx,'activeDayWordV29');inner(ctx,'program');
   return ctx;
@@ -154,7 +155,7 @@ function addExerciseCtx(){
     sheet:(title,body,save,ok)=>{sheets.push({title,body,save,ok});},
     autoBackupToIDB:()=>Promise.resolve(true),storageHasPendingWrites:()=>false});
   ctx.store=store;ctx.calls=calls;ctx.sheets=sheets;ctx.customs=customs;
-  inner(ctx,'exerciseIsOnDayV29');inner(ctx,'exercisePickerSheet');inner(ctx,'exerciseDetailsSheet');inner(ctx,'addExercise');
+  inner(ctx,'exerciseIsOnDayV29');inner(ctx,'saveCustomExerciseV38');inner(ctx,'exercisePickerSheet');inner(ctx,'exerciseDetailsSheet');inner(ctx,'addExercise');inner(ctx,'guardWorkoutAdd');inner(ctx,'addExerciseToWorkout');
   return ctx;
 }
 test('addExercise: pick → details (sets/reps/rest) → one write with from:{cycle,week}; a new name is saved as a custom exercise of its group',async()=>{
@@ -202,7 +203,7 @@ test('removeExercise and deleteDay: guarded, confirmed, index-preserving, histor
 });
 test('Program rows and counters respect "valid from week": an exercise added in week 3 is greyed and not counted in week 1',()=>{
   const list=[ex('Bench',{targetSets:3}),ex('Curl',{targetSets:4,from:{c:1,w:2}})];
-  const ctx=programCtx({getProgramMetaV6:()=>({days:[day('Push')]}),dayListFor:()=>list,exerciseInProgramV36:(e,c,w)=>!e.programDisabled&&(!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w)),exerciseValidForWeekV36:(e,c,w)=>!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w)});
+  const ctx=programCtx({getProgramMetaV6:()=>({days:[day('Push')]}),dayListFor:()=>list});
   const html=ctx.program();
   assert.match(html,/<b>1\/2<\/b> aktivnih vaj · <b>3<\/b> serije/);
   assert.match(html,/velja od cikla 1, tedna 3/);

@@ -5,7 +5,8 @@
 // equipment/advanced/sources subpages.
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8'),shell=read('js/compact-shell.js'),compactUi=read('js/compact-ui.js');
-function harness(extra={}){const ctx=vm.createContext(extra);vm.runInContext(compactUi,ctx);vm.runInContext(shell,ctx);return ctx;}
+const modelWeek=(s=>s.slice(s.indexOf('function exerciseValidForWeekV36('),s.indexOf('function activeWorkoutEntriesV19(')))(fs.readFileSync(path.join(__dirname,'..','src/app/workout-model.js'),'utf8'));
+function harness(extra={}){const ctx=vm.createContext(extra);vm.runInContext(modelWeek,ctx);vm.runInContext(compactUi,ctx);vm.runInContext(shell,ctx);return ctx;}
 function inner(ctx,name){const start=shell.indexOf('  function '+name+'('),end=shell.indexOf('\n  function ',start+1);assert.ok(start>=0&&end>start,'function '+name+' not found');vm.runInContext(shell.slice(start,end),ctx);}
 const button=(act,label,cls,attrs)=>`<button type="button" class="${cls||'cg-link'}" data-act="${act}" ${attrs||''}>${label}</button>`;
 
@@ -13,7 +14,7 @@ function settingsCtx(overrides={}){
   const base={
     esc:s=>String(s),icon:name=>`<svg data-icon="${name}"></svg>`,fmt:n=>String(n),button,clock:n=>String(n),
     APP_VERSION:'v4-test',cw:0,cd:0,
-    exerciseInProgramV36:(e,c,w)=>!!e&&!e.programDisabled&&(!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w)),exerciseValidForWeekV36:(e,c,w)=>!e||!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w),
+    
     V6_KEYS:{lastExternal:'wt_last_external_backup_v6'},
     localStorage:{getItem:()=>null},
     state:{settings:'',flagged:false,query:'',limit:50},

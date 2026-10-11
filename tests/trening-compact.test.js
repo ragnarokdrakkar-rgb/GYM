@@ -5,7 +5,8 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const shell=read('js/compact-shell.js'),compactUi=read('js/compact-ui.js'),v4=read('css/compact-v4.css'),shellCss=read('css/compact-shell.css'),referenceCss=read('css/compact-reference.css');
-function harness(extra={}){const ctx=vm.createContext(extra);vm.runInContext(compactUi,ctx);vm.runInContext(shell,ctx);return ctx;}
+const modelWeek=(s=>s.slice(s.indexOf('function exerciseValidForWeekV36('),s.indexOf('function activeWorkoutEntriesV19(')))(fs.readFileSync(path.join(__dirname,'..','src/app/workout-model.js'),'utf8'));
+function harness(extra={}){const ctx=vm.createContext(extra);vm.runInContext(modelWeek,ctx);vm.runInContext(compactUi,ctx);vm.runInContext(shell,ctx);return ctx;}
 function inner(ctx,name){const start=shell.indexOf('  function '+name+'('),end=shell.indexOf('\n  function ',start+1);assert.ok(start>=0&&end>start,'function '+name+' not found');vm.runInContext(shell.slice(start,end),ctx);}
 function innerConst(ctx,name){const m=shell.match(new RegExp('  const '+name+'=.*;'));assert.ok(m,'const '+name+' not found');vm.runInContext(m[0],ctx);}
 const button=(act,label,cls,attrs)=>`<button type="button" class="${cls||'cg-link'}" data-act="${act}" ${attrs||''}>${label}</button>`;
@@ -227,7 +228,7 @@ test('Hero CSS: name row is a wrapping flex row with the chip right-aligned; the
 // ---- Program day card -------------------------------------------------------------------------------------------------
 function programCtx(days,list,hidden={}){
   const ctx=harness({esc:s=>String(s),icon:()=>'',clock:n=>String(n),button,PROG:{weeks:[{},{},{},{}]},cw:0,state:{day:0},navigationLocked:()=>false,
-    getCyc:()=>({num:1}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,exerciseTargetSetsV19:item=>Number(item?.targetSets)||4,restForEx:(id,n,r)=>r,getHiddenEx:()=>hidden,exerciseInProgramV36:(e,c,w)=>!!e&&!e.programDisabled&&(!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w)),exerciseValidForWeekV36:(e,c,w)=>!e||!e.from||c>e.from.c||(c===e.from.c&&w>=e.from.w),
+    getCyc:()=>({num:1}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,exerciseTargetSetsV19:item=>Number(item?.targetSets)||4,restForEx:(id,n,r)=>r,getHiddenEx:()=>hidden,
     getProgramMetaV6:()=>({days}),dayListFor:()=>list});
   inner(ctx,'activeDayWordV29');inner(ctx,'program');
   return ctx;
