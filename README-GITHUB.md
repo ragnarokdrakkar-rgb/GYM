@@ -13,7 +13,7 @@ Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.6.3 je
 ## Novo v 1.6.3
 
 - Med treningom deluje stikalo vaje v Programu (vklop in izklop), v Fokusu »Izključi iz programa«, izbirnik pa neaktivne in odstranjene vaje tega dne ponudi nazaj (»vključi« / »vrni«).
-- Fokus: pike vaj na dnu so vedno v eni vrstici (pri 8+ vajah manjše), nič več odrezane.
+- Fokus: pike na dnu so odstranjene; črtice na vrhu so tapljive (skok na vajo), spodaj ‹ › in ime naslednje vaje.
 
 ## Novo v 1.6.2
 

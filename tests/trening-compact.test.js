@@ -302,26 +302,16 @@ test('CSS hides the logger .cg-last line ONLY in Focus (scoped to #cg-app[data-f
   assert.match(v4Body('#cg-app .cg-focus-last'),/white-space:nowrap/);
 });
 
-test('Focus step dots: partial = blue border + light blue tint + normal text (digit legible >= 4.5:1); done, pending and current are unchanged',()=>{
-  const partial=v4Body('#cg-app .cg-dots button.partial');
-  assert.match(partial,/background:color-mix\(in srgb,var\(--cg-partial\) 22%,transparent\)/);
-  assert.match(partial,/border-color:var\(--cg-partial\)/);
-  assert.match(partial,/(^|;)color:var\(--cg-text\)/);
-  assert.doesNotMatch(partial,/gradient/);
-  // contrast of the digit on the rendered tint (partial at the rule's alpha, composited on the page background and the surfaces used in Focus)
-  const share=Number(/color-mix\(in srgb,var\(--cg-partial\) (\d+)%,transparent\)/.exec(partial)[1])/100;
-  for(const surface of ['bg','panel','raised']){
-    const tint=mix(tokens['--cg-partial'],share,tokens['--cg-'+surface]);
-    assert.ok(ratio(tokens['--cg-text'],tint)>=4.5,`digit on tint over --cg-${surface}: ${ratio(tokens['--cg-text'],tint).toFixed(2)}`);
-  }
-  assert.ok(ratio(tokens['--cg-partial'],tokens['--cg-bg'])>=3,'the blue ring keeps 3:1 against the page');
-  // untouched styles
-  assert.equal(v4Body('#cg-app .cg-dots button.done'),'background:var(--cg-ok);border-color:var(--cg-ok);color:var(--cg-bg);');
-  assert.match(v4Body('#cg-app .cg-dots button'),/background:transparent;border:1\.5px solid var\(--cg-pending\);color:var\(--cg-pending\)/);
-  assert.equal(v4Body('#cg-app .cg-dots button.current'),'box-shadow:0 0 0 2px var(--cg-bg),0 0 0 4px var(--cg-accent);');
-  // the digit stays in the button (focusDot markup is unchanged: partial dots still show their number)
-  const ctx=harness({state:{active:''},esc:s=>String(s)});inner(ctx,'focusDot');
-  assert.match(ctx.focusDot({key:'k',name:'Bench',status:'partial',done:1,target:3},1),/class="partial " data-ex="k" aria-label="Bench: 1\/3">2</);
+test('Focus strip: tappable bars, partial blue, done green, pending line colour, current outlined in accent; no bottom dots',()=>{
+  assert.match(v4Body('#cg-app .cg-fprog button'),/flex:1;min-width:6px;height:28px;min-height:28px;padding:0;border:0;/);
+  assert.match(v4Body('#cg-app .cg-fprog button::before'),/height:4px;border-radius:2px;background:var\(--cg-line2\)/);
+  assert.equal(v4Body('#cg-app .cg-fprog button.done::before'),'background:var(--cg-ok);');
+  assert.equal(v4Body('#cg-app .cg-fprog button.partial::before'),'background:var(--cg-partial);');
+  assert.match(v4Body('#cg-app .cg-fprog button.current::before'),/outline:2px solid var\(--cg-accent\)/);
+  assert.ok(ratio(tokens['--cg-partial'],tokens['--cg-bg'])>=3,'the blue bar keeps 3:1 against the page');
+  assert.ok(ratio(tokens['--cg-ok'],tokens['--cg-bg'])>=3,'the green bar keeps 3:1 against the page');
+  assert.doesNotMatch(v4,/cg-dots/);
+  assert.match(v4Body('#cg-app .cg-fstep-info small'),/text-overflow:ellipsis;white-space:nowrap/);
 });
 
 // ---- guard rails for the stylesheet change itself ------------------------------------------------------------------------
@@ -341,7 +331,7 @@ test('Step 9 block is appended once to compact-v4.css, uses only var(--cg-*) tok
 test('No new literal colors in the changed shell/v4 rules for the Trening top (status/selection colors come from tokens)',()=>{
   for(const selector of ['#cg-app .cg-quick-weeks button','#cg-app .cg-quick-days button','#cg-app .cg-quick-days button.done','#cg-app .cg-quick-note','#cg-app .cg-next-workout'])
     assert.doesNotMatch(shellBody(selector),/#[0-9a-f]{3,8}\b|rgba?\(/i,selector);
-  for(const selector of ['#cg-app .cg-hero','#cg-app .cg-hero-sub','#cg-app .cg-hero-line','#cg-app .cg-focus-meta','#cg-app .cg-dots button.partial'])
+  for(const selector of ['#cg-app .cg-hero','#cg-app .cg-hero-sub','#cg-app .cg-hero-line','#cg-app .cg-focus-meta','#cg-app .cg-fprog button.partial::before'])
     assert.doesNotMatch(v4Body(selector),/#[0-9a-f]{3,8}\b|rgba?\(/i,selector);
   // selection is still drawn separately from status: accent border + tint + glow on the selected day/week
   assert.match(v4Body('#cg-app .cg-quick-days button.selected'),/border-color:var\(--cg-accent\);background:color-mix\(in srgb,var\(--cg-accent\) 10%,var\(--cg-raised\)\)/);

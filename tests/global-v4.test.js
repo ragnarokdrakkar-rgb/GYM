@@ -125,7 +125,7 @@ test('.cg-empty is a dashed, centered, muted 14px/24px-padding card used for eve
 });
 
 test('44px minimum touch target: pseudo-element hit areas cover the visually smaller controls',()=>{
-  assert.match(v4,/#cg-app \.cg-switch,#cg-app \.cg-dots button,#cg-app \.cg-range-seg button,#cg-app \.cg-history-chip,/);
+  assert.match(v4,/#cg-app \.cg-switch,#cg-app \.cg-range-seg button,#cg-app \.cg-history-chip,/);
   assert.match(v4,/width:max\(100%,44px\);height:max\(100%,44px\);\}/);
 });
 

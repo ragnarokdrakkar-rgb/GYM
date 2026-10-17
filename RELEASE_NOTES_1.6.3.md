@@ -8,6 +8,6 @@
 - Trenutni vnos serije ostane pri vseh teh dejanjih; shranjene serije se nikoli ne premaknejo.
 
 ### Fokus
-- **Pike vaj na dnu so vedno v eni vrstici.** Pri 8 ali več vajah so manjše; če jih je več, kot gre v vrstico, se vrstica pomika in trenutna vaja je vedno vidna. Prej je osma pika padla v drugo vrstico in bila odrezana.
+- **Pike vaj na dnu so odstranjene** (podvajale so črtice na vrhu in se pri 8+ vajah prelomile v odrezano drugo vrstico). **Črtice pod glavo so zdaj tapljive:** tap na črtico skoči na tisto vajo; zelena = opravljena, modra = v teku, obrobljena = trenutna. Spodaj ostaneta ‹ › z napisom »Vaja 2/8 · Naprej: Leg press«.
 
 Pred nadgradnjo naredi zunanjo JSON varnostno kopijo (Nastavitve → Varnostna kopija). APK namesti kot posodobitev; stare aplikacije ne odstranjuj.

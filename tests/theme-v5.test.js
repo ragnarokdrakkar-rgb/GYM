@@ -48,7 +48,7 @@ test('primary actions (hero start, current-set tick, .cg-action incl. dialog sub
 
 test('green (done) fills never use the white on-accent text; they keep the near-black background color',()=>{
   assert.ok(body('#cg-app .cg-setrow-tick.cg-tick-done').includes('color:var(--cg-bg)'));
-  assert.ok(body('#cg-app .cg-dots button.done').includes('color:var(--cg-bg)'));
+  assert.equal(body('#cg-app .cg-fprog button.done::before'),'background:var(--cg-ok);');
   for(const r of rules)if(/background:var\(--cg-ok\)/.test(r.body))assert.doesNotMatch(r.body,/var\(--cg-on-accent\)/,r.selectors.join(','));
 });
 
@@ -77,15 +77,15 @@ test('selection = accent border + 10% accent tint + soft glow on every picker, c
 test('status colors stay semantic and hollow: pending is an outline/ring/label, never a solid red fill',()=>{
   assert.match(body('#cg-app .cg-dot.pending'),/background:transparent;border:1\.5px solid var\(--cg-pending\)/);
   assert.match(body('#cg-app .cg-pips i.pending'),/background:transparent;box-shadow:inset 0 0 0 1px var\(--cg-pending\)/);
-  assert.match(body('#cg-app .cg-dots button'),/background:transparent;border:1\.5px solid var\(--cg-pending\);color:var\(--cg-pending\)/);
+  assert.match(body('#cg-app .cg-fprog button::before'),/background:var\(--cg-line2\)/);
   assert.match(body('#cg-app .cg-chip.pending'),/color:var\(--cg-pending\)/);
   assert.match(body('#cg-app .cg-ring.pending .cg-ring-arc'),/stroke:var\(--cg-pending\)/);
   assert.match(body('#cg-app .cg-dot.done'),/background:var\(--cg-ok\)/);
   assert.match(body('#cg-app .cg-dot.partial'),/var\(--cg-partial\)/);
   // (the 7px save-state indicator dot is the one deliberate solid red mark)
   for(const r of rules)if(!r.selectors.some(s=>s.includes('.cg-save-dot')))assert.doesNotMatch(r.body,/(^|;)background:var\(--cg-pending\)/,'solid pending fill in '+r.selectors.join(','));
-  // the current-exercise dot is separated from its status outline by a page-colored gap ring
-  assert.ok(body('#cg-app .cg-dots button.current').includes('box-shadow:0 0 0 2px var(--cg-bg),0 0 0 4px var(--cg-accent)'));
+  // the current exercise bar is outlined in the accent with a page-colored gap
+  assert.match(body('#cg-app .cg-fprog button.current::before'),/outline:2px solid var\(--cg-accent\);outline-offset:1px/);
 });
 
 test('atmosphere: red glow on hero/program card, dark-red rest card with accent border, red bottom-nav tab',()=>{

@@ -15,43 +15,37 @@ function baseCtx(overrides={}){
 }
 const ex=(overrides={})=>({key:'k1',name:'Bench',status:'pending',done:0,target:3,item:{},rest:90,...overrides});
 
-test('focusDot: done is filled/checked, partial and pending carry their status class, current adds the outline class independent of status',()=>{
-  const ctx=baseCtx();inner(ctx,'focusDot');
-  const done=ctx.focusDot(ex({status:'done',done:3}),0);
-  assert.match(done,/class="done\s*"/);assert.match(done,/>✓</);
-  const partial=ctx.focusDot(ex({status:'partial',done:1}),1);
-  assert.match(partial,/class="partial\s*"/);assert.match(partial,/>2</); // 1-indexed position
-  const pending=ctx.focusDot(ex({status:'pending'}),2);
-  assert.match(pending,/class="pending\s*"/);assert.match(pending,/>3</);
-  const current=ctx.focusDot(ex({key:'k2',status:'pending'}),0);
-  const ctx2=baseCtx({state:{active:'k2',focus:true}});inner(ctx2,'focusDot');
-  const currentHtml=ctx2.focusDot(ex({key:'k2',status:'partial'}),0);
-  assert.match(currentHtml,/class="partial current"/); // status class kept, current appended regardless of status
-  assert.doesNotMatch(current,/current/); // not selected in the base ctx (different active key)
+test('focusStrip: one tappable bar per exercise with its status class; the current one is marked and labelled',()=>{
+  const cache=[ex({key:'a',name:'Bench',status:'done',done:3}),ex({key:'b',name:'Počepi',status:'partial',done:1,target:5}),ex({key:'c',name:'Veslanje',status:'pending'})];
+  const ctx=baseCtx({workoutCache:cache,state:{active:'b',focus:true}});inner(ctx,'focusStrip');
+  const html=ctx.focusStrip();
+  assert.match(html,/^<div class="cg-fprog" role="group" aria-label="Vaje v tem treningu">/);
+  assert.equal((html.match(/<button type="button"/g)||[]).length,3);
+  assert.match(html,/class="done" data-ex="a" aria-label="1\. Bench: 3\/3"><\/button>/);
+  assert.match(html,/class="partial current" data-ex="b" aria-label="2\. Počepi: 1\/5" aria-current="true"><\/button>/);
+  assert.match(html,/class="pending" data-ex="c" aria-label="3\. Veslanje: 0\/3"><\/button>/);
+  assert.doesNotMatch(html,/aria-hidden/,'it is the navigation now, not decoration');
 });
 
-test('focusDot aria-label reports the exercise name and done/target progress',()=>{
-  const ctx=baseCtx();inner(ctx,'focusDot');
-  const html=ctx.focusDot(ex({name:'Počepi',done:2,target:5,status:'partial'}),0);
-  assert.match(html,/aria-label="Počepi: 2\/5"/);
-});
-
-test('focusSteps: prev is disabled only on the first exercise, next only on the last',()=>{
-  const cache=[ex({key:'a'}),ex({key:'b'}),ex({key:'c'})];
-  const first=baseCtx({workoutCache:cache});inner(first,'focusDot');inner(first,'focusSteps');
+test('focusSteps: prev/next disabled at the ends, the middle names the position and the next exercise; no second indicator',()=>{
+  const cache=[ex({key:'a',name:'Bench'}),ex({key:'b',name:'Počepi'}),ex({key:'c',name:'Veslanje'})];
+  const first=baseCtx({workoutCache:cache});inner(first,'focusSteps');
   const firstHtml=first.focusSteps(0);
   assert.match(firstHtml,/data-act="prev" aria-label="Prejšnja vaja" disabled/);
   assert.doesNotMatch(firstHtml,/data-act="next"[^>]*disabled/);
-  const mid=baseCtx({workoutCache:cache});inner(mid,'focusDot');inner(mid,'focusSteps');
+  assert.match(firstHtml,/<div class="cg-fstep-info"><strong>Vaja 1\/3<\/strong><small>Naprej: Počepi<\/small><\/div>/);
+  const mid=baseCtx({workoutCache:cache});inner(mid,'focusSteps');
   const midHtml=mid.focusSteps(1);
   assert.doesNotMatch(midHtml,/data-act="prev"[^>]*disabled/);
   assert.doesNotMatch(midHtml,/data-act="next"[^>]*disabled/);
-  const last=baseCtx({workoutCache:cache});inner(last,'focusDot');inner(last,'focusSteps');
+  assert.match(midHtml,/Vaja 2\/3<\/strong><small>Naprej: Veslanje</);
+  const last=baseCtx({workoutCache:cache});inner(last,'focusSteps');
   const lastHtml=last.focusSteps(2);
   assert.doesNotMatch(lastHtml,/data-act="prev"[^>]*disabled/);
   assert.match(lastHtml,/data-act="next" aria-label="Naslednja vaja" disabled/);
-  // Three dots, one per exercise.
-  assert.equal((lastHtml.match(/data-ex=/g)||[]).length,3);
+  assert.match(lastHtml,/Vaja 3\/3<\/strong><small>Zadnja vaja</);
+  assert.doesNotMatch(lastHtml,/data-ex=|cg-dots/,'the strip at the top is the only per-exercise indicator');
+  assert.doesNotMatch(shell,/cg-dots|focusDot/);
 });
 
 test('restBar: label uses the exercise whose key matches the running timer, with a paused suffix, and falls back to plain "Počitek"',()=>{

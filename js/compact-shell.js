@@ -283,12 +283,16 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
   function focusHeader(day,index){
     return `<div class="cg-fhead">${button('focus',icon('x'),'cg-ficon','aria-label="Izhod iz fokusa"')}<div class="cg-fhead-mid"><strong>${esc(day?.name||'Trening')}</strong><small>Cikel ${getCyc().num} · Teden ${cw+1} · vaja ${index+1}/${workoutCache.length}</small></div><div class="cg-fhead-clock"><strong data-session-clock>${clock(stRun?(Date.now()-stStart)/1000:0)}</strong></div></div>`;
   }
-  function focusDot(e,i){
-    const current=e.key===state.active,label=`${e.name}: ${e.done}/${e.target}`;
-    return `<button type="button" class="${e.status} ${current?'current':''}" data-ex="${e.key}" aria-label="${esc(label)}">${e.status==='done'?'✓':i+1}</button>`;
+  // Step 18: the strip under the header is the only exercise indicator and it is
+  // tappable (jump to any exercise); the bar at the bottom keeps ‹ › and says
+  // which exercise comes next. No second row of dots.
+  function focusStrip(){
+    return `<div class="cg-fprog" role="group" aria-label="Vaje v tem treningu">${workoutCache.map((e,i)=>{const current=e.key===state.active;return `<button type="button" class="${e.status}${current?' current':''}" data-ex="${e.key}" aria-label="${esc(`${i+1}. ${e.name}: ${e.done}/${e.target}`)}"${current?' aria-current="true"':''}></button>`;}).join('')}</div>`;
   }
   function focusSteps(index){
-    return `<div class="cg-focus-steps">${button('prev',icon('left'),'cg-quiet',`aria-label="Prejšnja vaja" ${index<=0?'disabled':''}`)}<div class="cg-dots${workoutCache.length>7?' dense':''}" style="--cg-dot-n:${workoutCache.length}">${workoutCache.map((e,i)=>focusDot(e,i)).join('')}</div>${button('next',icon('right'),'cg-quiet',`aria-label="Naslednja vaja" ${index>=workoutCache.length-1?'disabled':''}`)}</div>`;
+    const next=workoutCache[index+1];
+    const info=`<div class="cg-fstep-info"><strong>Vaja ${index+1}/${workoutCache.length}</strong><small>${next?'Naprej: '+esc(next.name):'Zadnja vaja'}</small></div>`;
+    return `<div class="cg-focus-steps">${button('prev',icon('left'),'cg-quiet',`aria-label="Prejšnja vaja" ${index<=0?'disabled':''}`)}${info}${button('next',icon('right'),'cg-quiet',`aria-label="Naslednja vaja" ${index>=workoutCache.length-1?'disabled':''}`)}</div>`;
   }
   function navigationLocked(){return !!(stRun||window.v6RecoveryPending||localStorage.getItem(LS_SESS));}
   function weekOverview(week=cw){
@@ -372,7 +376,7 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       // exercise content below (title/meta/logger, i.e. the set table) scrolls in
       // its own bounded box. See #cg-app[data-focus] rules in compact-v4.css.
       const header=focusHeader(day,index);
-      const strip=`<div class="cg-fprog" aria-hidden="true">${workoutCache.map(e=>`<i class="${e.status}${e.key===state.active?' current':''}"></i>`).join('')}</div>`;
+      const strip=focusStrip();
       const restHost=`<div class="cg-rest-host">${restBar()}</div>`;
       if(!active)return header+strip+restHost+'<div class="cg-fscroll"><p class="cg-small cg-empty">Ta dan nima aktivnih vaj.</p></div>';
       const title=`<div class="cg-ftitle"><h1 class="cg-fname">${esc(active.name)}</h1>${button('exercise-menu','⋯','cg-ficon cg-fmenu','aria-label="Možnosti vaje" aria-haspopup="dialog"')}</div>`;
@@ -563,7 +567,6 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     const oldScroll=window.scrollY,route=[state.page,state.focus,state.settings,state.progress,state.strength].join('|');
     main.innerHTML=({Trening:workout,Program:program,Napredek:progress,Nastavitve:settings}[state.page]||workout)();
     root.dataset.focus=String(state.focus&&state.page==='Trening');nav.hidden=state.focus&&state.page==='Trening';
-    const dot=main.querySelector('.cg-dots .current'),dots=dot?.parentElement;if(dot&&dots&&dots.scrollWidth>dots.clientWidth+1)dot.scrollIntoView({inline:'center',block:'nearest'});
     nav.innerHTML=[['Trening','dumbbell'],['Program','program'],['Napredek','chart'],['Nastavitve','settings']].map(([p,ic])=>`<button data-page="${p}" ${state.page===p?'aria-current="page"':''}>${icon(ic)}${p}</button>`).join('');
     const e=activeExercise();for(const [selector,set] of [['[data-prescription]',prescriptionOpen]]){const d=$(selector);if(d&&e)d.addEventListener('toggle',()=>{if(d.open)set.add(e.key);else set.delete(e.key);});}
     updatePlates();drawChart();renderBackups();

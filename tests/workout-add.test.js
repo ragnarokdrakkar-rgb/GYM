@@ -166,12 +166,12 @@ test('Program: the switch and "+ Dodaj vajo" route through the workout-safe path
   assert.match(shell,/function addExerciseToWorkout\(di=cd\)\{\n\s*const here=di===cd;/);
   assert.match(shell,/once:here\?'Samo ta trening':`Samo teden \$\{cw\+1\}`/);
 });
-test('Focus dots: one row that shrinks with the count, dense at 8+, current dot scrolled into view when it overflows',()=>{
-  assert.match(shell,/<div class="cg-dots\$\{workoutCache\.length>7\?' dense':''\}" style="--cg-dot-n:\$\{workoutCache\.length\}">/);
-  assert.match(shell,/const dot=main\.querySelector\('\.cg-dots \.current'\),dots=dot\?\.parentElement;if\(dot&&dots&&dots\.scrollWidth>dots\.clientWidth\+1\)dot\.scrollIntoView\(\{inline:'center',block:'nearest'\}\);/);
+test('Focus: the strip under the header is the tappable per-exercise indicator; the bottom bar has no dots',()=>{
+  assert.match(shell,/const strip=focusStrip\(\);/);
+  assert.match(shell,/function focusStrip\(\)\{\n\s*return `<div class="cg-fprog" role="group" aria-label="Vaje v tem treningu">/);
+  assert.match(shell,/<div class="cg-fstep-info"><strong>Vaja \$\{index\+1\}\/\$\{workoutCache\.length\}<\/strong><small>\$\{next\?'Naprej: '\+esc\(next\.name\):'Zadnja vaja'\}<\/small><\/div>/);
+  assert.doesNotMatch(shell,/cg-dots|focusDot|scrollIntoView\(\{inline/);
   const css=read('css/compact-v4.css');
-  assert.match(css,/#cg-app \.cg-focus-steps \.cg-dots\{flex-wrap:nowrap;justify-content:flex-start;gap:5px;min-width:0;padding:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;/);
-  assert.match(css,/\.cg-dots button:first-child\{margin-left:auto;\}/,'centered via auto margins, so an overflowing row still starts at dot 1');
-  assert.match(css,/#cg-app \.cg-dots button\{width:clamp\(22px,calc\(\(100% - \(var\(--cg-dot-n,6\) - 1\) \* 5px\) \/ var\(--cg-dot-n,6\)\),30px\);min-width:0;height:auto;min-height:0;aspect-ratio:1;/);
-  assert.match(css,/#cg-app \.cg-dots\.dense button\{font-size:10px;/);
+  assert.doesNotMatch(css,/cg-dots/);
+  assert.match(css,/#cg-app \.cg-fprog button\{flex:1;min-width:6px;height:28px;min-height:28px;/,'the bars themselves are the tap targets');
 });
