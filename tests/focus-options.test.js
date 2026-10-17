@@ -57,15 +57,16 @@ test('the exercise menu offers info, rest and both remove options with clear con
   assert.match(menu.body,/Vsi tedni\. Zgodovina ostane\./);
 });
 
-test('with confirmed sets both remove options are disabled and say why; during a workout only the program option is',()=>{
+test('with confirmed sets both remove options are disabled and say why; during a workout both stay available',()=>{
   const done=menuCtx([{kg:'60',reps:'8',done:true}]);
   assert.match(done.body,/data-act="exercise-remove-week" disabled/);
   assert.match(done.body,/data-act="exercise-disable" disabled/);
   assert.match(done.body,/Najprej jih razveljavi/);
   const running=menuCtx([{kg:'',reps:'',done:false}],true);
   assert.match(running.body,/data-act="exercise-remove-week" >/);
-  assert.match(running.body,/data-act="exercise-disable" disabled/);
-  assert.match(running.body,/Po koncu treninga: Program → stikalo\./);
+  assert.match(running.body,/data-act="exercise-disable" >/);
+  assert.match(running.body,/Vsi tedni\. Zgodovina ostane\. Vključiš jo v Programu\./);
+  assert.doesNotMatch(running.body,/Po koncu treninga/);
 });
 
 test('removing from this workout re-checks confirmed sets after the confirmation and writes wt_hidden_ex verifiably',()=>{
@@ -77,11 +78,12 @@ test('removing from this workout re-checks confirmed sets after the confirmation
   assert.match(shell,/function setHidden\(next,message\)\{if\(!safeSetRaw\('wt_hidden_ex',JSON\.stringify\(next\)\)\)throw Error/);
 });
 
-test('disabling in the program is blocked during a workout and keeps history',()=>{
+test('disabling in the program works during a workout through the shared helper, moves Focus on and keeps history',()=>{
   const code=branch('exercise-disable');
-  assert.match(code,/^else if\(act==='exercise-disable'\)\{\n\s*guardProgram\(\);/);
-  assert.match(code,/it\.programDisabled=true;if\(!saveDayLists\(all\)\)throw Error/);
-  assert.doesNotMatch(code,/splice|delete all/,'the exercise stays in the day list');
+  assert.match(code,/^else if\(act==='exercise-disable'\)\{\n\s*if\(!compactCanRemoveExerciseV34\(getSets\(\)\[e\.key\]\)\)throw Error/);
+  assert.match(code,/setExerciseActiveV39\(cd,e\.ei,false\)/);
+  assert.match(code,/workoutCache=currentRows\(\);const next=workoutCache\[Math\.min\(at,workoutCache\.length-1\)\]/);
+  assert.doesNotMatch(code,/guardProgram|afterProgram|splice|delete all/,'no workout lock, no draft wipe, the exercise stays in the day list');
 });
 
 test('removed exercises are listed on the workout screen with a way back',()=>{

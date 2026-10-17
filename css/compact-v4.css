@@ -497,3 +497,13 @@
 #cg-app .cg-choice strong{font-size:15px;color:var(--cg-text);}
 #cg-app .cg-choice small{font-size:12px;color:var(--cg-muted);}
 #cg-app .cg-choice:has(input:checked){border-color:var(--cg-accent);background:color-mix(in srgb,var(--cg-accent) 10%,var(--cg-raised));}
+/* Step 17: Focus dots stay in one row (they shrink with the count, 8+ = dense); a restorable picker row. */
+#cg-app .cg-focus-steps .cg-dots{flex-wrap:nowrap;justify-content:flex-start;gap:5px;min-width:0;padding:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;}
+#cg-app .cg-focus-steps .cg-dots button:first-child{margin-left:auto;}
+#cg-app .cg-focus-steps .cg-dots button:last-child{margin-right:auto;}
+#cg-app .cg-focus-steps .cg-dots::-webkit-scrollbar{display:none;}
+#cg-app .cg-dots button{width:clamp(22px,calc((100% - (var(--cg-dot-n,6) - 1) * 5px) / var(--cg-dot-n,6)),30px);min-width:0;height:auto;min-height:0;aspect-ratio:1;}
+#cg-app .cg-dots.dense button{font-size:10px;border-width:1.25px;}
+#cg-app .cg-exresult.cg-exresult-restore small{color:var(--cg-accent);font-weight:600;}
+#cg-app .cg-restore-list{margin:0 0 10px;}
+#cg-app .cg-restore-title{padding:8px 10px 2px;margin:0;}

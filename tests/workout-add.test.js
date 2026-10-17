@@ -43,7 +43,7 @@ test('the details sheet offers the scope choice only when asked, with "samo ta t
 function workoutCtx(over={}){
   const store={0:[]},calls=[],sheets=[],customs=[];
   const ctx=harness({EXERCISE_DB:dbSample,getCustomExercises:()=>customs,CUST_KEY:'wt_custom_ex',safeSetRaw:(k,v)=>{calls.push(['set',k,v]);return true;},
-    getCyc:()=>({num:1}),cw:2,cd:0,dispNameForItem:it=>it.n0,plainImportedText:(v,max)=>String(v||'').slice(0,max),esc:s=>String(s),button,compactNameV26:s=>String(s).toLowerCase(),
+    getCyc:()=>({num:1}),cw:2,cd:0,sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,getHiddenEx:()=>({}),dispNameForItem:it=>it.n0,plainImportedText:(v,max)=>String(v||'').slice(0,max),esc:s=>String(s),button,compactNameV26:s=>String(s).toLowerCase(),
     _newExId:n=>'id-'+n,state:{focus:false,openRow:''},dialog:noopDialog(),closeSheet:()=>{},notify:t=>calls.push(['notify',t]),
     guardProgram:()=>{throw Error('guardProgram must not block adding during a workout');},window:{v6RecoveryPending:false},
     getProgramMetaV6:()=>({days:[{name:'Push',active:true}]}),programWriteBusy:false,getDayLists:()=>JSON.parse(JSON.stringify(store)),
@@ -51,7 +51,7 @@ function workoutCtx(over={}){
     showDay:i=>calls.push(['showDay',i]),currentRows:()=>store[0].map((it,ei)=>({key:'c1w2d0e'+ei,ei,item:it})),
     sheet:(title,body,save,ok)=>{sheets.push({title,body,save,ok});},autoBackupToIDB:()=>Promise.resolve(true),storageHasPendingWrites:()=>false,...over});
   ctx.store=store;ctx.calls=calls;ctx.sheets=sheets;ctx.customs=customs;
-  for(const n of ['exerciseIsOnDayV29','saveCustomExerciseV38','exercisePickerSheet','exerciseDetailsSheet','guardWorkoutAdd','addExerciseToWorkout'])inner(ctx,n);
+  for(const n of ['exerciseIsOnDayV29','saveCustomExerciseV38','exercisePickerSheet','exerciseDetailsSheet','guardWorkoutAdd','setExerciseActiveV39','restoreRosterExerciseV39','restoreGuarded','addExerciseToWorkout'])inner(ctx,n);
   return ctx;
 }
 test('adding during a workout: picker → details with scope → one appended row; "samo ta trening" carries from+until on this week',async()=>{
@@ -108,4 +108,70 @@ test('entry points: "+ Dodaj vajo" on the Trening list (Program link only when u
   const start=shell.indexOf('  function addExerciseToWorkout('),body=shell.slice(start,shell.indexOf('\n  }\n',start));
   assert.doesNotMatch(body,/draft\.clear|afterProgram\(|guardProgram\(/,'never wipes the current set draft or blocks on a running workout');
   assert.match(body,/mutateDayList\(di,rows=>\{index=rows\.push\(/,'appended: saved set keys never move');
+});
+
+// ---- Step 17: switch / disable during a workout, restorable picker rows, one-row Focus dots ----
+function activeCtx(over={}){
+  const store={0:[{id:'a',n0:'A'},{id:'b',n0:'B',programDisabled:true}]},calls=[],sets={c1w2d0e0:[{kg:'60',reps:'8',done:true}]};
+  const ctx=harness({window:{v6RecoveryPending:false},getDayLists:()=>JSON.parse(JSON.stringify(store)),saveDayLists:all=>{Object.assign(store,all);calls.push('save');return true;},
+    sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,getCyc:()=>({num:1}),cw:2,cd:0,getSets:()=>sets,navigationLocked:()=>false,
+    draft:{delete:k=>calls.push(['draft.delete',k])},state:{openRow:''},showDay:i=>calls.push(['showDay',i]),afterProgram:()=>calls.push('after'),...over});
+  ctx.store=store;ctx.calls=calls;inner(ctx,'setExerciseActiveV39');return ctx;
+}
+test('setExerciseActiveV39 outside a workout: writes and re-renders through afterProgram as before',()=>{
+  const ctx=activeCtx();
+  ctx.setExerciseActiveV39(0,1,true);
+  assert.equal(ctx.store[0][1].programDisabled,false);assert.deepEqual(ctx.calls,['save','after']);
+  ctx.setExerciseActiveV39(0,0,false);
+  assert.equal(ctx.store[0][0].programDisabled,true,'outside a workout disabling is allowed even with confirmed sets (history stays)');
+  assert.throws(()=>ctx.setExerciseActiveV39(0,9,true),/Vaja ni več na tem dnevu/);
+});
+test('setExerciseActiveV39 during a workout: no guard, no draft wipe; disabling needs no confirmed set this week',()=>{
+  const ctx=activeCtx({navigationLocked:()=>true});
+  ctx.setExerciseActiveV39(0,1,true);
+  assert.equal(ctx.store[0][1].programDisabled,false);
+  assert.deepEqual(ctx.calls,['save',['draft.delete','c1w2d0e1'],['showDay',0]],'showDay, never afterProgram (which would clear the current set draft)');
+  assert.throws(()=>ctx.setExerciseActiveV39(0,0,false),/Vaja ima zabeležene serije/);
+  assert.equal(ctx.store[0][0].programDisabled,undefined);
+  const pending=activeCtx({window:{v6RecoveryPending:true}});
+  assert.throws(()=>pending.setExerciseActiveV39(0,1,true),/Najprej nadaljuj ali zavrzi/);
+});
+test('the workout picker offers an inactive or removed roster exercise back ("vključi" / "vrni") instead of a dead duplicate',async()=>{
+  const sets=[];const ctx=workoutCtx({getHiddenEx:()=>({c1w2d0e1:true}),navigationLocked:()=>true,draft:{delete(){}},safeSetRaw:(k,v)=>{sets.push([k,v]);return true;}});
+  ctx.saveDayLists=all=>{Object.assign(ctx.store,JSON.parse(JSON.stringify(all)));return true;};
+  ctx.store[0].push({id:'off',n0:'Plank',programDisabled:true},{id:'hid',n0:'Barbell Bench Press'});
+  ctx.addExerciseToWorkout();
+  const s=ctx.sheets[0];
+  assert.match(s.body,/<div class="cg-exresults cg-restore-list" data-restore-list><p class="cg-small cg-restore-title">Na tem dnevu, a ne v treningu<\/p>/);
+  assert.match(s.body,/data-pick-exercise="Plank">Plank<small>neaktivna · vključi<\/small>/);
+  assert.match(s.body,/data-pick-exercise="Barbell Bench Press">Barbell Bench Press<small>odstranjena ta teden · vrni<\/small>/);
+  assert.ok(s.body.indexOf('data-restore-list')<s.body.indexOf('data-muscle-body'),'listed above the body figure');
+  await s.save(new Map([['name','Plank'],['group','core']]));
+  assert.equal(ctx.store[0][0].programDisabled,false,'inactive → active again');
+  assert.deepEqual(ctx.calls.filter(c=>c[0]==='notify').at(-1),['notify','»Plank« je spet aktivna in v treningu.']);
+  await s.save(new Map([['name','Barbell Bench Press'],['group','chest']]));
+  const hiddenWrite=sets.find(([k])=>k==='wt_hidden_ex');
+  assert.ok(hiddenWrite&&!JSON.parse(hiddenWrite[1]).c1w2d0e1,'removed-this-week flag cleared');
+  assert.deepEqual(ctx.calls.filter(c=>c[0]==='notify').at(-1),['notify','»Barbell Bench Press« je spet v tem treningu.']);
+  assert.equal(ctx.sheets.length,1,'no details sheet: the row already has its sets/reps');
+  const picker=shell.slice(shell.indexOf('  function exercisePickerSheet('),shell.indexOf('\n  function ',shell.indexOf('  function exercisePickerSheet(')+1));
+  assert.match(picker,/fix\?`<small>\$\{st\.off\?'neaktivna · vključi':'odstranjena ta teden · vrni'\}<\/small>`:dup\?'<small>že na tem dnevu<\/small>':''/);
+  assert.match(picker,/\$\{dup&&!fix\?'disabled':''\}/,'only a truly duplicate row is disabled');
+  assert.match(picker,/nova=trimmed&&!exact&&!restorable\(rosterState\(trimmed\)\)\?/,'a restorable name is never offered as "Nova vaja"');
+  const plain=workoutCtx();plain.store[0].push({id:'off',n0:'Plank',programDisabled:true});plain.addExerciseToWorkout();
+  assert.match(plain.sheets[0].body,/data-restore-list/);
+});
+test('Program: the switch and "+ Dodaj vajo" route through the workout-safe paths while a workout runs',()=>{
+  assert.match(shell,/else if\(act==='program-add'\)\{if\(navigationLocked\(\)\)\{addExerciseToWorkout\(state\.day\);return;\}addExercise\(\);return;\}/);
+  assert.match(shell,/function addExerciseToWorkout\(di=cd\)\{\n\s*const here=di===cd;/);
+  assert.match(shell,/once:here\?'Samo ta trening':`Samo teden \$\{cw\+1\}`/);
+});
+test('Focus dots: one row that shrinks with the count, dense at 8+, current dot scrolled into view when it overflows',()=>{
+  assert.match(shell,/<div class="cg-dots\$\{workoutCache\.length>7\?' dense':''\}" style="--cg-dot-n:\$\{workoutCache\.length\}">/);
+  assert.match(shell,/const dot=main\.querySelector\('\.cg-dots \.current'\),dots=dot\?\.parentElement;if\(dot&&dots&&dots\.scrollWidth>dots\.clientWidth\+1\)dot\.scrollIntoView\(\{inline:'center',block:'nearest'\}\);/);
+  const css=read('css/compact-v4.css');
+  assert.match(css,/#cg-app \.cg-focus-steps \.cg-dots\{flex-wrap:nowrap;justify-content:flex-start;gap:5px;min-width:0;padding:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;/);
+  assert.match(css,/\.cg-dots button:first-child\{margin-left:auto;\}/,'centered via auto margins, so an overflowing row still starts at dot 1');
+  assert.match(css,/#cg-app \.cg-dots button\{width:clamp\(22px,calc\(\(100% - \(var\(--cg-dot-n,6\) - 1\) \* 5px\) \/ var\(--cg-dot-n,6\)\),30px\);min-width:0;height:auto;min-height:0;aspect-ratio:1;/);
+  assert.match(css,/#cg-app \.cg-dots\.dense button\{font-size:10px;/);
 });

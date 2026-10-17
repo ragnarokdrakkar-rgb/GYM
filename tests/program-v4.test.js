@@ -81,20 +81,16 @@ test('Day card active-exercise and weekly-set counts exclude a disabled exercise
   assert.match(visible,/<b>2\/3<\/b> aktivnih vaj · <b>7<\/b> serij · aktiven dan: <b>Da<\/b>/);
 });
 
-test('program-toggle flips programDisabled on a fresh read, saves via saveDayLists, and throws when the exercise is gone',()=>{
-  const start=shell.indexOf("else if(act==='program-toggle')"),marker="notify(it.programDisabled?'Vaja je neaktivna. Zgodovina ostane.':'Vaja je spet aktivna.');",end=shell.indexOf(marker,start)+marker.length+1;
+test('program-toggle reads the row fresh, flips it through setExerciseActiveV39 (no guardProgram) and reports the new state',()=>{
+  const start=shell.indexOf("else if(act==='program-toggle')"),marker="notify(wasOff?'Vaja je spet aktivna.':'Vaja je neaktivna. Zgodovina ostane.');",end=shell.indexOf(marker,start)+marker.length+1;
   const branch=shell.slice(start,end),body=branch.replace(/^else if\(act==='program-toggle'\)/,'');
-  assert.match(branch,/const all=getDayLists\(\)/);assert.match(branch,/if\(!it\)throw Error/);assert.match(branch,/saveDayLists\(all\)/);assert.match(branch,/afterProgram\(\)/);
+  assert.doesNotMatch(branch,/guardProgram|afterProgram|saveDayLists/,'the shared helper does the write and the re-render');
   const calls=[];
-  const ctx=vm.createContext({guardProgram:()=>calls.push('guard'),
-    getDayLists:()=>({0:[{n:'A',programDisabled:false},{n:'B',programDisabled:true}]}),
-    saveDayLists:all=>{calls.push(['save',JSON.parse(JSON.stringify(all))]);return true;},
-    afterProgram:()=>calls.push('after'),notify:t=>calls.push(['notify',t]),state:{day:0},Error});
+  const ctx=vm.createContext({getDayLists:()=>({0:[{n:'A',programDisabled:false},{n:'B',programDisabled:true}]}),
+    setExerciseActiveV39:(di,i,active)=>calls.push(['set',di,i,active]),notify:t=>calls.push(['notify',t]),state:{day:0},Error});
   const toggle=vm.runInContext(`(function(index){const act='program-toggle';${body}})`,ctx);
-  toggle(0);
-  assert.deepEqual(calls[0],'guard');assert.equal(calls[1][0],'save');assert.equal(calls[1][1][0][0].programDisabled,true);
-  assert.equal(calls[2],'after');assert.deepEqual(calls[3],['notify','Vaja je neaktivna. Zgodovina ostane.']);
-  calls.length=0;toggle(1);assert.deepEqual(calls[3],['notify','Vaja je spet aktivna.']);
+  toggle(0);assert.deepEqual(calls,[['set',0,0,false],['notify','Vaja je neaktivna. Zgodovina ostane.']]);
+  calls.length=0;toggle(1);assert.deepEqual(calls,[['set',0,1,true],['notify','Vaja je spet aktivna.']]);
   assert.throws(()=>toggle(9),/Vaja ni več na tem dnevu/);
 });
 
@@ -115,7 +111,7 @@ test('Muscle groups cover every built-in DB muscle and sort custom exercises int
 
 function pickerCtx(dayItems=[]){
   const sheets=[];
-  const ctx=harness({EXERCISE_DB:dbSample,getCustomExercises:()=>[{n:'Moj potisk',group:'chest'}],esc:s=>String(s),button,
+  const ctx=harness({EXERCISE_DB:dbSample,getCustomExercises:()=>[{n:'Moj potisk',group:'chest'}],esc:s=>String(s),button,getHiddenEx:()=>({}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,
     getDayLists:()=>({0:dayItems}),getCyc:()=>({num:1}),cw:0,dispNameForItem:it=>it.n0||it.n,programWriteBusy:false,guardProgram:()=>{},
     plainImportedText:(v,max)=>String(v||'').slice(0,max),dialog:noopDialog(),compactNameV26:s=>String(s).toLowerCase(),
     sheet:(title,body,save,ok)=>{sheets.push({title,body,save,ok});}});
@@ -128,6 +124,7 @@ test('The picker opens with the muscle grid and counts, and rejects a pick that 
   assert.equal(s.title,'Dodaj vajo');assert.equal(s.ok,'Naprej');
   assert.equal((s.body.match(/<button type="button" class="cg-muscle" data-muscle="/g)||[]).length,12);
   assert.ok(s.body.indexOf('data-muscle-body')>=0&&s.body.indexOf('data-muscle-body')<s.body.indexOf('data-muscle-grid'),'the body figure sits above the grid');
+  assert.doesNotMatch(s.body,/data-restore-list/,'no restore list without an onRestore callback');
   assert.match(s.body,/data-muscle="chest"><strong>Prsa<\/strong><small>2 vaji<\/small>/,'DB + custom counted');
   assert.match(s.body,/data-muscle="shoulders"><strong>Ramena<\/strong><small>1 vaja<\/small>/);
   assert.match(s.body,/data-exercise-search/);
@@ -146,7 +143,7 @@ test('Replacing: the exercise itself is excluded from the duplicate check, other
 
 function addExerciseCtx(){
   const store={0:[]},calls=[],sheets=[],customs=[];
-  const ctx=harness({EXERCISE_DB:dbSample,getCustomExercises:()=>customs,CUST_KEY:'wt_custom_ex',safeSetRaw:(k,v)=>{calls.push(['set',k,v]);return true;},
+  const ctx=harness({EXERCISE_DB:dbSample,getCustomExercises:()=>customs,CUST_KEY:'wt_custom_ex',safeSetRaw:(k,v)=>{calls.push(['set',k,v]);return true;},getHiddenEx:()=>({}),sdk:(c,w,d,e)=>`c${c}w${w}d${d}e${e}`,
     getCyc:()=>({num:2}),cw:1,dispNameForItem:it=>it.n0,plainImportedText:(v,max)=>String(v||'').slice(0,max),esc:s=>String(s),button,compactNameV26:s=>String(s).toLowerCase(),
     _newExId:n=>'id-'+n,state:{day:0},dialog:noopDialog(),closeSheet:()=>{},notify:(t)=>calls.push(['notify',t]),
     guardProgram:()=>{},programWriteBusy:false,getDayLists:()=>JSON.parse(JSON.stringify(store)),
@@ -155,7 +152,7 @@ function addExerciseCtx(){
     sheet:(title,body,save,ok)=>{sheets.push({title,body,save,ok});},
     autoBackupToIDB:()=>Promise.resolve(true),storageHasPendingWrites:()=>false});
   ctx.store=store;ctx.calls=calls;ctx.sheets=sheets;ctx.customs=customs;
-  inner(ctx,'exerciseIsOnDayV29');inner(ctx,'saveCustomExerciseV38');inner(ctx,'exercisePickerSheet');inner(ctx,'exerciseDetailsSheet');inner(ctx,'addExercise');inner(ctx,'guardWorkoutAdd');inner(ctx,'addExerciseToWorkout');
+  inner(ctx,'exerciseIsOnDayV29');inner(ctx,'saveCustomExerciseV38');inner(ctx,'exercisePickerSheet');inner(ctx,'exerciseDetailsSheet');inner(ctx,'addExercise');inner(ctx,'guardWorkoutAdd');inner(ctx,'setExerciseActiveV39');inner(ctx,'restoreRosterExerciseV39');inner(ctx,'restoreGuarded');inner(ctx,'addExerciseToWorkout');
   return ctx;
 }
 test('addExercise: pick → details (sets/reps/rest) → one write with from:{cycle,week}; a new name is saved as a custom exercise of its group',async()=>{

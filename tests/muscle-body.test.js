@@ -36,7 +36,7 @@ test('every region is a labelled, focusable button and stays inside its 100×192
 
 test('the picker shows the body above the grid and wires regions like grid buttons, with keyboard support for the SVG',()=>{
   const start=shell.indexOf('  function exercisePickerSheet('),end=shell.indexOf('\n  function ',start+1);const picker=shell.slice(start,end);
-  assert.match(picker,/const groups=muscleBodySvgV37\(\)\+`<div class="cg-muscle-grid" data-muscle-grid>/);
+  assert.match(picker,/const groups=restoreList\(\)\+muscleBodySvgV37\(\)\+`<div class="cg-muscle-grid" data-muscle-grid>/);
   assert.match(picker,/hint0='Tapni mišico na telesu, izberi skupino spodaj ali poišči vajo\.'/);
   assert.match(picker,/data-picker-hint>\$\{hint0\}<\/p>/);
   assert.match(picker,/hint\.textContent=hint0;body\.innerHTML=groups;wire\(\);/,'back restores body + grid');
