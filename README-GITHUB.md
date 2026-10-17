@@ -1,14 +1,19 @@
-# Workout Tracker 1.6.2 — Temno-rdeča prenova in hitrejši vnos serij
+# Workout Tracker 1.6.3 — Temno-rdeča prenova in hitrejši vnos serij
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
-2. Prenesi [APK izdaje 1.6.2](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.6.2/Workout-Tracker-v1.6.2.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+2. Prenesi [APK izdaje 1.6.3](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.6.3/Workout-Tracker-v1.6.3.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.6.2 je 79. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.6.3 je 80. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Novo v 1.6.3
+
+- Med treningom deluje stikalo vaje v Programu (vklop in izklop), v Fokusu »Izključi iz programa«, izbirnik pa neaktivne in odstranjene vaje tega dne ponudi nazaj (»vključi« / »vrni«).
+- Fokus: pike vaj na dnu so vedno v eni vrstici (pri 8+ vajah manjše), nič več odrezane.
 
 ## Novo v 1.6.2
 
