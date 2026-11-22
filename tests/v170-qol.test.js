@@ -28,7 +28,7 @@ test('the current set shows the suggestion as a grey placeholder (not required),
 });
 
 test('a logged set gives a short vibration and a toast with "Razveljavi" that undoes exactly that set',()=>{
-  assert.match(shell,/if\(ok\)\{draft\.delete\(e\.key\);hapticV41\(\);lastLoggedV41=\{key:e\.key,index:v\.index,ei:e\.ei,cn:getCyc\(\)\.num,at:Date\.now\(\)\};render\(\);notify\(started\?'Trening začet · serija zabeležena\.':'Serija zabeležena\.',false,\{act:'toast-undo',label:'Razveljavi'\}\);return;\}/);
+  assert.match(shell,/if\(ok\)\{draft\.delete\(e\.key\);hapticV41\(\);lastLoggedV41=\{key:e\.key,index:v\.index,ei:e\.ei,cn:getCyc\(\)\.num,at:Date\.now\(\)\};busy=false;render\(\);notify\(started\?'Trening začet · serija zabeležena\.':'Serija zabeležena\.',false,\{act:'toast-undo',label:'Razveljavi'\}\);return;\}/);
   const undo=shell.slice(shell.indexOf("else if(act==='toast-undo')"),shell.indexOf("else if(act==='exercise-note')"));
   assert.match(undo,/if\(!u\|\|Date\.now\(\)-u\.at>20000\)return;/,'stale undo does nothing');
   assert.match(undo,/if\(!rows\[u\.index\]\?\.done\)return;tgSet\(u\.key,u\.index,cd,u\.ei,u\.cn\);/);
@@ -103,4 +103,11 @@ test('during a rest the lock screen gets a silent ongoing notification with the 
   assert.ok(ctx.calls.some(c=>c[0]==='channel'&&c[1]==='workout_rest_progress_v1'&&c[2]===2&&c[3]===false),'low-importance channel without sound');
   ctx.calls.length=0;ctx.window.stopT('c1w0d0e0');await flush();
   assert.ok(ctx.calls.some(c=>c[0]==='cancel'&&c[1].includes(42002)&&c[1].includes(42003)));
+});
+
+test('regression 1.7.0: the lock is released BEFORE the re-render, so the next set\'s tick is enabled',()=>{
+  const start=shell.indexOf("if(form.hasAttribute('data-log-form'))"),block=shell.slice(start,shell.indexOf("}finally{busy=false;}render();}",start));
+  const okPath=block.slice(block.indexOf('if(ok){'),block.indexOf('else notify('));
+  assert.ok(okPath.indexOf('busy=false;')>=0&&okPath.indexOf('busy=false;')<okPath.indexOf('render();'),'busy=false comes before render() on the success path');
+  for(const m of block.matchAll(/render\(\);[^}]*return;/g))assert.ok(block.slice(0,m.index).lastIndexOf('busy=false;')>block.slice(0,m.index).lastIndexOf('busy=true;'),'every early-return render happens unlocked');
 });
