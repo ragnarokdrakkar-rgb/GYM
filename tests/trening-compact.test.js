@@ -256,7 +256,7 @@ test('Program day card: inactive day says Ne, a hidden/disabled exercise lowers 
 });
 
 // ---- Focus ------------------------------------------------------------------------------------------------------------
-function metaCtx(){const ctx=harness({esc:s=>String(s),fmt:n=>String(n).replace('.',',')});inner(ctx,'focusMeta');return ctx;}
+function metaCtx(){const ctx=harness({esc:s=>String(s),fmt:n=>String(n).replace('.',',')});inner(ctx,'focusMeta');inner(ctx,'exerciseNoteV41');return ctx;}
 const fex=(over={})=>({target:4,item:{targetReps:'8-10'},last:{kg:47.5,reps:8},...over});
 
 test('Focus meta is ONE line: "Cilj <b>target</b> · Zadnjič kg × reps" with a previous entry, only the target without one',()=>{
@@ -273,7 +273,7 @@ test('Focus meta is ONE line: "Cilj <b>target</b> · Zadnjič kg × reps" with a
     assert.equal(ctx.focusMeta(fex({target:n,item:{},last:null})),`<div class="cg-focus-meta">Cilj <b>${n} ${word}</b></div>`);
   // the last entry reads exactly like the logger's own .cg-last line (including the optional RPE)
   assert.match(ctx.focusMeta(fex({last:{kg:60,reps:5,rpe:8.5}})),/Zadnjič 60 kg × 5 · RPE 8\.5<\/span>/);
-  assert.match(shell,/<div class="cg-last">\$\{e\.last\?`Zadnjič \$\{fmt\(e\.last\.kg\)\} kg × \$\{esc\(e\.last\.reps\)\}\$\{e\.last\.rpe\?' · RPE '\+esc\(e\.last\.rpe\):''\}`:'Še brez prejšnjega vnosa\.'\}<\/div>/);
+  assert.match(shell,/<div class="cg-last">\$\{e\.last\?`Zadnjič \$\{fmt\(e\.last\.kg\)\} kg × \$\{esc\(e\.last\.reps\)\}\$\{e\.last\.rpe\?' · RPE '\+esc\(e\.last\.rpe\):''\}\$\{sugNote\}`:'Še brez prejšnjega vnosa\.'\}<\/div>/);
 });
 
 test('Focus renders the meta line from focusMeta() between the exercise name and the logger; the Trening list keeps the logger .cg-last line',()=>{

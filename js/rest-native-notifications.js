@@ -3,12 +3,17 @@
 
   const NOTIFICATION_ID = 42002;
   const CHANNEL_ID = 'workout_rest_timer_v2';
+  // 1.7.0: a silent, ongoing notification while the rest runs (lock screen),
+  // showing when it ends. The loud end notification above stays separate.
+  const PROGRESS_ID = 42003;
+  const PROGRESS_CHANNEL_ID = 'workout_rest_progress_v1';
   const CHANNEL_SOUND = 'workout_rest.wav';
   const EXACT_WARNING_KEY = 'wt_exact_alarm_v2_warning';
 
   let appIsActive = true;
   let scheduleGeneration = 0;
   let channelReadyPromise = null;
+  let progressChannelPromise = null;
 
   function getPlugin(name) {
     try {
@@ -103,6 +108,23 @@
     appIsActive = document.visibilityState !== 'hidden';
   }
 
+  function restStillRunning() {
+    try {
+      const timer = typeof window.currentTimerV6 === 'function' ? window.currentTimerV6() : null;
+      return Boolean(timer && (timer.paused || timer.endTs > Date.now()));
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function cancelProgressOnly() {
+    Promise.resolve(
+      localNotifications.cancel({ notifications: [{ id: PROGRESS_ID }] })
+    ).catch(function (error) {
+      console.warn('Progress notification cancel failed:', error);
+    });
+  }
+
   function registerAppStateListener() {
     if (
       appPlugin &&
@@ -111,6 +133,10 @@
       appPlugin
         .addListener('appStateChange', function (state) {
           appIsActive = Boolean(state && state.isActive);
+          // Back in the app after the rest ended in the background: drop the stale progress notification.
+          if (appIsActive && !restStillRunning()) {
+            cancelProgressOnly();
+          }
         })
         .catch(function (error) {
           console.warn('App state listener failed:', error);
@@ -152,6 +178,62 @@
     } catch (error) {
       channelReadyPromise = null;
       throw error;
+    }
+  }
+
+  function createProgressChannel() {
+    if (progressChannelPromise) {
+      return progressChannelPromise;
+    }
+    if (typeof localNotifications.createChannel !== 'function') {
+      progressChannelPromise = Promise.resolve();
+      return progressChannelPromise;
+    }
+    progressChannelPromise = localNotifications.createChannel({
+      id: PROGRESS_CHANNEL_ID,
+      name: 'Odmor v teku',
+      description: 'Tiho obvestilo med odmorom: kdaj se odmor konca',
+      importance: 2,
+      visibility: 1,
+      vibration: false,
+      lights: false
+    }).catch(function (error) {
+      progressChannelPromise = null;
+      throw error;
+    });
+    return progressChannelPromise;
+  }
+
+  function restEndLabel(deadlineMs) {
+    return new Date(deadlineMs).toLocaleTimeString('sl-SI', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  async function showProgressNotification(deadlineMs, generation) {
+    try {
+      await createProgressChannel();
+      if (generation !== scheduleGeneration) {
+        return;
+      }
+      await localNotifications.schedule({
+        notifications: [
+          {
+            id: PROGRESS_ID,
+            title: 'Odmor do ' + restEndLabel(deadlineMs),
+            body: 'Ob koncu dobis obvestilo z zvokom.',
+            channelId: PROGRESS_CHANNEL_ID,
+            ongoing: true,
+            autoCancel: false,
+            extra: {
+              type: 'workout-rest-progress'
+            }
+          }
+        ]
+      });
+    } catch (error) {
+      console.warn('Rest progress notification failed:', error);
     }
   }
 
@@ -242,7 +324,8 @@
 
     const matching = Array.isArray(delivered.notifications)
       ? delivered.notifications.filter(function (notification) {
-          return notification.id === NOTIFICATION_ID;
+          return notification.id === NOTIFICATION_ID ||
+            notification.id === PROGRESS_ID;
         })
       : [];
 
@@ -259,6 +342,9 @@
         notifications: [
           {
             id: NOTIFICATION_ID
+          },
+          {
+            id: PROGRESS_ID
           }
         ]
       });
@@ -347,6 +433,8 @@
         }
       ]
     });
+
+    await showProgressNotification(deadlineMs, myGeneration);
 
     console.log(
       'Native timer scheduled:',

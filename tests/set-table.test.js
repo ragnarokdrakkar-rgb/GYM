@@ -17,7 +17,7 @@ function baseCtx(overrides={}){
   });
 }
 function loadTable(ctx){for(const fn of ['valuesFor','steppers','setRow','setTable'])inner(ctx,fn);}
-function loadLogger(ctx){loadTable(ctx);inner(ctx,'logger');}
+function loadLogger(ctx){loadTable(ctx);if(ctx.state===undefined)ctx.state={focus:false};if(ctx.exerciseNoteV41===undefined)inner(ctx,'exerciseNoteV41');inner(ctx,'logger');}
 
 function exercise(overrides={}){
   return {

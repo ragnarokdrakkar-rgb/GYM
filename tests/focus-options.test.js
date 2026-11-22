@@ -51,7 +51,7 @@ function menuCtx(rows,locked=false){
 test('the exercise menu offers info, rest and both remove options with clear consequences',()=>{
   const menu=menuCtx([{kg:'',reps:'',done:false}]);
   assert.equal(menu.title,'Bench');assert.equal(menu.soloOk,true);assert.equal(menu.ok,'Zapri');
-  for(const act of ['exercise-info','rest-settings','exercise-remove-week','exercise-disable'])assert.match(menu.body,new RegExp(`data-act="${act}" >`));
+  for(const act of ['exercise-info','rest-settings','exercise-note','exercise-remove-week','exercise-disable'])assert.match(menu.body,new RegExp(`data-act="${act}" >`));
   assert.match(menu.body,/Počitek · 2:30/);
   assert.match(menu.body,/Samo teden 2\. Vrneš jo na seznamu vaj\./);
   assert.match(menu.body,/Vsi tedni\. Zgodovina ostane\./);
@@ -112,7 +112,7 @@ test('Focus shows the exercise name with an options button; the logger link open
 
 test('an empty set field is not painted as an error before the user has touched it',()=>{
   const css=fs.readFileSync(path.join(__dirname,'..','css/compact-v4.css'),'utf8');
-  assert.match(css,/#cg-app \.cg-setrow2 input:user-invalid\{border-color:var\(--cg-pending\);\}/);
+  assert.match(css,/#cg-app \.cg-setrow2 input:user-invalid\{border-color:var\(--cg-danger\);\}/);
   assert.doesNotMatch(css,/\.cg-setrow2 input:invalid/);
 });
 

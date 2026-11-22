@@ -24,3 +24,7 @@
 .compact-shell-v27 #wt-update-download{background:linear-gradient(135deg,#e3232b,#8f0a12)!important;color:#ffffff!important;border-color:#e3232b!important;}
 .compact-shell-v27 #wt-update-close{background:#170e0e!important;color:#bba9a9!important;border-color:#3a2222!important;}
 .compact-shell-v27 #storage-error-banner:not([hidden]){display:block!important;position:fixed;z-index:999999;bottom:0;left:0;right:0;}
+/* 1.7.0 colour themes: the page behind the shadow root follows the chosen theme. */
+.compact-shell-v27[data-cg-theme="grafit"] body{background:#0b0c0e!important;}
+.compact-shell-v27[data-cg-theme="modra"] body{background:#060b14!important;}
+.compact-shell-v27[data-cg-theme="svetla"] body{background:#f5f2ef!important;}

@@ -28,11 +28,12 @@ test('tick() drives save state from storageHasPendingWrites and markSaveStateV15
 
 test('CSS gives the red save state a tappable, non-inert control and dims ok/saving',()=>{
   assert.match(v4,/\.cg-savebtn\[data-save-state="ok"\],#cg-app \.cg-savebtn\[data-save-state="saving"\]\{pointer-events:none;\}/);
-  assert.match(v4,/\.cg-savebtn\[data-save-state="error"\]\{color:var\(--cg-pending\);\}/);
+  assert.match(v4,/\.cg-savebtn\[data-save-state="error"\]\{color:var\(--cg-danger\);\}/);
 });
 
-test('notify() keeps its (text,error) signature; the toast timing helper never auto-hides errors',()=>{
-  assert.match(shell,/function notify\(text,error=false\)\{/);
+test('notify() keeps (text,error) and adds an optional action; the toast timing helper never auto-hides errors',()=>{
+  assert.match(shell,/function notify\(text,error=false,action=null\)\{/);
+  assert.match(shell,/const delay=action\?6000:compactToastTimingV32\(error\);/,'a toast with an action stays a little longer');
   const ctx=vm.createContext({});vm.runInContext(shell,ctx);
   assert.equal(ctx.compactToastTimingV32(false),3500);
   assert.equal(ctx.compactToastTimingV32(true),null);

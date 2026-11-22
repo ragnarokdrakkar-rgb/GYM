@@ -20,7 +20,8 @@ const SELECT_SHADOW='box-shadow:inset 0 0 0 1px var(--cg-accent),0 6px 20px -12p
 test('v5 tokens on #cg-app: black + deep red palette incl. --cg-accent-fill and a white --cg-on-accent',()=>{
   const expected={'--cg-bg':'#050404','--cg-panel':'#0e0909','--cg-raised':'#170e0e','--cg-line':'#271818','--cg-line2':'#3a2222',
     '--cg-text':'#f8f3f3','--cg-muted':'#bba9a9','--cg-dim':'#8c7676','--cg-accent':'#ff3b3b','--cg-accent-fill':'#e3232b','--cg-accent2':'#8f0a12',
-    '--cg-on-accent':'#ffffff','--cg-ok':'#34d27b','--cg-partial':'#4ea4ff','--cg-pending':'#ff5c5c'};
+    '--cg-on-accent':'#ffffff','--cg-ok':'#34d27b','--cg-partial':'#4ea4ff','--cg-pending':'#8f7f7f','--cg-danger':'#ff5c5c'};
+  // 1.7.0: "not done yet" is neutral grey; red stays for the main action, selection and --cg-danger.
   for(const [name,value] of Object.entries(expected))assert.equal(tokens[name],value,name);
   assert.match(v4,/#cg-app\{--cg-bg:#050404;/,'the token rule stays the first rule of the file');
 });

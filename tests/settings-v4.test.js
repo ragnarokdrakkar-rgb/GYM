@@ -118,7 +118,7 @@ test('Alarm and Progression subpages share one form (all field names present, th
   const app=settingsCtx({state:{settings:'app',flagged:false,query:'',limit:50},programUses531V16:()=>true}).settings();
   for(const act of ['cycle-new','tm-advance','tm-reset','update','draft-restore','diagnostics'])assert.match(app,new RegExp(`data-act="${act}"`),`missing act ${act}`);
   assert.doesNotMatch(app,/data-advanced-form/,'nothing to save on the app page');
-  assert.match(shell,/\['equipment','history','backup','phase','advanced','alarm','progression','app'\]\.includes\(act\)/);
+  assert.match(shell,/\['equipment','history','backup','phase','advanced','alarm','progression','app','theme'\]\.includes\(act\)/);
 });
 
 test('Equipment subpage keeps data-equipment-form with all its field names',()=>{

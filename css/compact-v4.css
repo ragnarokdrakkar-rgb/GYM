@@ -1,7 +1,7 @@
 /* Step 1 of the UI redesign: dark red tokens, cycle header, week/day
    pickers with separated status vs selection, hero card and exercise rings.
    Loaded after compact-shell.css inside the shadow root; overrides its tokens. */
-#cg-app{--cg-bg:#050404;--cg-panel:#0e0909;--cg-raised:#170e0e;--cg-line:#271818;--cg-line2:#3a2222;--cg-text:#f8f3f3;--cg-muted:#bba9a9;--cg-dim:#8c7676;--cg-accent:#ff3b3b;--cg-accent-fill:#e3232b;--cg-accent2:#8f0a12;--cg-on-accent:#ffffff;--cg-ok:#34d27b;--cg-partial:#4ea4ff;--cg-pending:#ff5c5c;--cg-display:"WT Display","Arial Narrow",system-ui,sans-serif;--cg-fs-h1:30px;--cg-fs-h2:20px;--cg-fs-body:15px;--cg-fs-small:12.5px;--cg-gap:12px;--cg-gutter:16px;background:var(--cg-bg);}
+#cg-app{--cg-bg:#050404;--cg-panel:#0e0909;--cg-raised:#170e0e;--cg-line:#271818;--cg-line2:#3a2222;--cg-text:#f8f3f3;--cg-muted:#bba9a9;--cg-dim:#8c7676;--cg-accent:#ff3b3b;--cg-accent-fill:#e3232b;--cg-accent2:#8f0a12;--cg-on-accent:#ffffff;--cg-ok:#34d27b;--cg-partial:#4ea4ff;--cg-pending:#8f7f7f;--cg-danger:#ff5c5c;--cg-display:"WT Display","Arial Narrow",system-ui,sans-serif;--cg-fs-h1:30px;--cg-fs-h2:20px;--cg-fs-body:15px;--cg-fs-small:12.5px;--cg-gap:12px;--cg-gutter:16px;background:var(--cg-bg);}
 
 /* v5 dark red theme */
 /* Primary actions: red fill into deep red, white text (4.6:1 on the lightest stop, --cg-accent-fill). */
@@ -119,7 +119,7 @@
 #cg-app .cg-setrow2.current .cg-setrow-num{color:var(--cg-text);}
 #cg-app .cg-setrow-value{font-family:var(--cg-display);font-size:22px;font-weight:600;text-align:center;color:var(--cg-text);font-variant-numeric:tabular-nums;min-height:46px;display:flex;align-items:center;justify-content:center;}
 #cg-app .cg-setrow2 input{width:100%;min-width:0;min-height:46px;border:1px solid var(--cg-line2);background:var(--cg-bg);border-radius:8px;text-align:center;font-family:var(--cg-display);font-size:22px;font-weight:600;color:var(--cg-text);font-variant-numeric:tabular-nums;}
-#cg-app .cg-setrow2 input:user-invalid{border-color:var(--cg-pending);}
+#cg-app .cg-setrow2 input:user-invalid{border-color:var(--cg-danger);}
 #cg-app .cg-setrow-tick{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;background:var(--cg-raised);border:1px solid var(--cg-line);color:var(--cg-muted);}
 #cg-app .cg-setrow-tick svg{width:18px;height:18px;}
 #cg-app .cg-setrow-tick.cg-tick-done{background:var(--cg-ok);border-color:var(--cg-ok);color:var(--cg-bg);}
@@ -343,15 +343,15 @@
 #cg-app .cg-savebtn[data-save-state="ok"],#cg-app .cg-savebtn[data-save-state="saving"]{pointer-events:none;}
 #cg-app .cg-savebtn[data-save-state="saving"] .cg-save-dot{background:var(--cg-partial);}
 #cg-app .cg-savebtn[data-save-state="saving"]{color:var(--cg-partial);}
-#cg-app .cg-savebtn[data-save-state="error"]{color:var(--cg-pending);}
-#cg-app .cg-savebtn[data-save-state="error"] .cg-save-dot{background:var(--cg-pending);animation:cg-pulse 1.4s ease-in-out infinite;}
+#cg-app .cg-savebtn[data-save-state="error"]{color:var(--cg-danger);}
+#cg-app .cg-savebtn[data-save-state="error"] .cg-save-dot{background:var(--cg-danger);animation:cg-pulse 1.4s ease-in-out infinite;}
 
 /* Floating toast, anchored above the bottom nav (or the screen edge in Focus
    mode). Empty means no text, so it never reserves layout space; pointer
    events are scoped to the toast box itself, never the rest of the screen. */
 #cg-app .cg-message{position:fixed;top:auto;left:50%;bottom:calc(56px + max(10px,env(safe-area-inset-bottom,0px)) + 10px);transform:translateX(-50%);z-index:20;width:calc(100% - 32px);max-width:398px;height:auto;margin:0;padding:12px 16px;border-radius:12px;background:var(--cg-raised);border:1px solid color-mix(in srgb,var(--cg-ok) 45%,var(--cg-line));color:var(--cg-text);font-size:13px;line-height:1.4;text-align:center;box-shadow:0 10px 28px rgba(0,0,0,.45);pointer-events:auto;}
 #cg-app .cg-message:empty{display:none;}
-#cg-app .cg-message-error{border-color:color-mix(in srgb,var(--cg-pending) 55%,var(--cg-line));background:color-mix(in srgb,var(--cg-pending) 16%,var(--cg-raised));cursor:pointer;}
+#cg-app .cg-message-error{border-color:color-mix(in srgb,var(--cg-danger) 55%,var(--cg-line));background:color-mix(in srgb,var(--cg-danger) 16%,var(--cg-raised));cursor:pointer;}
 #cg-app[data-focus="true"] .cg-message{bottom:calc(16px + env(safe-area-inset-bottom,0px));}
 
 /* Bottom nav: 56px tabs, translucent + blurred panel with a solid fallback. */
@@ -420,7 +420,7 @@
 #cg-app .cg-menu-item{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;min-height:56px;padding:12px 14px;border-radius:12px;background:var(--cg-raised);border:1px solid var(--cg-line);color:var(--cg-text);text-align:left;}
 #cg-app .cg-menu-item strong{font-size:16px;font-weight:700;}
 #cg-app .cg-menu-item small{font-size:12.5px;color:var(--cg-muted);}
-#cg-app .cg-menu-item.cg-menu-danger strong{color:var(--cg-pending);}
+#cg-app .cg-menu-item.cg-menu-danger strong{color:var(--cg-danger);}
 #cg-app .cg-menu-item:disabled{opacity:.6;}
 #cg-app .cg-menu-item:disabled strong{color:var(--cg-muted);}
 #cg-app .cg-removed{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px;padding:10px 12px;border:1px dashed var(--cg-line2);border-radius:12px;font-size:13px;color:var(--cg-muted);}
@@ -453,7 +453,7 @@
 #cg-app .cg-weight-today{margin:0 0 12px;min-height:48px;font-weight:650;}
 #cg-app .cg-trend{font-style:normal;font-weight:700;}
 #cg-app .cg-trend.up{color:var(--cg-ok);}
-#cg-app .cg-trend.down{color:var(--cg-pending);}
+#cg-app .cg-trend.down{color:var(--cg-danger);}
 #cg-app .cg-trend.flat{color:var(--cg-muted);font-weight:600;}
 
 /* Step 11: typing in Focus. With the keyboard open the scroll area was squeezed to
@@ -464,7 +464,7 @@
 #cg-app.cg-typing[data-focus="true"] .cg-rest-label{display:none;}
 
 /* Step 13: deleting one workout from history (started by mistake). */
-#cg-app .cg-history-summary .cg-danger-btn{color:var(--cg-pending);margin-left:8px;}
+#cg-app .cg-history-summary .cg-danger-btn{color:var(--cg-danger);margin-left:8px;}
 
 /* Step 14: exercise picker by muscle group; replace/remove and delete-day actions. */
 #cg-app .cg-muscle-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 12px;}
@@ -474,7 +474,7 @@
 #cg-app .cg-muscle:active{border-color:var(--cg-accent);background:color-mix(in srgb,var(--cg-accent) 12%,var(--cg-raised));}
 #cg-app .cg-exercise-actions{margin:4px 0 10px;}
 #cg-app .cg-exercise-actions .cg-quiet{min-height:44px;font-size:14px;}
-#cg-app .cg-exercise-actions .cg-danger-btn{color:var(--cg-pending);border-color:color-mix(in srgb,var(--cg-pending) 45%,var(--cg-line));}
+#cg-app .cg-exercise-actions .cg-danger-btn{color:var(--cg-danger);border-color:color-mix(in srgb,var(--cg-danger) 45%,var(--cg-line));}
 #cg-app .cg-sheet [data-act="picker-back"]{padding:6px 0 10px;}
 /* Step 15: clickable body in the exercise picker (front + back). */
 #cg-app .cg-body-wrap{margin:2px 0 10px;padding:8px 6px 2px;border-radius:14px;background:var(--cg-panel);border:1px solid var(--cg-line);}
@@ -505,3 +505,37 @@
 #cg-app .cg-backup-row-actions{display:flex;gap:4px;flex:none;}
 #cg-app .cg-backup-row-actions .cg-link{padding:8px 6px;}
 #cg-app .cg-backup-row-actions [data-act="backup-restore"]{color:var(--cg-accent);font-weight:600;}
+/* Step 20 (1.7.0): calmer colours, four themes, suggestion, undo toast, note, workout summary.
+   Red (accent) = main action and selection only; "not done yet" is neutral (--cg-pending),
+   destructive actions and errors use --cg-danger. */
+#cg-app .cg-danger,#cg-app .cg-form-error{color:var(--cg-danger);}
+#cg-app .cg-plan-row input:invalid{border-color:var(--cg-danger);}
+#cg-app .cg-step,#cg-app .cg-settable .cg-step{background:transparent;border-color:var(--cg-line);color:var(--cg-muted);font-size:15px;min-height:38px;}
+#cg-app .cg-step:active,#cg-app .cg-settable .cg-step:active{color:var(--cg-text);}
+#cg-app[data-cg-theme="grafit"]{--cg-bg:#0b0c0e;--cg-panel:#14161a;--cg-raised:#1c1f24;--cg-line:#2a2e35;--cg-line2:#3a3f47;--cg-text:#f3f4f6;--cg-muted:#b3b8c2;--cg-dim:#858b96;--cg-accent:#ff8a3d;--cg-accent-fill:#ff8a3d;--cg-accent2:#e0661a;--cg-on-accent:#1a0d03;--cg-ok:#34d27b;--cg-partial:#4ea4ff;--cg-pending:#8b919c;--cg-danger:#ff6b6b;}
+#cg-app[data-cg-theme="modra"]{--cg-bg:#060b14;--cg-panel:#0c1422;--cg-raised:#121d30;--cg-line:#1e2b42;--cg-line2:#2c3d5a;--cg-text:#f1f5fb;--cg-muted:#a9b6ca;--cg-dim:#7d8aa0;--cg-accent:#2ed3c6;--cg-accent-fill:#2ed3c6;--cg-accent2:#1aa79c;--cg-on-accent:#03201d;--cg-ok:#3ddc84;--cg-partial:#7ab2ff;--cg-pending:#7f8ba0;--cg-danger:#ff6b6b;}
+#cg-app[data-cg-theme="svetla"]{--cg-bg:#f5f2ef;--cg-panel:#ffffff;--cg-raised:#efeae6;--cg-line:#e0d8d2;--cg-line2:#cbbfb7;--cg-text:#1d1515;--cg-muted:#5e5050;--cg-dim:#7a6b6b;--cg-accent:#c81e2a;--cg-accent-fill:#d3202c;--cg-accent2:#9e0f18;--cg-on-accent:#ffffff;--cg-ok:#13843f;--cg-partial:#1f6fd1;--cg-pending:#857676;--cg-danger:#c62828;}
+#cg-app .cg-setrow2.suggested input::placeholder{color:var(--cg-dim);opacity:1;font-style:italic;}
+#cg-app .cg-message .cg-message-action{margin-left:12px;padding:4px 10px;min-height:32px;border-radius:8px;background:transparent;border:1px solid var(--cg-line2);color:var(--cg-accent);font-weight:700;}
+#cg-app .cg-ex-note{margin:4px 0 8px;font-size:13px;color:var(--cg-muted);overflow-wrap:anywhere;}
+#cg-app .cg-ex-note b{color:var(--cg-text);font-weight:600;}
+#cg-app .cg-summary-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:4px 0 12px;}
+#cg-app .cg-summary-stats div{background:var(--cg-raised);border:1px solid var(--cg-line);border-radius:12px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:2px;min-width:0;}
+#cg-app .cg-summary-stats strong{font-family:var(--cg-display);font-weight:700;font-size:22px;line-height:1.1;}
+#cg-app .cg-summary-stats span{font-size:11.5px;color:var(--cg-muted);}
+#cg-app .cg-summary-line{font-size:14px;color:var(--cg-muted);margin:0 0 10px;}
+#cg-app .cg-summary-line b{color:var(--cg-text);}
+#cg-app .cg-summary-pr{margin:4px 0;font-size:14px;}
+#cg-app .cg-summary-pr b{color:var(--cg-ok);}
+#cg-app .cg-summary-pr small{color:var(--cg-muted);margin-left:6px;}
+#cg-app .cg-theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+#cg-app .cg-theme-choice{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px;border-radius:12px;background:var(--cg-raised);border:1px solid var(--cg-line);color:var(--cg-text);text-align:left;min-height:104px;}
+#cg-app .cg-theme-choice.selected{border-color:var(--cg-accent);box-shadow:inset 0 0 0 1px var(--cg-accent);}
+#cg-app .cg-theme-choice strong{font-size:15px;}
+#cg-app .cg-theme-choice small{font-size:11.5px;color:var(--cg-muted);}
+#cg-app .cg-theme-swatch{display:flex;gap:4px;margin-bottom:4px;}
+#cg-app .cg-theme-swatch i{width:20px;height:20px;border-radius:50%;border:1px solid var(--cg-line2);display:block;}
+#cg-app [data-cg-swatch="rdeca"] i:nth-child(1){background:#050404}#cg-app [data-cg-swatch="rdeca"] i:nth-child(2){background:#ff3b3b}#cg-app [data-cg-swatch="rdeca"] i:nth-child(3){background:#34d27b}
+#cg-app [data-cg-swatch="grafit"] i:nth-child(1){background:#14161a}#cg-app [data-cg-swatch="grafit"] i:nth-child(2){background:#ff8a3d}#cg-app [data-cg-swatch="grafit"] i:nth-child(3){background:#34d27b}
+#cg-app [data-cg-swatch="modra"] i:nth-child(1){background:#0c1422}#cg-app [data-cg-swatch="modra"] i:nth-child(2){background:#2ed3c6}#cg-app [data-cg-swatch="modra"] i:nth-child(3){background:#3ddc84}
+#cg-app [data-cg-swatch="svetla"] i:nth-child(1){background:#f5f2ef}#cg-app [data-cg-swatch="svetla"] i:nth-child(2){background:#c81e2a}#cg-app [data-cg-swatch="svetla"] i:nth-child(3){background:#13843f}
