@@ -1,14 +1,18 @@
-# Workout Tracker 1.7.0 — Barvne teme in lažji trening
+# Workout Tracker 1.7.1 — Barvne teme in lažji trening
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
-2. Prenesi [APK izdaje 1.7.0](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.7.0/Workout-Tracker-v1.7.0.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+2. Prenesi [APK izdaje 1.7.1](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.7.1/Workout-Tracker-v1.7.1.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.7.0 je 82. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.7.1 je 83. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Novo v 1.7.1
+
+- Popravek: po potrditvi serije je kljukica naslednje serije ostala onemogočena, zato serij ni bilo mogoče potrjevati naprej.
 
 ## Novo v 1.7.0
 
