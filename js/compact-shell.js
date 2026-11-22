@@ -518,8 +518,8 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       return subHeader('Faza telesne sestave','Faza določa cilj teže in trend. Tvoj seznam vaj ostane enak.')+startBtn+choices+'<p class="cg-footnote">Sprememba začne novo fazo danes. Ne vklopi 5/3/1 in ne menja izbranih vaj.</p>'+history;
     }
     if(state.settings==='backup'){
-      const actions=`<div class="cg-backup-actions">${button('export','Prenesi varnostno kopijo (JSON)','cg-action cg-full')}${button('import','Obnovi iz datoteke','cg-quiet cg-full')}${button('snapshot','Shrani lokalno kopijo','cg-quiet cg-full')}</div>`;
-      return subHeader('Varnostna kopija')+'<p class="cg-small">Izvozi datoteko JSON v telefon ali oblak. Lokalne kopije ne nadomestijo zunanjega backupa.</p>'+actions+'<div class="cg-section-label"><span>Lokalne kopije</span></div><div data-backup-list class="cg-card">Pridobivam seznam …</div>';
+      const actions=`<div class="cg-backup-actions">${button('export','Prenesi varnostno kopijo (JSON)','cg-action cg-full')}${button('import','Obnovi iz datoteke','cg-quiet cg-full')}${button('snapshot','Shrani lokalno kopijo zdaj','cg-quiet cg-full')}</div>`;
+      return subHeader('Varnostna kopija')+'<p class="cg-small">Izvozi datoteko JSON v telefon ali oblak. Lokalne kopije so v aplikaciji: ob brisanju podatkov aplikacije ali odstranitvi izginejo, zato ne nadomestijo zunanje kopije.</p>'+actions+'<div class="cg-section-label"><span>Lokalne kopije</span><span>zadnjih 12</span></div><p class="cg-small">»Obnovi« zamenja vse trenutne podatke s to kopijo. Trenutno stanje se prej samodejno shrani kot kopija »pred obnovo«.</p><div data-backup-list class="cg-card">Pridobivam seznam …</div>';
     }
     if(state.settings==='advanced'||state.settings==='alarm'||state.settings==='progression'||state.settings==='app')return advancedView(state.settings);
     const gym=getGym(),prog=programSummaryV31(),lastExt=localStorage.getItem(V6_KEYS.lastExternal),
@@ -561,7 +561,34 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
     if(strength){const series=compactStrengthSeriesV26(sessions(),state.strength),options=chartOptions();options.onClick=(_,points)=>{if(points.length){state.point=series[points[0].index].si;render();}};options.plugins.tooltip.callbacks.label=c=>`${fmt(c.raw)} kg × ${series[c.dataIndex].reps}`;chart=new Chart(strength,{type:'line',data:{labels:series.map(p=>p.date),datasets:[{data:series.map(p=>p.kg),borderColor:t.accent,backgroundColor:t.accent,pointRadius:series.map(p=>p.si===state.point?6:3),pointHitRadius:16,borderWidth:2.5,tension:.15}]},options});}
     if(weight){const entries=Object.entries(getBW()).sort((a,b)=>a[0].localeCompare(b[0])),view=bwChartWindowV25(entries,state.weightDays),options=chartOptions();options.plugins.tooltip.callbacks.label=c=>`${c.dataset.label}: ${fmt(c.raw)} kg`;chart=new Chart(weight,{type:'line',data:{labels:view.map(p=>p[0]),datasets:[{label:'Meritve',data:view.map(p=>Number(p[1])),borderColor:t.dim,backgroundColor:t.dim,pointRadius:2,pointHitRadius:10,showLine:false},{label:'7-dnevno povprečje',data:view.map(([d])=>avg7d(entries.filter(([date])=>date<=d))),borderColor:t.accent,backgroundColor:t.accent,pointRadius:0,borderWidth:2.5,tension:.2}]},options});}
   }
-  async function renderBackups(){const holder=$('[data-backup-list]');if(!holder)return;try{const list=await getAllBackups();if(!holder.isConnected)return;holder.innerHTML=list.map(b=>`<div class="cg-srow"><span class="cg-srow-text"><strong>${esc(new Date(b.date).toLocaleString('sl-SI'))}</strong><small>${b.sizeKB||'?'} KB · ${esc(b.label||'lokalna kopija')}</small></span>${button('backup-download','Prenesi','cg-link',`data-index="${b.id}"`)}</div>`).join('')||'<p class="cg-small cg-empty">Ni lokalnih kopij.</p>';}catch(e){holder.textContent=e.message;}}
+  // Step 19: local copies (IndexedDB snapshots) can be restored from here; the
+  // current state is saved as a "pred obnovo" copy first, so a restore can be undone.
+  function backupLabelV40(label){return ({auto:'samodejna',manual:'ročna','pred-obnovo':'pred obnovo','rollback-before-import':'pred uvozom datoteke'})[label]||label||'lokalna kopija';}
+  // Counts what a person recognises: finished workouts, confirmed sets, weight entries (planned empty rows are not sets).
+  function backupCountsV40(b){const sets=b&&b.sets&&typeof b.sets==='object'?Object.values(b.sets):[];return {sessions:Array.isArray(b?.sessions)?b.sessions.length:0,done:sets.reduce((n,rows)=>n+(Array.isArray(rows)?rows.filter(r=>r&&r.done===true).length:0),0),bw:b?.bw&&typeof b.bw==='object'?Object.keys(b.bw).length:0};}
+  function backupWordsV40(c){const n=c.sessions,t=n===1?'trening':n===2?'treninga':n===3||n===4?'treningi':'treningov',d=c.done,sw=d===1?'serija':d===2?'seriji':d===3||d===4?'serije':'serij';return `${n} ${t} · ${d} ${sw}`;}
+  const backupStatsCache=new Map();
+  function backupStatsOf(b){if(backupStatsCache.has(b.id))return backupStatsCache.get(b.id);let st=null;try{st=backupCountsV40(JSON.parse(b.blob));}catch(e){st=null;}backupStatsCache.set(b.id,st);return st;}
+  async function renderBackups(){const holder=$('[data-backup-list]');if(!holder)return;try{const list=await getAllBackups();if(!holder.isConnected)return;holder.innerHTML=list.map(b=>{const st=backupStatsOf(b);return `<div class="cg-srow cg-backup-row"><span class="cg-srow-text"><strong>${esc(new Date(b.date).toLocaleString('sl-SI',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}))}</strong><small>${st?backupWordsV40(st)+' · ':'ni berljiva · '}${esc(backupLabelV40(b.label))} · ${b.sizeKB||'?'} KB</small></span><span class="cg-backup-row-actions">${button('backup-restore','Obnovi','cg-link',`data-index="${b.id}" ${st?'':'disabled'}`)}${button('backup-download','Shrani','cg-link',`data-index="${b.id}" aria-label="Shrani kopijo v telefon"`)}</span></div>`;}).join('')||'<p class="cg-small cg-empty">Ni lokalnih kopij. Nastanejo samodejno ob koncu treninga in pred spremembami programa, ali z gumbom zgoraj.</p>';}catch(e){holder.textContent=e.message;}}
+  async function restoreLocalCopyV40(id){
+    if(navigationLocked())throw Error('Najprej zaključi ali obnovi aktivni trening.');
+    const item=(await getAllBackups()).find(x=>x.id===id);if(!item)throw Error('Te lokalne kopije ni več.');
+    let backup;try{backup=JSON.parse(item.blob);}catch(e){throw Error('Lokalna kopija ni berljiva.');}
+    const checked=validateBackupP1(backup);if(!checked.ok)throw Error('Lokalna kopija ni veljavna: '+checked.msg);
+    const now=backupCountsV40({sessions:getSessions(),sets:getSets(),bw:getBW()}),then=backupCountsV40(backup),when=new Date(item.date).toLocaleString('sl-SI',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+    const text=`Obnovim podatke iz kopije ${when}?\n\nTreningi v zgodovini: ${now.sessions} → ${then.sessions}\nOpravljene serije: ${now.done} → ${then.done}\nMeritve teže: ${now.bw} → ${then.bw}\n\nVsi trenutni podatki (program, serije, zgodovina, nastavitve) se zamenjajo s to kopijo. Trenutno stanje prej shranim kot lokalno kopijo »pred obnovo«, da se lahko vrneš.`;
+    if(!await ask(text,'Obnovi'))return;
+    if(navigationLocked())throw Error('Najprej zaključi ali obnovi aktivni trening.');
+    if(busy)return;busy=true;
+    try{
+      try{await saveBackupToIDB(await buildBackupJSON(false),'pred-obnovo',id);}catch(e){throw Error('Trenutnega stanja ni bilo mogoče shraniti, zato obnove nisem začel. ('+(e&&e.message||e)+')');}
+      const timer=typeof currentTimerV6==='function'?currentTimerV6():null;if(timer)stopT(timer.key);
+      await restoreBackupObjectP1(backup,{photos:false,mode:'replace'});
+    }finally{busy=false;}
+    // The restore re-runs the legacy showPage('workout'), which the shell maps to Trening: stay on this list instead.
+    backupStatsCache.clear();draft.clear();state.active='';state.openRow='';state.focus=false;state.page='Nastavitve';state.settings='backup';
+    notify(`Obnovljeno iz kopije ${when}. Prejšnje stanje je kopija »pred obnovo«.`);
+  }
   function render(){
     if(!root)return;if(chart){chart.destroy();chart=null;}
     const oldScroll=window.scrollY,route=[state.page,state.focus,state.settings,state.progress,state.strength].join('|');
@@ -940,8 +967,9 @@ if(typeof document!=='undefined'&&document.documentElement.dataset.ui==='compact
       else if(act==='tm'){const tms=get531TMs();sheet('5/3/1 · Training max',`<p class="cg-small">Osnovni TM. Obstoječi zamik ciklov ostane ohranjen.</p>${['bench','squat','deadlift','ohp'].map(l=>`<label>${l}<input type="number" name="${l}" value="${tms[l]||''}" min="1" max="500" step="any"></label>`).join('')}`,data=>{guardProgram();const next={...get531TMs()};for(const l of ['bench','squat','deadlift','ohp']){const v=data.get(l);if(v)next[l]=Number(v);else delete next[l];}if(!safeSetRaw('wt_531tm',JSON.stringify(next)))throw Error('TM ni shranjen.');notify('Osnovni TM shranjen.');});return;}
       else if(act==='export')await exportData();
       else if(act==='import')importData();
-      else if(act==='snapshot'){const ok=await autoBackupToIDB();notify(ok?'Lokalna kopija shranjena.':'Lokalna kopija ni uspela.',!ok);}
-      else if(act==='backup-download')await downloadBackupFromIDB(index);
+      else if(act==='snapshot'){const ok=await autoBackupToIDB('manual');notify(ok?'Lokalna kopija shranjena.':'Lokalna kopija ni uspela.',!ok);}
+      else if(act==='backup-download'){await downloadBackupFromIDB(index);return;}
+      else if(act==='backup-restore')await restoreLocalCopyV40(index);
       render();
     }catch(error){notify(error.message,true);}
   }

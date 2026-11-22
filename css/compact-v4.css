@@ -500,3 +500,8 @@
 #cg-app .cg-exresult.cg-exresult-restore small{color:var(--cg-accent);font-weight:600;}
 #cg-app .cg-restore-list{margin:0 0 10px;}
 #cg-app .cg-restore-title{padding:8px 10px 2px;margin:0;}
+/* Step 19: local copies can be restored or saved to the phone. */
+#cg-app .cg-backup-row{gap:10px;}
+#cg-app .cg-backup-row-actions{display:flex;gap:4px;flex:none;}
+#cg-app .cg-backup-row-actions .cg-link{padding:8px 6px;}
+#cg-app .cg-backup-row-actions [data-act="backup-restore"]{color:var(--cg-accent);font-weight:600;}

@@ -1487,7 +1487,7 @@ function getDaysSinceLastBackup(){
 }
 
 // === IDB BACKUP STORAGE — local snapshots; clearing app/site data removes them ===
-async function saveBackupToIDB(blob,label){
+async function saveBackupToIDB(blob,label,protectId){
   const db=await openPhotoDB();
   return new Promise((res,rej)=>{
     const tx=db.transaction(BK_STORE,'readwrite');
@@ -1495,7 +1495,7 @@ async function saveBackupToIDB(blob,label){
     tx.objectStore(BK_STORE).add(obj);
     tx.oncomplete=()=>{
       res(); // The acknowledged snapshot is valid even if later housekeeping fails.
-      pruneOldBackups(12).catch(error=>console.warn('Snapshot cleanup failed',error.name));
+      pruneOldBackups(12,protectId).catch(error=>console.warn('Snapshot cleanup failed',error.name));
     };
     tx.onerror=()=>rej(tx.error);
     tx.onabort=()=>rej(tx.error||new Error('Snapshot transaction aborted'));
@@ -1521,11 +1521,12 @@ async function deleteBackup(id){
   });
 }
 
-async function pruneOldBackups(keep){
+async function pruneOldBackups(keep,protectId){
   const all=await getAllBackups();
   if(all.length<=keep)return;
-  // Briši najstarejše (all je sortiran desc)
+  // Briši najstarejše (all je sortiran desc). A copy that is being restored is never pruned.
   for(let i=keep;i<all.length;i++){
+    if(protectId!==undefined&&all[i].id===protectId)continue;
     await deleteBackup(all[i].id);
   }
 }
@@ -1583,10 +1584,10 @@ async function buildBackupJSON(includePhotos){
 }
 
 // Auto-shrani backup v IDB (brez photos — varčuje prostor)
-async function autoBackupToIDB(){
+async function autoBackupToIDB(label){
   try{
     const json=await buildBackupJSON(false);
-    await saveBackupToIDB(json,'auto');
+    await saveBackupToIDB(json,typeof label==='string'&&label?label:'auto');
     localStorage.setItem('wt_last_idb_backup',new Date().toISOString());
     return true;
   }catch(e){console.warn('IDB backup failed:',e);return false;}
@@ -1638,16 +1639,23 @@ async function renderBackupList(){
   }).join('');
 }
 
+// Saves a local copy as a JSON file through the same path as the full export: the
+// native BackupExport plugin on Android (Download folder), else share or download.
+// A plain <a download> on a blob URL does nothing in the Android WebView.
 async function downloadBackupFromIDB(id){
   const list=await getAllBackups();
-  const b=list.find(x=>x.id===id);if(!b)return;
-  const blob=new Blob([b.blob],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`workout_backup_${b.date.split('T')[0]}.json`;
-  a.click();URL.revokeObjectURL(url);
-  toast('💾 Backup prenesen','ok');
+  const b=list.find(x=>x.id===id);if(!b){toast('Te lokalne kopije ni več.','err');return false;}
+  const filename=`workout_backup_${b.date.split('T')[0]}_${b.date.slice(11,16).replace(':','')}.json`;
+  try{
+    let how='download';
+    if(typeof window.saveBackupFileV13==='function')how=await window.saveBackupFileV13(b.blob,filename);
+    else{const url=URL.createObjectURL(new Blob([b.blob],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(url);},2000);}
+    toast(how==='native'?`Kopija shranjena v mapo Prenosi (${filename}).`:how==='share'?'Kopija poslana v izbrano aplikacijo.':'Kopija prenesena.','ok');
+    return true;
+  }catch(e){
+    if(e&&e.name==='AbortError'){toast('Shranjevanje preklicano.');return false;}
+    toast('Kopije ni bilo mogoče shraniti: '+(e&&e.message||e),'err');return false;
+  }
 }
 
 async function restoreBackupFromIDB(id){
