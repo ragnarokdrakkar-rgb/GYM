@@ -1,14 +1,18 @@
-# Workout Tracker 1.6.3 — Temno-rdeča prenova in hitrejši vnos serij
+# Workout Tracker 1.6.4 — Temno-rdeča prenova in hitrejši vnos serij
 
 Android aplikacija in lokalno delujoči spletni vmesnik za zapisovanje treningov.
 
 ## Posodobitev na telefonu
 
 1. Če izvoz deluje, pred nadgradnjo shrani JSON kopijo zunaj aplikacije. Če odpove z napako »Polje sugs mora biti objekt«, ohrani podatke in lokalne posnetke ter znova izvozi kopijo po nadgradnji.
-2. Prenesi [APK izdaje 1.6.3](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.6.3/Workout-Tracker-v1.6.3.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
+2. Prenesi [APK izdaje 1.6.4](https://github.com/ragnarokdrakkar-rgb/GYM/releases/download/v1.6.4/Workout-Tracker-v1.6.4.apk) ali odpri [GitHub Releases](https://github.com/ragnarokdrakkar-rgb/GYM/releases/latest).
 3. Odpri APK in izberi **Posodobi**. Stare aplikacije ne odstranjuj in ne briši njenih podatkov.
 
-Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.6.3 je 80. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+Identiteta paketa ostaja `com.kemal.workouttracker`; versionCode izdaje 1.6.4 je 81. APK mora biti podpisan z istim obstoječim ključem. Ključ in njegove nastavitve niso del repozitorija.
+
+## Novo v 1.6.4
+
+- Varnostna kopija: lokalno kopijo zdaj obnoviš z gumbom »Obnovi« (trenutno stanje se prej samodejno shrani kot kopija »pred obnovo«); »Shrani« jo zapiše v mapo Prenosi na telefonu.
 
 ## Novo v 1.6.3
 
